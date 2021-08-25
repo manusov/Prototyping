@@ -1,0 +1,26 @@
+display = on         ; on = console output enabled, off = disabled
+report = on          ; on = save report to file output.txt enabled, off = disabled
+waitkey = on         ; on = wait "Press ENTER" after operation, off = skip this waiting
+measure = mbps       ; measurement scenario, variants = mbps (bandwidth), iops (performance)
+filemode = group     ; file mode, variants = group (group of files), single (repeat for one file)
+filecount = 10       ; file count per group (group mode) or iterations count (single mode)
+filesize = 100M      ; one file size
+blocksize = 10M      ; one block size, this is data size per one OS API function call
+filerepeats = 1      ; repeat read, write, copy operation inside one file
+filedata = none      ; data source, none, zeroes, ones, srng, hrng (software and hardware random number generator)
+readsync = on        ; on = read synchronization, disable OS read caching, off = no control (caching enabled)
+writesync = on       ; on = write synchronization, disable OS write caching, off = no control (caching enabled)
+copysync = on        ; on = copy synchronization, disable OS copy caching, off = no control (caching enabled)
+readdelay = 0        ; delay time before read phase, milliseconds, 0 = no delay
+writedelay = 0       ; delay time before write phase, milliseconds, 0 = no delay
+copydelay = 0        ; delay time before copy phase, milliseconds, 0 = no delay
+filehint = none      ; access type hints for file operations OS API, variants = sequental, random, none
+readmixed = 0        ; part of read operations per mixed group, io requests count = readmixed + writemixed
+writemixed = 0       ; part of write operations per mixed group, io requests count = readmixed + writemixed
+numaaware = off      ; on = use NUMA-aware node selection, off = not use
+numanode = 0         ; NUMA node number, used only if numaaware = on
+affinity = 0F        ; CPU affinity mask, hex value
+srcfile = c:\temp\src.bin   ; source file path, used for read and write
+dstfile = c:\temp\dst.bin   ; destination file path, used for copy as destination
+
+
