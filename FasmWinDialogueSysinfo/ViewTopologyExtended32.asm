@@ -5,7 +5,8 @@
 ; TODO. Make U_B string as resource.
 ; See MSDN.
 ; TODO. Yet used only first member of Affinity array.
-; TODO> See MSDN, not all parameters visualized.  
+; TODO. See MSDN, not all parameters visualized.
+; TODO. BUG: LIMIT_ENUM not decremented at TopologyHelper.  
 
 include 'win32a.inc'
 CLEARTYPE_QUALITY   = 5
@@ -40,7 +41,7 @@ STRING_DATA         = 15
 STRING_TRACE        = 16
 STRING_UNKNOWN_TYPE = 17
 STRING_POINTS       = 18
-STRING_HT           = 19
+STRING_SMT          = 19
 STRING_EFFICIENCY   = 20
 STRING_NODE         = 21
 STRING_CACHE_WAYS   = 22
@@ -170,6 +171,25 @@ je .memoryFailed
 jmp .topologyFailed 
 .getOk: 
 
+mov edi,BASE_ENUM
+lea esi,[ebp + edi]
+xor ecx,ecx
+call TopologyHelper
+jz .topologyFailed
+mov ecx,2
+call TopologyHelper
+jz .topologyFailed
+mov ecx,3
+call TopologyHelper
+jz .topologyFailed
+mov ecx,1
+call TopologyHelper
+jz .topologyFailed
+mov ecx,4
+call TopologyHelper
+jz .topologyFailed
+sub edi,BASE_ENUM
+mov [BufferLength],edi
 mov ecx,[BufferLength]
 test ecx,ecx
 jz .functionNotFound
@@ -208,7 +228,7 @@ mov al,STRING_CPU_CORE
 call RelationNameHelper 
 mov al,32
 call AffinityGroupHelper
-mov eax,( STRING_HT SHL 16 ) + 2908h
+mov eax,( STRING_SMT SHL 16 ) + 2908h
 call ParameterHelper8
 mov eax,( STRING_EFFICIENCY SHL 16 ) + 3209h
 call ParameterHelper8
@@ -269,6 +289,10 @@ mov al,STRING_CPU_PACKAGE
 call RelationNameHelper 
 mov al,32
 call AffinityGroupHelper
+mov eax,( STRING_SMT SHL 16 ) + 2908h
+call ParameterHelper8
+mov eax,( STRING_EFFICIENCY SHL 16 ) + 3209h
+call ParameterHelper8
 jmp .doneRelation
 .relationGroup: 
 mov al,STRING_GROUP
@@ -345,6 +369,20 @@ call [MessageBox]
 call ReleaseMemoryHelper
 mov ecx,2           
 call [ExitProcess]
+
+TopologyHelper:
+lea eax,[BufferLength]
+mov dword [eax],LIMIT_ENUM
+push eax
+mov eax,ebp
+add eax,edi
+push eax
+push ecx
+call [_GetLogicalProcessorInformationEx]
+mov ecx,[BufferLength]
+add edi,ecx
+test eax,eax
+ret
 
 RelationNameHelper:
 lea edi,[edx + 01]
@@ -992,7 +1030,7 @@ enddialog
 resource raws, ID_GUI_STRINGS, LANG_ENGLISH + SUBLANG_DEFAULT, guistrings, \
                ID_GUI_BINDERS, LANG_ENGLISH + SUBLANG_DEFAULT, guibinders
 resdata guistrings
-DB  'SMP extended topology list (ia32 v0.0)' , 0
+DB  'SMP extended topology list (ia32 v0.01)' , 0
 DB  'System monospace bold'        , 0
 DB  'Report', 0
 DB  'Binary', 0
@@ -1011,7 +1049,7 @@ DB  'Data'               , 0
 DB  'Trace'              , 0
 DB  'Unknown'            , 0
 DB  ' ...'               , 0
-DB  'ht='                , 0
+DB  'smt='               , 0
 DB  'efficiency='        , 0
 DB  'node='              , 0
 DB  'ways='              , 0
