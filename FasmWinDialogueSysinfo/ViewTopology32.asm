@@ -4,6 +4,9 @@
 ; TODO. Optimize helpers parameters, for ParameterHelper 8/16/32.
 ; TODO. Make U_B string as resource.
 
+; TODO. Bugs with MOV ECX,TERM_CODE instead PUSH TERM_CODE,
+; see this sample and next.
+
 include 'win32a.inc'
 CLEARTYPE_QUALITY   = 5
 ID_MAIN             = 100
@@ -327,7 +330,7 @@ push ebx
 push 0
 call [MessageBox]  
 call ReleaseMemoryHelper
-mov ecx,2           
+push 2           
 call [ExitProcess]
 
 RelationNameHelper:

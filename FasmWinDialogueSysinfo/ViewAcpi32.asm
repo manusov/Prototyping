@@ -294,7 +294,7 @@ push ebx
 push 0
 call [MessageBox]  
 call ReleaseMemoryHelper
-mov ecx,2           
+push 2           
 call [ExitProcess]
 
 StringCopyHelper:

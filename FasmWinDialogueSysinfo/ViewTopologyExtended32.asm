@@ -6,7 +6,10 @@
 ; See MSDN.
 ; TODO. Yet used only first member of Affinity array.
 ; TODO. See MSDN, not all parameters visualized.
-; TODO. BUG: LIMIT_ENUM not decremented at TopologyHelper.  
+; TODO. BUG: LIMIT_ENUM not decremented at TopologyHelper.
+
+; TODO. Bugs with MOV ECX,TERM_CODE instead PUSH TERM_CODE,
+; see this sample and next.
 
 include 'win32a.inc'
 CLEARTYPE_QUALITY   = 5
@@ -367,7 +370,7 @@ push ebx
 push 0
 call [MessageBox]  
 call ReleaseMemoryHelper
-mov ecx,2           
+push 2           
 call [ExitProcess]
 
 TopologyHelper:
