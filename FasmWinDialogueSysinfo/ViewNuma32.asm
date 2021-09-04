@@ -1,16 +1,13 @@
 ; TODO.
-; 1) Error handling.
-; 2) Dynamical import.
-; 3) Use GlobalMemoryStatus if GlobalMemoryStatusEx not supported.
-; 4) Synchronize with sub-set of NCRB functionality.
-; 5) Remove numbers usage, for example "82 + 50".
-; 6) Optimize for resources DLL, common for NCRB32/64,
+; 1) Remove numbers usage, for example "82 + 50".
+; 2) Optimize for resources DLL, common for NCRB32/64,
 ;    make some normal strings as resource raw objects.
-; 7) Required Windows-on-Windows (WoW64) info by 32-bit sample under 64-bit OS.
-; 8) Optimize, remove not required PUSH/POP RAX before/after SizePrint64,
+; 3) Optimize, remove not required PUSH/POP RAX before/after SizePrint64
 ;    and other subroutines, DecimalPrint32.
+; 4) Optimize PUSH/POP ECX/EDX at StringHelper subroutine.
 
 include 'win32a.inc'
+CLEARTYPE_QUALITY      = 5
 ID_MAIN                = 100
 ID_EXE_ICON            = 101
 ID_EXE_ICONS           = 102
@@ -27,35 +24,13 @@ STRING_REPORT          = 2
 STRING_BINARY          = 3
 STRING_CANCEL          = 4
 STRING_TEXT_UP         = 5
-STRING_MEMORY_LOAD     = 6
-STRING_TOTAL_PHYSICAL  = 7
-STRING_AVAIL_PHYSICAL  = 8
-STRING_TOTAL_PAGE_FILE = 9 
-STRING_AVAIL_PAGE_FILE = 10
-STRING_TOTAL_VIRTUAL   = 11
-STRING_AVAIL_VIRTUAL   = 12
-STRING_EXT_VIRTUAL     = 13
-STRING_MIN_ADDRESS     = 14
-STRING_MAX_ADDRESS     = 15
-STRING_PROC_MASK       = 16
-STRING_PROC_TYPE       = 17
-STRING_ALLOC_GRAN      = 18
-STRING_PROC_LEVEL      = 19
-STRING_PROC_REVISION   = 20
-STRING_PROC_CURRENT    = 21
-STRING_PROC_TOTAL      = 22
-STRING_PROC_GROUPS     = 23
-STRING_NUMA_DOMAINS    = 24
-STRING_NORMAL_PAGE     = 25
-STRING_LARGE_PAGE      = 26
-STRING_DISABLED        = 27
-STRING_ENABLED         = 28
 BUFFER_SYSTEM_INFO     = 0
 BIND_APP_GUI           = 0
 X_SIZE                 = 360
 Y_SIZE                 = 240
 INFO_BUFFER_SIZE       = 8192
 MISC_BUFFER_SIZE       = 8192
+NODE_COUNT_LIMIT       = 63 
 
 macro BIND_STOP
 { DB  0 }
@@ -74,39 +49,6 @@ COMBO_ADD      = 3
 COMBO_INACTIVE = 4
 MACRO BIND_COMBO srcid, dstid
 { DD 05h + (srcid) SHL 6 + (dstid) SHL 19 }
-
-CLEARTYPE_QUALITY      = 5
-ALL_PROCESSOR_GROUPS   = 0000FFFFh  
-struct MEMORYSTATUSEX_DEF
-dwLength                 dd ?
-dwMemoryLoad             dd ?
-ullTotalPhys             dq ?
-ullAvailPhys             dq ?
-ullTotalPageFile         dq ?
-ullAvailPageFile         dq ?
-ullTotalVirtual          dq ?
-ullAvailVirtual          dq ?
-ullAvailExtendedVirtual  dq ?
-ends
-
-MEM_LARGE_PAGES          =  020000000h 
-SE_PRIVILEGE_ENABLED     = 2 
-SE_LOCK_MEMORY_PRIVILEGE = 4
-struct LUID 
-usedpart             dd  ?   
-ignorehigh32bitpart  dd  ? 
-ends 
-struct LUID_AND_ATTRIBUTES 
-Luid        LUID 
-Attributes  dd  ?  
-ends 
-struct TOKEN_PRIVILEGES 
-PrivilegeCount  dd  ? 
-Privileges      LUID_AND_ATTRIBUTES 
-ends 
-virtual at ebx 
-tp TOKEN_PRIVILEGES 
-end virtual
 
 format PE GUI 4.0
 entry start
@@ -166,299 +108,126 @@ push NameKernelDll
 call [GetModuleHandle]
 test eax,eax
 jz .libraryNotFound
-mov [HandleDll],eax 
-push NameFunctionMemory
-mov ebx,[HandleDll]
+mov ebx,eax
+lea edi,[_GetNumaHighestNodeNumber]
+push NameFunctionGet
 push ebx
 call [GetProcAddress]
 test eax,eax
 jz .functionNotFound
-mov [_GlobalMemoryStatusEx],eax
-push NameFunctionNative
+stosd
+push NameFunctionMask
 push ebx
 call [GetProcAddress]
-test eax,eax
-jz .nativeNotFound
-mov [_GetNativeSystemInfo],eax
-push NameFunctionProcessors 
+stosd
+push NameFunctionNode
 push ebx
 call [GetProcAddress]
-mov [_GetActiveProcessorGroupCount],eax
-push NameFunctionGroups
+stosd
+push NameFunctionMaskEx
 push ebx
 call [GetProcAddress]
-mov [_GetActiveProcessorCount],eax
-push NameFunctionNuma
+stosd
+push NameFunctionNodeEx
 push ebx
 call [GetProcAddress]
-mov [_GetNumaHighestNodeNumber],eax
-push NameFunctionLargePages
+stosd
+lea ebx,[HighestNode]
 push ebx
-call [GetProcAddress]
-mov [_GetLargePageMinimum],eax
-lea ebx,[_OpenProcessToken]
-xor eax,eax
-mov [ebx + 00],eax
-mov [ebx + 04],eax
-push NameAdvapiDll
-call [LoadLibrary]
-test eax,eax
-jz @f
-xchg ebp,eax
-push NameFunctionOpen
-push ebp
-call [GetProcAddress]               
-mov [ebx + 00],eax
-push NameFunctionAdjust
-push ebp
-call [GetProcAddress]
-mov [ebx + 04],eax
-@@:
-lea ecx,[MemoryStatusEx]
-mov [ecx + MEMORYSTATUSEX_DEF.dwLength],sizeof.MEMORYSTATUSEX_DEF
-push ecx 
-call [_GlobalMemoryStatusEx]
+call [_GetNumaHighestNodeNumber]
 test eax,eax
 jz .statusFailed
-push SystemInfo
+mov ebx,[ebx]
+cmp ebx,NODE_COUNT_LIMIT
+ja .invalidCount
 
-; call [GetSystemInfo]
-  call [_GetNativeSystemInfo]
-
-mov eax,[_GetActiveProcessorGroupCount]
-test eax,eax
-jz @f
-call eax
-movzx eax,ax
-@@:
-mov [ActiveProcessorGroupCount],eax
-mov eax,[_GetActiveProcessorCount]
-test eax,eax
-jz @f
-push ALL_PROCESSOR_GROUPS
-call eax
-@@:
-mov [ActiveProcessorCount],eax
-lea ebx,[NumaNodesCount]
-mov eax,[_GetNumaHighestNodeNumber]
-test eax,eax
-jz @f
-push ebx
-call eax
-test eax,eax
-jz @f
-mov eax,[ebx]
-inc eax
-@@:
-mov [ebx],eax
-mov eax,[_GetLargePageMinimum]
-test eax,eax
-jz @f
-call eax
-@@:
-mov [LargePageSize],eax
-
-push ebx esi ebp
-sub esp,128
-mov [LargePageEnable],0
+lea esi,[MISC_BUFFER]
+xor ebp,ebp
 xor eax,eax
-cmp [_OpenProcessToken],eax
-je .exit
-cmp [_AdjustTokenPrivileges],eax 
-je .exit
-cmp [LargePageSize],eax 
-je .exit
-call [GetCurrentProcess]
-test eax,eax
-jz .skip
-lea ebp,[esp + 120]
-push ebp 
-push MAXIMUM_ALLOWED
-push eax
-call [_OpenProcessToken]
-test eax,eax 
-jz .skip   
-xor eax,eax  
-mov ebx,esp
-push eax
-push eax
-push eax
-push ebx 
-push eax
-push dword [ebp]
-mov [tp.PrivilegeCount],1 
-mov [tp.Privileges.Luid.usedpart],SE_LOCK_MEMORY_PRIVILEGE 
-and [tp.Privileges.Luid.ignorehigh32bitpart],0  
-mov [tp.Privileges.Attributes],SE_PRIVILEGE_ENABLED
-call [_AdjustTokenPrivileges] 
-mov ebx,eax 
-push dword [ebp] 
-call [CloseHandle] 
-.skip:
-test eax,eax
-jz .exit
-xor eax,eax
-test ebx,ebx
-jz .exit 
-call [GetCurrentProcess]
-test eax,eax
-jz .exit
-mov ebx,eax
-push PAGE_READWRITE
-push MEM_COMMIT + MEM_LARGE_PAGES
-push [LargePageSize]
-push 0
-push ebx
-call [VirtualAllocEx]
-test eax,eax
-jz @f
-push MEM_RELEASE
-push 0
-push eax
-push ebx
-call [VirtualFreeEx]
-@@:
-test eax,eax
-setnz al
-movzx eax,al
-mov [LargePageEnable],eax 
-.exit:
-add esp,128
-pop ebp esi ebx
+cmp [edi - 08],eax
+je .noExtended
+cmp [edi - 04],eax
+je .noExtended
 
-lea ebp,[INFO_BUFFER]
-mov al,STRING_MEMORY_LOAD
+.extscan:
+push esi
+push ebp
+call [_GetNumaNodeProcessorMaskEx]
+test eax,eax
+jz .statusFailed
+add esi,12
+push esi
+push ebp
+call [_GetNumaAvailableMemoryNodeEx]
+test eax,eax
+jz .statusFailed
+add esi,8
+inc ebp
+cmp ebp,ebx
+jb .extscan
+lea esi,[MISC_BUFFER]
+lea edx,[INFO_BUFFER]
+xor ebp,ebp
+.extlist:
+mov eax,[esi + 12]
+mov ecx,[esi + 16]
 call StringHelper
-mov eax,[MemoryStatusEx.dwMemoryLoad]
-push eax
-mov bl,0
-call DecimalPrint32
-mov ax,' %'
+lea edi,[edx - 82 + 16]
+mov ax,[esi + 04]
+call HexPrint16
+mov ax,' \'
 stosw
-pop eax
-lea edi,[ebp - 82 + 62]
-call HexPrint32 
-mov al,STRING_TOTAL_PHYSICAL
-call StringHelper
-lea ecx,[MemoryStatusEx.ullTotalPhys]
-call SizeHelper64
-mov al,STRING_AVAIL_PHYSICAL
-call StringHelper
-lea ecx,[MemoryStatusEx.ullAvailPhys]
-call SizeHelper64
-mov al,STRING_TOTAL_PAGE_FILE 
-call StringHelper
-lea ecx,[MemoryStatusEx.ullTotalPageFile]
-call SizeHelper64
-mov al,STRING_AVAIL_PAGE_FILE
-call StringHelper
-lea ecx,[MemoryStatusEx.ullAvailPageFile]
-call SizeHelper64
-mov al,STRING_TOTAL_VIRTUAL
-call StringHelper
-lea ecx,[MemoryStatusEx.ullTotalVirtual]
-call SizeHelper64
-mov al,STRING_AVAIL_VIRTUAL
-call StringHelper
-lea ecx,[MemoryStatusEx.ullAvailVirtual]
-call SizeHelper64
-mov al,STRING_EXT_VIRTUAL
-call StringHelper
-mov al,'-'
+mov al,' '
 stosb
-mov eax,dword [MemoryStatusEx.ullAvailExtendedVirtual + 0]
-mov edx,dword [MemoryStatusEx.ullAvailExtendedVirtual + 4]
-lea edi,[ebp - 82 + 62]
-call HexPrint64 
-mov edi,ebp
-mov ax,0A0Dh
-stosw
-mov ebp,edi 
+mov eax,[esi + 00]
+call HexPrint32
+add esi,20
+inc ebp
+cmp ebp,ebx
+jb .extlist
+jmp .listDone
 
-mov al,STRING_MIN_ADDRESS
+.noExtended:
+cmp [edi - 16],eax
+je .functionNotFound
+cmp [edi - 08],eax
+je .functionNotFound
+.scan:
+push esi
+push ebp
+call [_GetNumaNodeProcessorMask]
+test eax,eax
+jz .statusFailed
+add esi,8
+push esi
+push ebp
+call [_GetNumaAvailableMemoryNode]
+test eax,eax
+jz .statusFailed
+add esi,8
+inc ebp
+cmp ebp,ebx
+jb .scan
+lea esi,[MISC_BUFFER]
+lea edx,[INFO_BUFFER]
+xor ebp,ebp
+.list:
+mov eax,[esi + 08]
+mov ecx,[esi + 12]
 call StringHelper
-lea ecx,[SystemInfo.lpMinimumApplicationAddress]
-call SizeHelperAuto32
-mov al,STRING_MAX_ADDRESS
-call StringHelper
-lea ecx,[SystemInfo.lpMaximumApplicationAddress]
-call SizeHelperAuto32
-mov al,STRING_PROC_MASK
-call StringHelper
-mov al,'-'
-stosb
-mov eax,[SystemInfo.dwActiveProcessorMask]
-lea edi,[ebp - 82 + 62]
-call HexPrint32 
-mov al,STRING_PROC_TYPE
-call StringHelper
-lea ecx,[SystemInfo.dwProcessorType]
-call NumberHelper32
-mov al,STRING_ALLOC_GRAN
-call StringHelper
-lea ecx,[SystemInfo.dwAllocationGranularity]
-call SizeHelperAuto32
-mov al,STRING_PROC_LEVEL
-call StringHelper
-lea ecx,[SystemInfo.wProcessorLevel]
-call NumberHelper16
-mov al,STRING_PROC_REVISION
-call StringHelper
-lea ecx,[SystemInfo.wProcessorRevision]
-call NumberHelper16
-mov edi,ebp
-mov ax,0A0Dh
-stosw
-mov ebp,edi 
-
-mov al,STRING_PROC_CURRENT
-call StringHelper
-lea ecx,[SystemInfo.dwNumberOfProcessors]
-call NumberHelper32
-cmp [ActiveProcessorCount],0
-je @f
-mov al,STRING_PROC_TOTAL
-call StringHelper
-lea ecx,[ActiveProcessorCount]
-call NumberHelper32
-@@:
-cmp [ActiveProcessorGroupCount],0
-je @f
-mov al,STRING_PROC_GROUPS
-call StringHelper
-lea ecx,[ActiveProcessorGroupCount]
-call NumberHelper32
-@@:
-cmp [NumaNodesCount],0
-je @f
-mov al,STRING_NUMA_DOMAINS
-call StringHelper
-lea ecx,[NumaNodesCount]
-call NumberHelper32
-@@:
-mov al,STRING_NORMAL_PAGE
-call StringHelper
-lea ecx,[SystemInfo.dwPageSize]
-call SizeHelperAuto32
-cmp [LargePageSize],0
-je @f
-mov al,STRING_LARGE_PAGE
-call StringHelper
-mov eax,[LargePageSize]
-xor edx,edx
-push eax
-mov bl,0FFh
-call SizePrint64
-cmp [LargePageEnable],1
-sete al
-add al,STRING_DISABLED
-mov ah,0
-call IndexString
-call StringWrite
-pop eax
-lea edi,[ebp - 82 + 62]
+lea edi,[edx - 82 + 16]
+push edx
+mov eax,[esi + 00]
+mov edx,[esi + 04]
 call HexPrint64
-@@:
+pop edx
+add esi,16
+inc ebp
+cmp ebp,ebx
+jb .list
+
+.listDone:
+mov edi,edx
 mov al,0
 stosb
 
@@ -489,11 +258,11 @@ jmp .failed
 .functionNotFound:
 lea ebx,[MsgFunctionNotFound]
 jmp .failed
-.nativeNotFound:
-lea ebx,[MsgNativeNotFound]
-jmp .failed
 .statusFailed:
 lea ebx,[MsgFunctionError]
+jmp .failed
+.invalidCount:
+lea ebx,[MsgCountLimit]
 .failed:
 push MB_ICONERROR
 push 0
@@ -581,6 +350,29 @@ push WM_SETFONT
 push eax
 call [SendMessage]
 @@:
+ret
+
+StringHelper:
+push ebx eax ecx
+mov edi,edx
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+mov edx,edi
+lea edi,[edx - 82 + 01]
+mov eax,ebp
+mov bl,0
+call DecimalPrint32
+lea edi,[edx - 82 + 43]
+pop ecx eax
+push edx
+mov edx,ecx
+mov bl,0FFh 
+call SizePrint64
+pop edx ebx
 ret
 
 StringWriteSelected:
@@ -880,83 +672,19 @@ mov [esp],edi
 popad
 ret
 
-StringHelper:
-mov edi,ebp
-push eax
-cld
-mov ecx,80
-mov al,' '
-rep stosb
-mov ax,0A0Dh
-stosw
-pop eax
-mov ebp,edi
-mov ah,0
-call IndexString
-lea edi,[ebp - 82 + 01]
-call StringWrite
-lea edi,[ebp - 82 + 33]
-ret
-
-SizeHelperAuto32:
-mov bl,0FFh
-jmp SjzeHelperEntry
-
-SizeHelper32:
-mov bl,2
-SjzeHelperEntry:
-mov eax,dword [ecx + 00]
-xor edx,edx
-push eax
-call SizePrint64
-pop eax
-lea edi,[ebp - 82 + 62]
-jmp HexPrint32
-
-SizeHelper64:
-mov bl,2
-mov eax,[ecx + 00]
-mov edx,[ecx + 04]
-push eax edx
-call SizePrint64
-pop edx eax
-lea edi,[ebp - 82 + 62]
-jmp HexPrint64
-
-NumberHelper32:
-mov eax,[ecx]
-push eax
-mov bl,0
-call DecimalPrint32
-pop eax
-lea edi,[ebp - 82 + 62]
-jmp HexPrint32
-
-NumberHelper16:
-movzx eax,word [ecx]
-push eax
-mov bl,0
-call DecimalPrint32
-pop eax
-lea edi,[ebp - 82 + 62]
-jmp HexPrint16
-
 section '.data' data readable writeable
-MsgGuiFailed                   DB  'GUI initialization failed.'        , 0
-MsgLibraryNotFound             DB  'OS API initialization failed.'     , 0 
-MsgFunctionNotFound            DB  'OS not supports memory status.'    , 0
-MsgNativeNotFound              DB  'WoW64 not found.'                  , 0
-MsgFunctionError               DB  'OS memory status failed.'          , 0
-NameKernelDll                  DB  'KERNEL32.DLL'                      , 0
-NameAdvapiDll                  DB  'ADVAPI32.DLL'                      , 0
-NameFunctionMemory             DB  'GlobalMemoryStatusEx'              , 0
-NameFunctionProcessors         DB  'GetActiveProcessorGroupCount'      , 0 
-NameFunctionGroups             DB  'GetActiveProcessorCount'           , 0
-NameFunctionNuma               DB  'GetNumaHighestNodeNumber'          , 0
-NameFunctionLargePages         DB  'GetLargePageMinimum'               , 0
-NameFunctionOpen               DB  'OpenProcessToken'                  , 0
-NameFunctionAdjust             DB  'AdjustTokenPrivileges'             , 0
-NameFunctionNative             DB  'GetNativeSystemInfo'               , 0
+MsgGuiFailed                   DB  'GUI initialization failed.'         , 0
+MsgLibraryNotFound             DB  'OS API initialization failed.'      , 0 
+MsgFunctionNotFound            DB  'OS not supports NUMA information.'  , 0
+MsgFunctionError               DB  'OS NUMA status failed.'             , 0
+MsgCountLimit                  DB  'NUMA nodes count limit.'            , 0
+NameKernelDll                  DB  'KERNEL32.DLL'                       , 0
+
+NameFunctionGet                DB  'GetNumaHighestNodeNumber'           , 0
+NameFunctionMask               DB  'GetNumaNodeProcessorMask'           , 0
+NameFunctionNode               DB  'GetNumaAvailableMemoryNode'         , 0
+NameFunctionMaskEx             DB  'GetNumaNodeProcessorMaskEx'         , 0
+NameFunctionNodeEx             DB  'GetNumaAvailableMemoryNodeEx'       , 0
 AppControl                     INITCOMMONCONTROLSEX  8, 0
 U_B                            DB  'Bytes',0
 U_KB                           DB  'KB',0
@@ -980,22 +708,12 @@ HandleIcon                     DD  ?
 LockedStrings                  DD  ?
 LockedBinders                  DD  ?
 HandleFont                     DD  ?
-HandleDll                      DD  ?
-_GlobalMemoryStatusEx          DD  ?
-_GetActiveProcessorGroupCount  DD  ?
-_GetActiveProcessorCount       DD  ?
 _GetNumaHighestNodeNumber      DD  ?
-_GetLargePageMinimum           DD  ?
-_OpenProcessToken              DD  ?
-_AdjustTokenPrivileges         DD  ?
-_GetNativeSystemInfo           DD  ?
-MemoryStatusEx                 MEMORYSTATUSEX_DEF  ?
-SystemInfo                     SYSTEM_INFO         ?
-ActiveProcessorGroupCount      DD  ?
-ActiveProcessorCount           DD  ?
-NumaNodesCount                 DD  ?
-LargePageSize                  DD  ?
-LargePageEnable                DD  ?
+_GetNumaNodeProcessorMask      DD  ?
+_GetNumaAvailableMemoryNode    DD  ?
+_GetNumaNodeProcessorMaskEx    DD  ?
+_GetNumaAvailableMemoryNodeEx  DD  ?
+HighestNode                    DD  ?
 align 4096 
 INFO_BUFFER                    DB  INFO_BUFFER_SIZE DUP (?)
 MISC_BUFFER                    DB  MISC_BUFFER_SIZE DUP (?)  
@@ -1027,35 +745,12 @@ enddialog
 resource raws, ID_GUI_STRINGS, LANG_ENGLISH + SUBLANG_DEFAULT, guistrings, \
                ID_GUI_BINDERS, LANG_ENGLISH + SUBLANG_DEFAULT, guibinders
 resdata guistrings
-DB  'Native OS information (ia32 v0.0)' , 0
-DB  'System monospace bold'             , 0
+DB  'OS NUMA information (ia32 v0.0)' , 0
+DB  'System monospace bold'          , 0
 DB  'Report', 0
 DB  'Binary', 0
 DB  'Cancel', 0
-DB  ' Parameter                     | Value                      | Hex' , 0
-DB  'Memory load'                  , 0
-DB  'Total physical memory'        , 0
-DB  'Available physical memory'    , 0
-DB  'Total page file'              , 0
-DB  'Available page file'          , 0
-DB  'Total virtual user space'     , 0
-DB  'Available virtual user space' , 0
-DB  'Extended virtual'             , 0
-DB  'Application minimum address'  , 0
-DB  'Application maximum address'  , 0
-DB  'Active processor mask'        , 0
-DB  'Processor type'               , 0
-DB  'Allocation granularity'       , 0
-DB  'Processor level'              , 0
-DB  'Processor revision'           , 0
-DB  'Processors at current group'  , 0
-DB  'Processors total'             , 0
-DB  'Processor groups'             , 0
-DB  'NUMA domains'                 , 0
-DB  'Normal page size'             , 0
-DB  'Minimum large page size'      , 0
-DB  ' ( DISABLED )'                , 0
-DB  ' ( ENABLED )'                 , 0
+DB  ' NUMA domain  | Affinity (hex)           | Available memory at node' , 0
 endres
 resdata guibinders
 BIND_STRING  STRING_REPORT       , IDR_REPORT
@@ -1073,7 +768,7 @@ resdata manifest
 db '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
 db '<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">'
 db '<assemblyIdentity'
-db '    name="OS information viewer"'
+db '    name="OS NUMA information viewer"'
 db '    processorArchitecture="x86"'
 db '    version="1.0.0.0"'
 db '    type="win32"/>'

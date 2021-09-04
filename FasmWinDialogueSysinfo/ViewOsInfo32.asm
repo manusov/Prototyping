@@ -5,7 +5,7 @@
 ; 4) Synchronize with sub-set of NCRB functionality.
 ; 5) Remove numbers usage, for example "82 + 50".
 ; 6) Optimize for resources DLL, common for NCRB32/64,
-;    make some normal strings as resource raw objexts.
+;    make some normal strings as resource raw objects.
 ; 7) Required Windows-on-Windows (WoW64) info by 32-bit sample under 64-bit OS.
 ; 8) Optimize, remove not required PUSH/POP RAX before/after SizePrint64,
 ;    and other subroutines, DecimalPrint32.
@@ -984,7 +984,7 @@ LargePageSize                  DD  ?
 LargePageEnable                DD  ?
 align 4096 
 INFO_BUFFER                    DB  INFO_BUFFER_SIZE DUP (?)
-NISC_BUFFER                    DB  MISC_BUFFER_SIZE DUP (?)  
+MISC_BUFFER                    DB  MISC_BUFFER_SIZE DUP (?)  
 
 section '.idata' import data readable writeable
 library kernel32 , 'kernel32.dll' , \

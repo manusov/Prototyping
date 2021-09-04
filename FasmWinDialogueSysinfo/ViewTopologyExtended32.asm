@@ -1002,7 +1002,7 @@ HandleDll                          DD  ?
 _GetLogicalProcessorInformationEx  DD  ?  
 align 4096 
 INFO_BUFFER                        DB  INFO_BUFFER_SIZE DUP (?)
-NISC_BUFFER                        DB  MISC_BUFFER_SIZE DUP (?)  
+MISC_BUFFER                        DB  MISC_BUFFER_SIZE DUP (?)  
 
 section '.idata' import data readable writeable
 library kernel32 , 'kernel32.dll' , \
