@@ -190,7 +190,7 @@ jmp .listDone
 .noExtended:
 cmp [edi - 16],eax
 je .functionNotFound
-cmp [edi - 08],eax
+cmp [edi - 12],eax
 je .functionNotFound
 .scan:
 push esi
