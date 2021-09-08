@@ -1,0 +1,9 @@
+1) + Restore original mask.
+2) + Colors.
+3) + Title strings before each logical CPU dump.
+4) Make option = Processor groups.
+5) Make option = Select one CPU.
+6) Make option = Select one CPU without affinization.
+7) Messages strings.
+
+
