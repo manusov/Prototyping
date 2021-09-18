@@ -981,7 +981,8 @@ directory RT_DIALOG     , dialogs   , \
           RT_GROUP_ICON , gicons    , \
           RT_MANIFEST   , manifests
 resource dialogs, ID_MAIN, LANG_ENGLISH + SUBLANG_DEFAULT, mydialog
-dialog mydialog, '', 0, 0, X_SIZE, Y_SIZE, DS_CENTER + WS_CAPTION + WS_SYSMENU + WS_SIZEBOX, 0, 0, 'System monospace', 18
+; dialog mydialog, '', 0, 0, X_SIZE, Y_SIZE, DS_CENTER + WS_CAPTION + WS_SYSMENU + WS_SIZEBOX, 0, 0, 'System monospace', 18
+dialog mydialog, '', 0, 0, X_SIZE, Y_SIZE, DS_CENTER + WS_CAPTION + WS_SYSMENU, 0, 0, 'System monospace', 18
 dialogitem 'BUTTON', '', IDR_REPORT        , 241, 224,  38, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem 'BUTTON', '', IDR_BINARY        , 280, 224,  38, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem 'BUTTON', '', IDR_CANCEL        , 319, 224,  38, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -993,7 +994,7 @@ enddialog
 resource raws, ID_GUI_STRINGS, LANG_ENGLISH + SUBLANG_DEFAULT, guistrings, \
                ID_GUI_BINDERS, LANG_ENGLISH + SUBLANG_DEFAULT, guibinders
 resdata guistrings
-DB  'SMP topology list (x64 v0.0)' , 0
+DB  'SMP topology list (x64 v0.02)' , 0
 DB  'System monospace bold'        , 0
 DB  'Report', 0
 DB  'Binary', 0

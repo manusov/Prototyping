@@ -10,10 +10,10 @@
 ; 9)  Verify under Intel SDE emulator.
 ; 10) Regularize last empty string write. 0A0Dh value.
 ; 11) Verify x87 FPU supported because used.
-; 12) See "TODO" notes at report save procedure.
+; 12) See "TODO" notes at report save procedure. 
 
 
-include 'win64a.inc'
+include 'win32a.inc'
 CLEARTYPE_QUALITY    = 5
 ID_MAIN              = 100
 ID_EXE_ICON          = 101
@@ -63,7 +63,7 @@ FILE_PATH_MAXIMUM    = 255
 FILE_WORK_MAXIMUM    = 4096
 
 macro BIND_STOP
-{ DB 0 }
+{ DB  0 }
 MACRO BIND_STRING srcid, dstid
 { DD 01h + (srcid) SHL 6 + (dstid) SHL 19 }
 MACRO BIND_INFO srcid, dstid
@@ -124,60 +124,60 @@ DB  01h + ( bit SHL 2 )
 DB name, 0 , mnemonic , 0
 }
 
-format PE64 GUI 5.0
+format PE GUI 4.0
 entry start
 section '.code' code readable executable
 start:
 
-sub rsp,8*5
 cld
-lea rcx,[AppControl]
+push AppControl
 call [InitCommonControlsEx]
-test rax,rax
+test eax,eax
 jz .guiFailed
-xor ecx,ecx
+push 0
 call [GetModuleHandle]
-test rax,rax
+test eax,eax
 jz .guiFailed
-mov [HandleThis],rax
-mov edx,ID_EXE_ICONS
-xchg rcx,rax 
+mov [HandleThis],eax
+push ID_EXE_ICONS
+push eax 
 call [LoadIcon]
-test rax,rax
+test eax,eax
 jz .guiFailed
-mov [HandleIcon],rax
+mov [HandleIcon],eax
+
 mov edx,ID_GUI_STRINGS
 call ResourceLockHelper
 jz .guiFailed
-mov [LockedStrings],rax
+mov [LockedStrings],eax
 mov edx,ID_GUI_BINDERS
 call ResourceLockHelper
 jz .guiFailed
-mov [LockedBinders],rax
+mov [LockedBinders],eax
 mov edx,ID_CPUID_FEATURES
 call ResourceLockHelper
 jz .guiFailed
-mov [LockedEntriesCpuid],rax
+mov [LockedEntriesCpuid],eax
 mov edx,ID_XCR0_FEATURES
 call ResourceLockHelper
 jz .guiFailed
-mov [LockedEntriesXcr0],rax
+mov [LockedEntriesXcr0],eax
 
 ; Check platform compatibility and WinAPI initialization
 mov ebx,21
 pushf
-pop rax
+pop eax
 bts eax,ebx
-push rax
+push eax
 popf
 pushf
-pop rax
+pop eax
 btr eax,ebx
 jnc .noCpuid
-push rax
+push eax
 popf
 pushf
-pop rax
+pop eax
 btr eax,ebx
 jc .noCpuid
 xor eax,eax
@@ -185,8 +185,8 @@ cpuid
 cmp eax,1
 jb .noCpuidFunction
 
-; Get processor information
-lea rdi,[MISC_BUFFER]
+; Get processor signatures and strings information
+lea edi,[MISC_BUFFER]
 xor eax,eax
 cpuid
 xchg eax,ebx
@@ -203,16 +203,16 @@ stosd
 mov ecx,48
 mov al,' '
 rep stosb
-mov dword [rdi-48],'n/a '
-mov dword [rdi],0 
+mov dword [edi-48],'n/a '
+mov dword [edi],0 
 mov esi,80000000h
 mov eax,esi
 cpuid
 lea ebx,[esi + 04]
 cmp eax,ebx
 jb .exitName
-sub rdi,48
-push rdi
+sub edi,48
+push edi
 .storeName:
 lea eax,[esi + 02]
 cpuid
@@ -226,8 +226,8 @@ stosd
 inc esi
 cmp si,4 - 2
 jbe .storeName
-pop rdi
-mov rsi,rdi
+pop edi
+mov esi,edi
 mov ecx,48
 mov ebx,ecx
 .scanName:
@@ -253,56 +253,70 @@ jnz .copyName
 mov al,' '
 rep stosb
 .exitName:
-inc rdi
+inc edi
+
+; Measure TSC frequency
 mov eax,1
 cpuid
 test dl,00010000b
 jz .tscAbsent
-lea rbx,[OsTimer]
-mov rcx,rbx
-call [GetSystemTimeAsFileTime]
-mov rsi,[rbx]
+lea ebx,[OsTimer]
+push ebx
+call [GetSystemTimeAsFileTime]   ; this for phase correction
+mov esi,[ebx + 00]
 @@:
-mov rcx,rbx
-call [GetSystemTimeAsFileTime]
-cmp rsi,[rbx]
+push ebx
+call [GetSystemTimeAsFileTime]   ; this for measured interval start
+cmp esi,[ebx + 00]
 je @b
-mov rsi,[rbx]
-add rsi,10000000
+mov esi,[ebx + 00]
+mov ebp,[ebx + 04]
+add esi,10000000
+adc ebp,0
 rdtsc
-shl rdx,32
-lea rbp,[rax + rdx]
+mov [ebx + 08],eax
+mov [ebx + 12],edx
 @@:
-mov rcx,rbx
+push ebx
 call [GetSystemTimeAsFileTime]
-cmp rsi,[rbx]
+cmp ebp,[ebx + 04]
 ja @b
+jb @f
+cmp esi,[ebx + 00]
+ja @b
+@@:
 rdtsc
-shl rdx,32
-or rax,rdx
-sub rax,rbp
-jbe .tscError
-push 1000000 rax
+sub eax,[ebx + 08]
+sbb edx,[ebx + 12] 
+mov [ebx + 08],eax
+mov [ebx + 12],edx 
+mov dword [ebx + 00],1000000
 finit
-fild qword [rsp + 00]
-fidiv dword [rsp + 08]
-fstp qword [rsp + 08]
-pop rax rax
+fild qword [ebx + 08]
+fidiv dword [ebx + 00]
+fstp qword [ebx + 00]
+mov eax,[ebx + 00]
+mov edx,[ebx + 04]
 jmp .tscDone
 .tscAbsent:
 xor eax,eax
+cdq
 jmp .tscDone
 .tscError:
 mov eax,1
+cdq
 .tscDone:
-stosq
+stosd
+xchg eax,edx
+stosd
 
 ; Get processor features list by CPUID
-lea rdi,[CpuBitmap]
-mov qword [rdi + 00],0
 xor ebx,ebx
 xor ebp,ebp
-mov rsi,[LockedEntriesCpuid]
+mov esi,[LockedEntriesCpuid]
+lea edi,[CpuBitmap]
+mov [edi + 00],ebx
+mov [edi + 04],ebx
 .scanCpu:
 lodsb
 mov ah,al
@@ -316,16 +330,16 @@ je .withSubf
 jmp .stopCpu
 .withoutSubf:
 xor ecx,ecx           ; ECX = subfunction
-mov edx,[rsi + 00]    ; EDX = function
-mov ah,[rsi + 04]     ; AH  = bit number, AL = tag with bits [7-2] = register 
-add rsi,5
+mov edx,[esi + 00]    ; EDX = function
+mov ah,[esi + 04]     ; AH  = bit number, AL = tag with bits [7-2] = register 
+add esi,5
 call CpuidHelper
 jmp .nextEntry
 .withSubf:
-mov edx,[rsi + 00]
-mov ecx,[rsi + 04]
-mov ah,[rsi + 08] 
-add rsi,9
+mov edx,[esi + 00]
+mov ecx,[esi + 04]
+mov ah,[esi + 08] 
+add esi,9
 call CpuidHelper
 .nextEntry:
 mov ecx,2
@@ -339,22 +353,26 @@ loop .skipCpu
 inc ebp
 jmp .scanCpu
 .stopCpu:
-mov [rdi + 00],rbx
+mov [edi + 00],ebx
 
 ; Check OS context management bitmap validity and get OS features list by XGETBV 
-mov qword [rdi + 08],0
+xor eax,eax
+mov [edi + 08],eax
+mov [edi + 12],eax
 mov eax,1
 cpuid
 bt ecx,27
-setc [rdi + 16]
+setc [edi + 16]
 jnc .noContext
 xor ecx,ecx
 xgetbv
-shl rdx,32
-or rdx,rax
+; shl rdx,32   ; TODO. EDX yet ignored for ia32 version
+; or rdx,rax
+xchg edx,eax   ; TODO. Yet XCR0.[31-00] only, XCR0.[63-32] yet ignored   
+;---
 xor ebx,ebx
 xor ebp,ebp
-mov rsi,[LockedEntriesXcr0]
+mov esi,[LockedEntriesXcr0]
 .scanOs:
 lodsb
 mov ah,al
@@ -363,9 +381,9 @@ cmp ah,00000001b
 jne .stopOs 
 shr al,2
 movzx eax,al
-bt rdx,rax
+bt edx,eax
 jnc .zeroOs
-bts rbx,rbp
+bts ebx,ebp
 .zeroOs:
 mov ecx,2
 .skipOs:
@@ -378,12 +396,13 @@ loop .skipOs
 inc ebp
 jmp .scanOs
 .stopOs:
-mov [rdi + 08],rbx
+mov dword [edi + 08],ebx
+mov dword [edi + 12],0
 .noContext:
 
 ; Build text block for processor information list
-lea rsi,[MISC_BUFFER]
-lea rbp,[INFO_BUFFER + BUFFER_COMMON]
+lea esi,[MISC_BUFFER]
+lea ebp,[INFO_BUFFER + BUFFER_COMMON]
 mov al,STRING_SIGNATURE
 call CommonStringHelper
 call StringWrite
@@ -400,11 +419,25 @@ mov al,STRING_CLOCK
 call CommonStringHelper
 mov al,STRING_TSC
 call IndexHelper
-lodsq
-test rax,rax
+;---
+;lodsq
+;test rax,rax
+;jz .absentTsc
+;cmp rax,1
+;jz .failedTsc 
+;---
+lodsd
+xchg edx,eax
+lodsd
+xchg edx,eax
+test edx,edx
+jnz .validTsc
+test eax,eax
 jz .absentTsc
-cmp rax,1
-jz .failedTsc 
+cmp eax,1
+je .failedTsc
+;---
+.validTsc:
 mov bx,0200h
 call DoublePrint
 mov al,STRING_MHZ
@@ -424,9 +457,9 @@ mov al,0
 stosb
 
 ; Build text block for processor features list
-mov rsi,[LockedEntriesCpuid]
-lea rbp,[INFO_BUFFER + BUFFER_FEATURES]
-mov rbx,[CpuBitmap]
+mov esi,[LockedEntriesCpuid]
+lea ebp,[INFO_BUFFER + BUFFER_FEATURES]
+mov ebx,dword [CpuBitmap]   ; TODO. Yet ignored high 32 bits of 64-bit bitmap, ia32 version limitations
 .listCpu:
 lodsb
 and al,00111111b
@@ -436,16 +469,16 @@ cmp al,00000010b
 je .entryCpuid
 cmp al,00000011b
 jne .endListCpu
-add rsi,4
+add esi,4
 jmp .entryCpuid
 .entryLine:
 mov ax,0A0Dh
 stosw
 jmp .listCpu
 .entryCpuid:
-add rsi,5
+add esi,5
 call FeaturesStringHelper
-shr rbx,1
+shr ebx,1
 setnc al
 add al,STRING_SUPPORTED
 call IndexHelper
@@ -455,15 +488,15 @@ mov ax,0A0Dh
 stosw
 cmp [OsBitmapValid],0
 je .endListOs
-mov rsi,[LockedEntriesXcr0]
-mov rbx,[OsBitmap]
+mov esi,[LockedEntriesXcr0]
+mov ebx,dword [OsBitmap]   ; TODO. Yet ignored high 32 bits of 64-bit bitmap, ia32 version limitations
 .listOs:
 lodsb
 and al,00000011b
 cmp al,00000001b
 jne .endListOs
 call FeaturesStringHelper
-shr rbx,1
+shr ebx,1
 setnc al
 add al,STRING_SUPPORTED
 call IndexHelper
@@ -475,99 +508,89 @@ mov al,0
 stosb
 
 push 0 0 
-lea r9,[DialogProc]
-mov r8d,HWND_DESKTOP
-mov edx,ID_MAIN
-mov rcx,[HandleThis]  
-sub rsp,32
+push DialogProc
+push HWND_DESKTOP
+push ID_MAIN
+push [HandleThis]  
 call [DialogBoxParam] 
-add rsp,32+16
-test rax,rax
+test eax,eax
 jz .guiFailed 
-cmp rax,-1
+cmp eax,-1
 je .guiFailed
 .ok:
-xor ecx,ecx           
+push 0           
 call [ExitProcess]
 .guiFailed:
-mov r9d,MB_ICONERROR
-xor r8d,r8d
-lea rdx,[MsgGuiFailed]
-xor ecx,ecx
+push MB_ICONERROR
+push 0
+push MsgGuiFailed 
+push 0
 call [MessageBox]  
-mov ecx,1           
+push 1           
 call [ExitProcess]
 .libraryNotFound:
-lea rbx,[MsgLibraryNotFound]
+lea ebx,[MsgLibraryNotFound]
 jmp .failed
 .noCpuid:
-lea rbx,[MsgCpuid]
+lea ebx,[MsgCpuid]
 jmp .failed
 .noCpuidFunction:
-lea rbx,[MsgCpuidFunction]
+lea ebx,[MsgCpuidFunction]
 .failed:
-mov r9d,MB_ICONERROR
-xor r8d,r8d
-mov rdx,rbx
-xor ecx,ecx
+push MB_ICONERROR
+push 0
+push ebx
+push 0
 call [MessageBox]  
-mov ecx,2           
+push 2           
 call [ExitProcess]
 
 DialogProc:
-push rbp rbx rsi rdi
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov [rbp + 40 + 00],rcx 
-mov [rbp + 40 + 08],rdx
-mov [rbp + 40 + 16],r8
-mov [rbp + 40 + 24],r9
-xchg rax,rdx
-cmp rax,WM_INITDIALOG
+push ebp ebx esi edi
+mov ebp,esp
+mov eax,[ebp + 24]
+cmp eax,WM_INITDIALOG
 je .wminitdialog 
-cmp rax,WM_COMMAND
+cmp eax,WM_COMMAND
 je .wmcommand
-cmp rax,WM_CLOSE
+cmp eax,WM_CLOSE
 je .wmclose
 xor eax,eax
 jmp .finish
 
 .wminitdialog:
-mov rbx,[rbp + 40 + 00]
+mov ebx,[ebp + 20]
 mov ax,BIND_APP_GUI
 call Binder
-mov r9,[HandleIcon] 
-mov r8d,ICON_SMALL 
-mov edx,WM_SETICON 
-mov rcx,[rbp + 40 + 00]
+push [HandleIcon] 
+push ICON_SMALL 
+push WM_SETICON 
+push dword [ebp + 20]
 call [SendMessage]
 mov ax,STRING_APP
 call IndexString
-mov rdx,rsi
-mov rcx,[rbp + 40 + 00]
+push esi
+push dword [ebp + 20]
 call [SetWindowText]
 mov ax,STRING_FONT
 call IndexString
 xor eax,eax
-push rsi
+push esi
 push FIXED_PITCH
 push CLEARTYPE_QUALITY
 push CLIP_DEFAULT_PRECIS
 push OUT_TT_ONLY_PRECIS
 push DEFAULT_CHARSET
-push rax
-push rax
-push rax
+push eax
+push eax
+push eax
 push FW_DONTCARE
-xor r9d,r9d
-xor r8d,r8d
-xor edx,edx
-mov ecx,17
-sub rsp,32
+push eax
+push eax
+push eax
+push 17
 call [CreateFont]
-add rsp,32+80
-mov [HandleFont],rax
+mov [HandleFont],eax
 mov edx,IDR_UP_COMMON
 call FontHelper
 mov edx,IDR_TEXT_COMMON
@@ -579,7 +602,7 @@ call FontHelper
 jmp .processed
 
 .wmcommand:
-mov eax,[rbp + 40 + 16]
+mov eax,[ebp + 28]
 cmp eax,IDR_REPORT
 je .wmreport
 cmp eax,IDR_CANCEL
@@ -587,93 +610,82 @@ je .wmclose
 jmp .processed
 
 .wmclose:
-mov rcx,[HandleFont]
-jrcxz @f
-call [DeleteObject]
-@@:
-mov edx,1
-mov rcx,[rbp + 40 + 00]
+push 1
+push dword [ebp + 20]
 call [EndDialog]
 
 .processed:
 mov eax,1
 .finish:
-mov rsp,rbp
-pop rdi rsi rbx rbp
-ret
+mov esp,ebp
+pop edi esi ebx ebp
+ret 16
 
 .wmreport:
-push rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
 ; Copy file name to buffer
-lea rbx,[FileOpen]
-lea rsi,[ReportName]
-lea rdi,[FILE_PATH_BUFFER]
+lea ebx,[FileOpen]
+lea esi,[ReportName]
+lea edi,[FILE_PATH_BUFFER]
 call StringWrite
 xor eax,eax
 stosb
 ; Show dialogue box
 ; TODO. Optimize, clear by rep stosb and set used fields only,
 ; don't use one MOV per each zeroed field
-; TODO. Check exception under Windows 7 under debuggers, example FDBG.
+; TODO. Check exception under Windows 7 under debuggers, example OllyDbg.
 ; TODO. Not added ".txt" extension if file name edit.
-mov [rbx + OPENFILENAME.lStructSize],sizeof.OPENFILENAME
-mov [rbx + OPENFILENAME.hwndOwner],rax
-mov [rbx + OPENFILENAME.hInstance],rax
-mov [rbx + OPENFILENAME.lpstrFilter],ReportFilter
-mov [rbx + OPENFILENAME.lpstrCustomFilter],rax
-mov [rbx + OPENFILENAME.nMaxCustFilter],eax
-mov [rbx + OPENFILENAME.nFilterIndex],eax
-mov [rbx + OPENFILENAME.lpstrFile],FILE_PATH_BUFFER
-mov [rbx + OPENFILENAME.nMaxFile],FILE_PATH_MAXIMUM
-mov [rbx + OPENFILENAME.lpstrFileTitle],rax
-mov [rbx + OPENFILENAME.nMaxFileTitle],eax
-mov [rbx + OPENFILENAME.lpstrInitialDir],rax
-mov [rbx + OPENFILENAME.lpstrTitle],rax
-mov [rbx + OPENFILENAME.Flags],OFN_FILEMUSTEXIST
-mov [rbx + OPENFILENAME.nFileOffset],ax
-mov [rbx + OPENFILENAME.nFileExtension],ax
-mov [rbx + OPENFILENAME.lpstrDefExt],rax
-mov [rbx + OPENFILENAME.lCustData],eax
-mov [rbx + OPENFILENAME.lpfnHook],rax
-mov [rbx + OPENFILENAME.lpTemplateName],rax
-mov rcx,rbx
+mov [ebx + OPENFILENAME.lStructSize],sizeof.OPENFILENAME
+mov [ebx + OPENFILENAME.hwndOwner],eax
+mov [ebx + OPENFILENAME.hInstance],eax
+mov [ebx + OPENFILENAME.lpstrFilter],ReportFilter
+mov [ebx + OPENFILENAME.lpstrCustomFilter],eax
+mov [ebx + OPENFILENAME.nMaxCustFilter],eax
+mov [ebx + OPENFILENAME.nFilterIndex],eax
+mov [ebx + OPENFILENAME.lpstrFile],FILE_PATH_BUFFER
+mov [ebx + OPENFILENAME.nMaxFile],FILE_PATH_MAXIMUM
+mov [ebx + OPENFILENAME.lpstrFileTitle],eax
+mov [ebx + OPENFILENAME.nMaxFileTitle],eax
+mov [ebx + OPENFILENAME.lpstrInitialDir],eax
+mov [ebx + OPENFILENAME.lpstrTitle],eax
+mov [ebx + OPENFILENAME.Flags],OFN_FILEMUSTEXIST
+mov [ebx + OPENFILENAME.nFileOffset],ax
+mov [ebx + OPENFILENAME.nFileExtension],ax
+mov [ebx + OPENFILENAME.lpstrDefExt],eax
+mov [ebx + OPENFILENAME.lCustData],eax
+mov [ebx + OPENFILENAME.lpfnHook],eax
+mov [ebx + OPENFILENAME.lpTemplateName],eax
+push ebx
 call [GetSaveFileName]
-test rax,rax
+test eax,eax
 jz .noSelections
 ; Create report file 
-mov rcx,[rbx + OPENFILENAME.lpstrFile]
-xor rbx,rbx
-test rcx,rcx
+mov ecx,[ebx + OPENFILENAME.lpstrFile]
+xor ebx,ebx
+test ecx,ecx
 jz .reportError 
-xor eax,eax                   ; RAX = 0 for compact push
-push rax                      ; This push for alignment
-push rax                      ; Parm #7 = Template file, not used
+xor eax,eax                   ; EAX = 0 for compact push
+push eax                      ; Parm #7 = Template file, not used
 push FILE_ATTRIBUTE_NORMAL    ; Parm #6 = File attributes
 push CREATE_ALWAYS            ; Parm #5 = Creation disposition
-xor r9d,r9d                   ; Parm #4 = Security attributes, not used
-xor r8d,r8d                   ; Parm #3 = Share mode, not used
-mov edx,GENERIC_WRITE         ; Parm #2 = Desired access
-; rcx valid                   ; Parm #1 = Pointer to file name
-sub rsp,32
+push eax                      ; Parm #4 = Security attributes, not used
+push eax                      ; Parm #3 = Share mode, not used
+push GENERIC_WRITE            ; Parm #2 = Desired access
+push ecx                      ; Parm #1 = Pointer to file name
 call [CreateFileA]
-add rsp,32
-test rax,rax
+test eax,eax
 jz .reportError
-cmp rax,INVALID_HANDLE_VALUE
+cmp eax,INVALID_HANDLE_VALUE
 je .reportError 
-xchg rbx,rax
+xchg ebx,eax
 ; Save application name
 xor eax,eax
 call IndexString
-lea rdi,[FILE_WORK_BUFFER]
-push rdi
+lea edi,[FILE_WORK_BUFFER]
+push edi
 call StringWrite
 mov eax,000A0D00h + '.'
 stosd
-pop rsi
+pop esi
 call FileStringWrite
 ; Save table up for first text block
 call LineHelper
@@ -684,7 +696,7 @@ call FileStringWrite
 call LineHelper
 call FileStringWrite
 ; Save first text block
-lea rsi,[INFO_BUFFER + BUFFER_COMMON]
+lea esi,[INFO_BUFFER + BUFFER_COMMON]
 call FileStringWrite
 ; Save table up for second text block
 call LineHelper
@@ -695,98 +707,95 @@ call FileStringWrite
 call LineHelper
 call FileStringWrite
 ; Save second text block
-lea rsi,[INFO_BUFFER + BUFFER_FEATURES]
+lea esi,[INFO_BUFFER + BUFFER_FEATURES]
 call FileStringWrite
 ; Show status box
-lea rsi,[MsgReportOK]
-lea rdi,[FILE_WORK_BUFFER]
-push rdi
+lea esi,[MsgReportOK]
+lea edi,[FILE_WORK_BUFFER]
+push edi
 call StringWrite
-lea rsi,[FILE_PATH_BUFFER]
+lea esi,[FILE_PATH_BUFFER]
 call StringWrite
-xor eax,eax
+mov al,0
 stosb
+pop edx
+push edx     ; TODO. Remove extra pop-push
+xor eax,eax
 call IndexString
-pop rdx
-mov r8,rsi
-mov r9d,MB_OK
+pop edx
+mov ecx,esi
+mov eax,MB_OK
 jmp .reportStatus
 .reportError:
-mov r9,MB_ICONERROR
-lea rdx,[MsgReportFailed]
-xor r8d,r8d
-.reportStatus:
+mov eax,MB_ICONERROR
+lea edx,[MsgReportFailed]
 xor ecx,ecx
+.reportStatus:
+push eax
+push ecx
+push edx
+push 0
 call [MessageBox]  
 ; Close file
-test rbx,rbx
+test ebx,ebx
 jz .noSelections
-mov rcx,rbx
+push ebx
 xor ebx,ebx
 call [CloseHandle]
-test rax,rax
+test eax,eax
 jz .reportError 
 ; Done
 ; TODO. Decode error code and write details about file I/O error.
 ; TODO. Add "." after message string.
 .noSelections:
-mov rsp,rbp
-pop rbp
 jmp .processed 
 
 FileStringWrite:
 cld
-push rsi rdi rbp 0
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov rdi,rsi
+push esi edi ebp 0
+mov ebp,esp
+mov edi,esi
 mov ecx,FILE_WORK_MAXIMUM
 mov al,0
 repne scasb
-sub rdi,rsi
-dec rdi
+sub edi,esi
+dec edi
 .write:
-xor eax,eax
-push rax                ; This push for alignment
-push rax                ; Parm#5 = Overlapped, not used
-mov r9,rbp              ; Parm#4 = Pointer to output variable, count
-mov r8,rdi              ; Parm#3 = Number of chars ( length )
-mov rdx,rsi             ; Parm#2 = Pointer to string ( buffer )
-mov rcx,rbx             ; Parm#1 = File handle
-sub rsp,32
+push 0                 ; Parm#5 = Overlapped, not used
+push ebp               ; Parm#4 = Pointer to output variable, count
+push edi               ; Parm#3 = Number of chars ( length )
+push esi               ; Parm#2 = Pointer to string ( buffer )
+push ebx               ; Parm#1 = File handle
 call [WriteFile]
-add rsp,32
-mov rcx,[rbp]           ; RCX = Returned size
-test rax,rax            ; RAX = status, 0 means error
-jz .stop                ; Go exit if error
-jrcxz .stop             ; Go exit if returned size = 0
-add rsi,rcx             ; RSI = advance read pointer by returned size
-sub rdi,rcx             ; RDI = subtract current read size from size limit
-ja .write               ; Repeat write if return size > 0 and limit not reached 
+mov ecx,[ebp]          ; ECX = Returned size
+test eax,eax           ; EAX = status, 0 means error
+jz .stop               ; Go exit if error
+jecxz .stop            ; Go exit if returned size = 0
+add esi,ecx            ; ESI = advance read pointer by returned size
+sub edi,ecx            ; EDI = subtract current read size from size limit
+ja .write              ; Repeat write if return size > 0 and limit not reached 
 .stop:
-mov rsp,rbp
-pop rbp rbp rdi rsi
+pop ebp ebp edi esi
 ret
 
 LineHelper:
 cld
-lea rdi,[FILE_WORK_BUFFER]
-mov rsi,rdi
+lea edi,[FILE_WORK_BUFFER]
+mov esi,edi
 mov ax,0A0Dh
 stosw
 mov ecx,79
-push rax
+push eax
 mov al,'-'
 rep stosb
-pop rax
+pop eax
 stosw
 mov al,0
 stosb
 ret
 
 CpuidHelper:
-push rsi rdi rbp rbx
+push esi edi ebp ebx
 mov esi,edx         ; ESI = function
 mov edi,ecx         ; EDI = subfunction 
 mov ebp,eax         ; EBP = bit number : register id
@@ -822,94 +831,84 @@ jmp .bitDone
 .bitNo:
 clc
 .bitDone:
-pop rbx rbp rdi rsi
+pop ebx ebp edi esi
 jnc @f
-bts rbx,rbp
+bts ebx,ebp
 @@:
 ret
 
 ResourceLockHelper:
-push rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov r8d,RT_RCDATA
-mov rcx,[HandleThis]
+push RT_RCDATA
+push edx
+push [HandleThis]
 call [FindResource]                
-test rax,rax
+test eax,eax
 jz .exit 
-xchg rdx,rax
-mov rcx,[HandleThis]
+push eax
+push [HandleThis]
 call [LoadResource] 
-test rax,rax
+test eax,eax
 jz .exit
-xchg rcx,rax
+push eax
 call [LockResource]  
-test rax,rax
+test eax,eax
 .exit:
-mov rsp,rbp
-pop rbp
 ret
 
 FontHelper:
-mov rcx,[rbp + 40 + 00]
-push rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
+push edx
+push dword [ebp + 20]
 call [GetDlgItem]
-test rax,rax
+test eax,eax
 jz @f
-mov r9d,1
-mov r8,[HandleFont]
-mov edx,WM_SETFONT
-xchg rcx,rax
+push 1
+push [HandleFont]
+push WM_SETFONT
+push eax
 call [SendMessage]
 @@:
-mov rsp,rbp
-pop rbp
 ret
 
 CommonStringHelper:
-push rsi
+push esi
 mov ah,0
 call IndexString
-mov rdi,rbp
+mov edi,ebp
 cld
 mov ecx,80
 mov al,' '
 rep stosb
 mov ax,0A0Dh
 stosw
-mov rbp,rdi
-lea rdi,[rbp - 82 + 01]
+mov ebp,edi
+lea edi,[ebp - 82 + 01]
 call StringWrite
-lea rdi,[rbp - 82 + 18]
-pop rsi
+lea edi,[ebp - 82 + 18]
+pop esi
 ret
 
 FeaturesStringHelper:
-mov rdi,rbp
+mov edi,ebp
 cld
 mov ecx,80
 mov al,' '
 rep stosb
 mov ax,0A0Dh
 stosw
-mov rbp,rdi
-lea rdi,[rbp - 82 + 01]
+mov ebp,edi
+lea edi,[ebp - 82 + 01]
 call StringWrite
-lea rdi,[rbp - 82 + 43]
+lea edi,[ebp - 82 + 43]
 call StringWrite
-lea rdi,[rbp - 82 + 65]
+lea edi,[ebp - 82 + 65]
 ret
 
 IndexHelper:
-push rsi
+push esi
 mov ah,0
 call IndexString
 call StringWrite
-pop rsi
+pop esi
 ret
 
 StringWrite:
@@ -925,9 +924,9 @@ ret
 
 IndexString:
 cld
-mov rsi,[LockedStrings]
-movzx rcx,ax
-jrcxz .stop
+mov esi,[LockedStrings]
+movzx ecx,ax
+jecxz .stop
 .cycle:
 lodsb
 cmp al,0
@@ -938,18 +937,18 @@ ret
 
 Binder:
 cld
-mov rsi,[LockedBinders]
-movzx rcx,ax
-jrcxz .foundBinder
+mov esi,[LockedBinders]
+movzx ecx,ax
+jecxz .foundBinder
 .findBinder:
 lodsb
-add rsi,3
+add esi,3
 test al,00111111b
 jnz .findBinder
-sub rsi,3
+sub esi,3
 loop .findBinder
 .foundBinder:
-cmp byte [rsi],0
+cmp byte [esi],0
 je .stopBinder
 lodsd
 mov edx,eax
@@ -959,92 +958,78 @@ and eax,00001FFFh
 shr edx,6+13
 and edx,00001FFFh
 and ecx,00111111b
-push rsi
-call [ProcBinders + rcx * 8 - 8]
-pop rsi
+push esi
+call [ProcBinders + ecx * 4 - 4]
+pop esi
 jmp .foundBinder
 .stopBinder:
 ret
 BindString:
 call IndexString
 BindEntry:
-push rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov rcx,rbx  
+push edx
+push ebx  
 call [GetDlgItem]
-test rax,rax
+test eax,eax
 jz BindExit
-mov r9,rsi
-xor r8d,r8d
-mov edx,WM_SETTEXT
-xchg rcx,rax 
+push esi
+push 0
+push WM_SETTEXT
+push eax 
 call [SendMessage]
 BindExit:
-mov rsp,rbp
-pop rbp
-BindRet:
 ret
 BindInfo:
-lea rsi,[INFO_BUFFER + rax]
+lea esi,[INFO_BUFFER + eax]
 jmp BindEntry
 BindBig:
-lea rsi,[INFO_BUFFER + rax]
-mov rsi,[rsi]
-test rsi,rsi
-jz BindRet
+lea esi,[INFO_BUFFER + eax]
+mov esi,[esi]
+test esi,esi
+jz BindExit
 jmp BindEntry
 BindBool:
-push rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
 mov ecx,eax
 shr eax,3
 and ecx,0111b
-movzx eax,byte [INFO_BUFFER + rax]
+movzx eax,byte [INFO_BUFFER + eax]
 bt eax,ecx
 setc al
 xchg esi,eax
-mov rcx,rbx  
+push edx
+push ebx  
 call [GetDlgItem]
-test rax,rax
+test eax,eax
 jz .error
-mov edx,esi
-xchg rcx,rax 
+push esi
+push eax 
 call [EnableWindow]
 .error:
 jmp BindExit
 BindCombo:
-push r15 rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-lea rsi,[INFO_BUFFER + rax]
-mov rcx,rbx  
+lea esi,[INFO_BUFFER + eax]
+push edx 
+push ebx  
 call [GetDlgItem]
-test rax,rax
+test eax,eax
 jz .stop
-xchg rdi,rax
-mov r15d,0FFFF0000h
+xchg edi,eax
+mov ebp,0FFFF0000h
 .tagCombo:
 lodsb 
-movzx rax,al
-call [ProcCombo + rax * 8]
-inc r15d
+movzx eax,al
+call [ProcCombo + eax * 4]
+inc ebp
 jnc .tagCombo
-shr r15d,16
-cmp r15w,0FFFFh
+shr ebp,16
+cmp bp,0FFFFh
 je .stop
-xor r9d,r9d 
-mov r8d,r15d 
-mov edx,CB_SETCURSEL
-mov rcx,rdi 
+push 0 
+push ebp 
+push CB_SETCURSEL
+push edi 
 call [SendMessage]
 .stop:
-mov rsp,rbp
-pop rbp r15
 ret
 BindComboStopOn:
 stc
@@ -1054,7 +1039,7 @@ stc
 ret
 BindComboCurrent:
 call HelperBindCombo
-shl r15d,16
+shl ebp,16
 clc
 ret
 BindComboAdd:
@@ -1066,24 +1051,20 @@ clc
 ret
 HelperBindCombo:
 lodsw
-push rsi rbp
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
+push esi
 movzx eax,ax
 call IndexString
-mov r9,rsi
-xor r8d,r8d
-mov edx,CB_ADDSTRING
-mov rcx,rdi 
+push esi
+push 0
+push CB_ADDSTRING
+push edi 
 call [SendMessage]
-mov rsp,rbp
-pop rbp rsi
+pop esi
 ret
 
 DecimalPrint32:
 cld
-push rax rbx rcx rdx
+push eax ebx ecx edx
 mov bh,80h-10
 add bh,bl
 mov ecx,1000000000
@@ -1102,147 +1083,152 @@ mov bh,80h
 or al,30h
 stosb
 .skipZero:
-push rdx
+push edx
 xor edx,edx
 mov eax,ecx
 mov ecx,10
 div ecx
 mov ecx,eax 
-pop rax
+pop eax
 inc bh
 test ecx,ecx
 jnz .mainCycle 
-pop rdx rcx rbx rax
+pop edx ecx ebx eax
 ret
 
 HexPrint64:
-push rax
-ror rax,32
+xchg eax,edx
 call HexPrint32
-pop rax
+xchg eax,edx
 HexPrint32:
-push rax
+push eax
 ror eax,16
 call HexPrint16
-pop rax
+pop eax
 HexPrint16:
-push rax
+push eax
 xchg al,ah
 call HexPrint8
-pop rax
+pop eax
 HexPrint8:
-push rax
+push eax
 ror al,4
 call HexPrint4
-pop rax
+pop eax
 HexPrint4:
 cld
-push rax
+push eax
 and al,0Fh
-cmp al,9
-ja .modify
-add al,'0'
-jmp .store
-.modify:
-add al,'A'-10
-.store:
+add al,90h
+daa
+adc al,40h
+daa
 stosb
-pop rax
+pop eax
 ret
 
 DoublePrint:
-push rax rbx rcx rdx r8 r9 r10 r11
+pushad
 cld
-mov rdx,07FFFFFFFFFFFFFFFh
-and rdx,rax
+test eax,eax
+jnz @f
+mov ecx,07FFFFFFFh
+and ecx,edx
 jz .fp64_Zero
-mov rcx,07FF8000000000000h
-cmp rdx,rcx
+cmp ecx,07FF80000h
 je .fp64_QNAN
-mov rcx,07FF0000000000000h
-cmp rdx,rcx
+cmp ecx,07FF00000h
 je .fp64_INF
 ja .fp64_NAN
+@@:
 finit
-push rax
-push rax
-fstcw [rsp]
-pop rax
+push edx eax
+push eax
+fstcw [esp]
+pop eax
 or ax,0C00h
-push rax
-fldcw [rsp]
-pop rax
-fld qword [rsp]
-pop rax
+push eax
+fldcw [esp]
+pop eax
+fld qword [esp]
+pop eax edx
 fld st0
 frndint
 fxch
 fsub st0,st1
 mov eax,1
 movzx ecx,bh
-jrcxz .orderDetected
+jecxz .divisorDone
 @@:
-imul rax,rax,10
+imul eax,eax,10
 loop @b
-.orderDetected:
-push rax
-fimul dword [rsp]
-pop rax
-push rax rax
-fbstp [rsp]
-pop r8 r9
-push rax rax
-fbstp [rsp]
-pop r10 r11
-bt r11,15
-setc dl
-bt r9,15
-setc dh
+.divisorDone:
+push eax
+fimul dword [esp]
+pop eax
+sub esp,32
+fbstp [esp+00]
+fbstp [esp+16]
+test byte [esp+16+09],80h
+setnz dl
+test byte [esp+00+09],80h
+setnz dh
 test dx,dx
 jz @f
 mov al,'-'
 stosb
 @@:
-mov dl,0
-mov ecx,18 
+mov cx,20 
+mov edx,[esp + 16 + 06]  
+mov esi,[esp + 16 + 02] 
+mov ebp,[esp + 16 + 00] 
+shl ebp,16
+and edx,07FFFFFFFh
 .cycleInteger:
-mov al,r11l
-shr al,4
+mov eax,edx
+shr eax,28
 cmp cl,1
 je .store
 cmp cl,bl
 jbe .store
-test dl,dl
+test ch,ch
 jnz .store
 test al,al
 jz .position 
 .store:
-mov dl,1
+mov ch,1
 or al,30h
 stosb
 .position:
-shld r11,r10,4
-shl r10,4
-loop .cycleInteger
+shld edx,esi,4
+shld esi,ebp,4
+shl ebp,4
+dec cl
+jnz .cycleInteger
 test bh,bh
 jz .exit
 mov al,'.'
 stosb
 std 
 movzx ecx,bh     
-lea rdi,[rdi + rcx]
-push rdi
-dec rdi
+lea edi,[edi + ecx]
+mov edx,[esp + 00 + 00]  
+mov esi,[esp + 00 + 04] 
+mov ebp,[esp + 00 + 00] 
+push edi
+dec edi
 .cycleFloat:
-mov al,r8l
+mov al,dl
 and al,0Fh
 or al,30h
 stosb
-shrd r8,r9,4
-shr r9,4
+shrd edx,esi,4
+shrd esi,ebp,4
+shr ebp,4
 loop .cycleFloat
-pop rdi
+pop edi
 cld
+add esp,32
 jmp .exit
 .fp64_Zero:
 mov eax,'0.0 '
@@ -1258,12 +1244,13 @@ mov eax,'QNAN'
 .fp64special:
 stosd
 jmp .exit
-.error:
+.Error:
 mov al,'?'
 stosb
 .exit:
 finit
-pop r11 r10 r9 r8 rdx rcx rbx rax
+mov [esp],edi
+popad
 ret
 
 section '.data' data readable writeable
@@ -1277,34 +1264,35 @@ ReportFilter               DB  'Text files ', 0, '*.txt',0,0
 MsgReportFailed            DB  'Save report failed.'                       , 0
 MsgReportOK                DB  'Report saved: '                            , 0 
 AppControl                 INITCOMMONCONTROLSEX  8, 0
-ProcBinders                DQ  BindString
-                           DQ  BindInfo
-                           DQ  BindBig
-                           DQ  BindBool
-                           DQ  BindCombo
-ProcCombo                  DQ  BindComboStopOn
-                           DQ  BindComboStopOff 
-                           DQ  BindComboCurrent
-                           DQ  BindComboAdd
-                           DQ  BindComboInactive
-AllocationBase             DQ  0
-HandleThis                 DQ  ? 
-HandleIcon                 DQ  ?
-LockedStrings              DQ  ?
-LockedBinders              DQ  ?
-LockedEntriesCpuid         DQ  ?
-LockedEntriesXcr0          DQ  ?
-HandleFont                 DQ  ?
-HandleDll                  DQ  ?
-CpuBitmap                  DQ  ?
-OsBitmap                   DQ  ?
+ProcBinders                DD  BindString
+                           DD  BindInfo
+                           DD  BindBig
+                           DD  BindBool
+                           DD  BindCombo
+ProcCombo                  DD  BindComboStopOn
+                           DD  BindComboStopOff 
+                           DD  BindComboCurrent
+                           DD  BindComboAdd
+                           DD  BindComboInactive
+AllocationBase             DD  0
+HandleThis                 DD  ? 
+HandleIcon                 DD  ?
+LockedStrings              DD  ?
+LockedBinders              DD  ?
+LockedEntriesCpuid         DD  ?
+LockedEntriesXcr0          DD  ?
+HandleFont                 DD  ?
+HandleDll                  DD  ?
+CpuBitmap                  DQ  ?  ; only low 32 bits used at ia32 version
+OsBitmap                   DQ  ?  ; only low 32 bits used at ia32 version
 OsBitmapValid              DB  ?
 FileOpen                   OPENFILENAME  ?
 align 64
 OsTimer                    DQ  ?
+StartTsc                   DQ  ?
 align 4096 
 INFO_BUFFER                DB  INFO_BUFFER_SIZE DUP (?)
-MISC_BUFFER                DB  MISC_BUFFER_SIZE DUP (?)
+MISC_BUFFER                DB  MISC_BUFFER_SIZE DUP (?)  
 
 section '.idata' import data readable writeable
 library kernel32 , 'kernel32.dll' , \
@@ -1345,7 +1333,7 @@ resource raws, ID_GUI_STRINGS    , LANG_ENGLISH + SUBLANG_DEFAULT, guistrings,  
                ID_CPUID_FEATURES , LANG_ENGLISH + SUBLANG_DEFAULT, cpufeatures, \ 
                ID_XCR0_FEATURES  , LANG_ENGLISH + SUBLANG_DEFAULT, xcr0features
 resdata guistrings
-DB  'CPU information (x64 v0.03)' , 0
+DB  'CPU information (ia32 v0.03)' , 0
 DB  'System monospace bold'      , 0
 DB  'Report', 0
 DB  'Binary', 0
@@ -1426,14 +1414,14 @@ ENTRY_STOP
 endres
 resource icons, ID_EXE_ICON, LANG_NEUTRAL, exeicon
 resource gicons, ID_EXE_ICONS, LANG_NEUTRAL, exegicon
-icon exegicon, exeicon, 'images\fasmicon64.ico'
+icon exegicon, exeicon, 'images\fasmicon32.ico'
 resource manifests, 1, LANG_NEUTRAL, manifest
 resdata manifest
 db '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
 db '<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">'
 db '<assemblyIdentity'
 db '    name="CPU information viewer"'
-db '    processorArchitecture="amd64"'
+db '    processorArchitecture="x86"'
 db '    version="1.0.0.0"'
 db '    type="win32"/>'
 db '<description>Shield Icon Demo</description>'
@@ -1443,7 +1431,7 @@ db '        <assemblyIdentity'
 db '           type="win32"'
 db '           name="Microsoft.Windows.Common-Controls"'
 db '           version="6.0.0.0"'
-db '           processorArchitecture="amd64"'
+db '           processorArchitecture="x86"'
 db '           publicKeyToken="6595b64144ccf1df"'
 db '           language="*"'
 db '        />'
