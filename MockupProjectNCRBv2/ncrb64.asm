@@ -32,21 +32,26 @@
 ;                                                                                     ;
 ;=====================================================================================;
 
-;---------- Global definitions ------------------------------------------------;
+;---------- Include FASM definitions and modules definitions ------------------;
 include 'win64a.inc'               ; FASM definitions
 include 'global\definitions.inc'   ; NCRB project global definitions
 include 'global\registry64.inc'    ; Registry for dynamically created variables
+include 'ncrb64\system_info\connect_equ.inc'
+include 'ncrb64\threads_manager\connect_equ.inc'
+include 'ncrb64\targets_bandwidth\connect_equ.inc'
+include 'ncrb64\targets_latency\connect_equ.inc'
+include 'ncrb64\targets_math\connect_equ.inc'
+;---------- Global definitions ------------------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
 ID_EXE_ICONS            = 101      ; This application icon group
 MSG_MEMORY_ALLOC_ERROR  = 0        ; Error messages IDs, from this file
-MSG_INIT_FAILED         = 1        ; Note. Resource DLL cannot be used for this 
-MSG_LOAD_FAILED         = 2        ; messages:
+MSG_INIT_FAILED         = 1        ; Note. Resource DLL cannot be used for 
+MSG_LOAD_FAILED         = 2        ; this messages:
 MSG_HANDLE_NULL         = 3        ; it must be valid before DLL loaded 
 MSG_ICON_FAILED         = 4 
-MSG_STRINGS_POOL_FAILED = 5
-MSG_ICONS_POOL_FAILED   = 6
-MSG_CONTROL_POOL_FAILED = 7
-MSG_DIALOGUE_FAILED     = 8
+MSG_ICONS_POOL_FAILED   = 5
+MSG_RAW_RESOURCE_FAILED = 6  
+MSG_DIALOGUE_FAILED     = 7
 
 ;------------------------------------------------------------------------------;
 ;                                Code section.                                 ;        
@@ -69,11 +74,16 @@ test rax,rax
 jz .memoryAllocError               ; Go if memory allocation error
 mov [Registry],rax
 mov r15,rax                        ; R15 = Pointer to Registry
-;---------- Allocate temporary buffer -----------------------------------------;
+;---------- Allocate temporary buffer and GUI bind list -----------------------;
 add eax,REGISTRY64_MEMORY_SIZE - TEMP_BUFFER_INIT_SIZE
 mov [r15 + REGISTRY64.allocatorTempBuffer.objectStart],rax
 lea rax,[r15 + REGISTRY64_MEMORY_SIZE] 
 mov [r15 + REGISTRY64.allocatorTempBuffer.objectStop],rax
+lea rax,[r15 + REGISTRY64_MEMORY_SIZE - TEMP_BUFFER_INIT_SIZE - BIND_BUFFER_INIT_SIZE] 
+mov [r15 + REGISTRY64.allocatorBindBuffer.objectStart],rax
+lea rax,[r15 + REGISTRY64_MEMORY_SIZE - TEMP_BUFFER_INIT_SIZE] 
+mov [r15 + REGISTRY64.allocatorBindBuffer.objectStop],rax
+add r15,REGISTRY64.appData         ; R15 = Pointer to Registry.application data
 ;---------- Pre-load ADVAPI32.DLL ---------------------------------------------;
 ; Pre-load library ADVAPI32.DLL required, because it not loaded by static
 ; import. Note pre-load KERNEL32.DLL is not required because it loaded by
@@ -107,23 +117,6 @@ call [LoadIcon]                    ; Load application icon, from this exe file
 test rax,rax
 jz .iconFailed                     ; Go if load error, icon handle = NULL
 mov [r15 + APPDATA.hIcon],rax      ; Store handle of application icon
-;---------- Get handle and address pointer to strings pool at resources DLL ---;
-mov r8d,RT_RCDATA                  ; R8  = Parm#3 = Resource type
-mov edx,IDS_STRINGS_POOL           ; RDX = Parm#2 = Res. name, used numeric ID
-mov rcx,[r15 + APPDATA.hResources] ; RCX = Parm#1 = Module handle, load from DLL
-call [FindResource]                ; Find resource, get handle of block                
-test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .stringsPoolFailed              ; Go if handle = NULL, means error
-xchg rdx,rax                       ; RDX = Parm#2 = Handle of resource block
-mov rcx,[r15 + APPDATA.hResources] ; RCX = Parm#1 = Module handle, load from DLL
-call [LoadResource]                ; Load resource, get resource handle 
-test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .stringsPoolFailed              ; Go if handle = NULL, means error
-xchg rcx,rax                       ; RCX = Parm#1 = Resource handle
-call [LockResource]                ; Lock resource, get address pointer  
-test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .stringsPoolFailed              ; Go if handle = NULL, means error
-mov [r15 + APPDATA.lockedStrings],rax  ; Store pointer to strings pool
 ;---------- Get handles and address pointers to tabs icons at resources DLL ---;
 mov ebx,ICON_FIRST                   ; EBX = Icons identifiers
 lea rdi,[r15 + APPDATA.lockedIcons]  ; RDI = Pointer to icons pointers list
@@ -149,24 +142,54 @@ stosq                              ; Store pointer to icon
 inc ebx                            ; EBX = Next icon
 dec esi                            ; ESI = Cycle counter  
 jnz .loadIcons                     ; Cycle for initializing all icons 
-;---------- Get handle and address pointers to raw resource at resources DLL --;
-; Binders script used for interconnect GUI and System Information routines 
+;---------- Get handle and address pointer to raw pools at resources DLL ------;
+; Strings located at raw resources part, for compact encoding 1 byte per char,
+; note standard string resource use 2 byte per char (UNICODE). 
+; Binders located at raw resources part,
+; note binders script used for interconnect GUI and System Information routines. 
+lea rsi,[RawList]
+lea rdi,[r15 + APPDATA.lockedStrings]
+.loadRaw:
 mov r8d,RT_RCDATA                  ; R8  = Parm#3 = Resource type
-mov edx,IDS_BINDERS_POOL           ; RDX = Parm#2 = Res. name, used numeric ID
+lodsw
+movzx edx,ax                       ; RDX = Parm#2 = Res. name, used numeric ID
+test edx,edx
+jz .endRaw
 mov rcx,[r15 + APPDATA.hResources] ; RCX = Parm#1 = Module handle, load from DLL
 call [FindResource]                ; Find resource, get handle of block                
 test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .controlPoolFailed              ; Go if handle = NULL, means error
+jz .rawResourceFailed              ; Go if handle = NULL, means error
 xchg rdx,rax                       ; RDX = Parm#2 = Handle of resource block
 mov rcx,[r15 + APPDATA.hResources] ; RCX = Parm#1 = Module handle, load from DLL
 call [LoadResource]                ; Load resource, get resource handle 
 test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .controlPoolFailed              ; Go if handle = NULL, means error
+jz .rawResourceFailed              ; Go if handle = NULL, means error
 xchg rcx,rax                       ; RCX = Parm#1 = Resource handle
 call [LockResource]                ; Lock resource, get address pointer  
 test rax,rax                       ; RAX = HRSRC, handle of resource block
-jz .controlPoolFailed              ; Go if handle = NULL, means error
-mov [r15 + APPDATA.lockedBinders],rax  ; Store pointer to binders pool
+jz .rawResourceFailed              ; Go if handle = NULL, means error
+stosq                              ; Store pointer to strings pool
+jmp .loadRaw
+.endRaw:
+
+
+;---------- Load configuration file ncrb.inf ----------------------------------; 
+
+
+
+;---------- Get system information, user mode routines ------------------------;
+call SysinfoUserMode
+; TODO. Error handling.
+
+
+;---------- Load kernel mode driver kmd64.sys ---------------------------------;
+
+
+
+;---------- Get system information, kernel mode routines ----------------------;
+
+
+
 ;---------- Create and show main dialogue window ------------------------------; 
 push 0 0                       ; Parm#5 = Pass value, plus alignment qword 
 lea r9,[DialogProcMain]        ; R9  = Parm#4 = Pointer to dialogue proced.
@@ -181,34 +204,33 @@ jz .dialogueFailed             ; Go if create dialogue return error
 cmp rax,-1
 je .dialogueFailed             ; Go if create dialogue return error
 ;---------- Application exit point with release resource ----------------------; 
-xor r14d,r14d                      ; R14 = Exit Code, 0 means no errors
+xor r13d,r13d                      ; R13 = Exit Code, 0 means no errors
 .exitResources:
 mov r15,[Registry]
 test r15,r15
 jz .exit
+mov r14,r15
+add r15,REGISTRY64.appData
 mov rcx,[r15 + APPDATA.hAdvapi32]  ; RCX = Library ADVAPI32.DLL handle
 jrcxz .skipUnload                  ; Go skip unload if handle = null
 call [FreeLibrary]                 ; Unload ADVAPI32.DLL
 .skipUnload:
 mov r8d,MEM_RELEASE                ; R8  = Parm#3 = Memory free operation type
 xor edx,edx                        ; RDX = Parm#2 = Size, 0 = by allocated
-mov rcx,r15                        ; RCX = Parm#1 = Memory block base address  
+mov rcx,r14                        ; RCX = Parm#1 = Memory block base address  
 call [VirtualFree]                 ; Release memory, allocated for registry
 .exit:
-mov ecx,r14d                       ; RCX = Parm#1 = exit code           
+mov ecx,r13d                       ; RCX = Parm#1 = exit code           
 call [ExitProcess]
 ;---------- This entry points used if application start failed ----------------; 
 .dialogueFailed:
 mov al,MSG_DIALOGUE_FAILED     ; AL = String pool index for error name
 jmp .errorProgram
-.controlPoolFailed:
-mov al,MSG_CONTROL_POOL_FAILED
+.rawResourceFailed:
+mov al,MSG_RAW_RESOURCE_FAILED
 jmp .errorProgram
 .iconsPoolFailed:
 mov al,MSG_ICONS_POOL_FAILED
-jmp .errorProgram
-.stringsPoolFailed:
-mov al,MSG_STRINGS_POOL_FAILED
 jmp .errorProgram
 .iconFailed:
 mov al,MSG_ICON_FAILED
@@ -234,7 +256,7 @@ lea r8,[ProgName]      ; R8  = Parm#3 = Pointer to title (caption) string
 mov rdx,rsi            ; RDX = Parm#2 = Pointer to string: error name 
 xor ecx,ecx            ; RCX = Parm#1 = Parent Window = NULL
 call [MessageBox]  
-mov r14d,1
+mov r13d,1
 jmp .exitResources
 
 ;---------- Callback dialogue procedure for main window -----------------------;
@@ -263,6 +285,7 @@ mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
 mov r15,[Registry]                   ; R15 = Pointer to global registry
+add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData 
 lea rbx,[r15 + APPDATA.tabCtrlItem]  ; RBX = Pointer to tab item structure
 lea rsi,[r15 + APPDATA.hTabDlg]      ; RSI = Pointer to sheets handles array
 ;---------- Detect message type -----------------------------------------------;
@@ -537,6 +560,7 @@ mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
 mov r15,[Registry]             ; R15 = Pointer to global registry
+add r15,REGISTRY64.appData     ; R15 = Pointer to registry.appData
 movzx esi,al                   ; ESI = Binder ID for this child window
 ;---------- Detect message type -----------------------------------------------;
 cmp rdx,0000FFFFh
@@ -590,6 +614,25 @@ mov rsp,rbp
 pop r15 rdi rsi rbx rbp
 ret
 
+;---------- Copy text string terminated by 00h --------------------------------;
+; Note last byte 00h not copied.                                               ;
+;                                                                              ;
+; INPUT:   RSI = Source address                                                ;
+;          RDI = Destination address                                           ;
+; OUTPUT:  RSI = Modified by copy                                              ;
+;          RDI = Modified by copy                                              ;
+;          Memory at [Input RDI] modified                                      ;
+;------------------------------------------------------------------------------;
+StringWrite:
+cld
+.cycle:
+lodsb
+cmp al,0
+je .exit
+stosb
+jmp .cycle
+.exit:
+ret
 ;---------- Find string in the pool by index ----------------------------------;
 ; INPUT:   RSI = Pointer to string pool                                        ;
 ;          AX  = String index in the strings pool                              ;
@@ -606,16 +649,263 @@ jne .cycle
 loop .cycle
 .stop:
 ret
-
+;---------- Find string in the pool by index and write this string ------------;
+; INPUT:   AX  = String index in the application resources strings pool        ;
+; OUTPUT:  RSI = Updated pointer to string, selected by index                  ;
+;          RDI = Modified by copy                                              ;  
+;------------------------------------------------------------------------------;
+PoolStringWrite:
+mov rcx,[Registry]
+jrcxz .exit
+mov rsi,[rcx + REGISTRY64.appData.lockedStrings]
+test rsi,rsi
+jz .exit
+call IndexString
+call StringWrite
+.exit:
+ret
+;---------- Print 64-bit Hex Number -------------------------------------------;
+; INPUT:  RAX = Number                                                         ;
+;         RDI = Destination Pointer                                            ;
+; OUTPUT: RDI = Modify                                                         ;
+;------------------------------------------------------------------------------;
+HexPrint64:
+push rax
+ror rax,32
+call HexPrint32
+pop rax
+; no RET, continue at next subroutine
+;---------- Print 32-bit Hex Number -------------------------------------------;
+; INPUT:  EAX = Number                                                         ;
+;         RDI = Destination Pointer                                            ;
+; OUTPUT: RDI = Modify                                                         ;
+;------------------------------------------------------------------------------;
+HexPrint32:
+push rax
+ror eax,16
+call HexPrint16
+pop rax
+; no RET, continue at next subroutine
+;---------- Print 16-bit Hex Number -------------------------------------------;
+; INPUT:  AX  = Number                                                         ;
+;         RDI = Destination Pointer                                            ;
+; OUTPUT: RDI = Modify                                                         ;
+;------------------------------------------------------------------------------;
+HexPrint16:
+push rax
+xchg al,ah
+call HexPrint8
+pop rax
+; no RET, continue at next subroutine
+;---------- Print 8-bit Hex Number --------------------------------------------;
+; INPUT:  AL  = Number                                                         ;
+;         RDI = Destination Pointer                                            ;
+; OUTPUT: RDI = Modify                                                         ;
+;------------------------------------------------------------------------------;
+HexPrint8:
+push rax
+ror al,4
+call HexPrint4
+pop rax
+; no RET, continue at next subroutine
+;---------- Print 4-bit Hex Number --------------------------------------------;
+; INPUT:  AL  = Number (bits 0-3)                                              ;
+;         RDI = Destination Pointer                                            ;
+; OUTPUT: RDI = Modify                                                         ;
+;------------------------------------------------------------------------------;
+HexPrint4:
+cld
+push rax
+and al,0Fh
+cmp al,9
+ja .modify
+add al,'0'
+jmp .store
+.modify:
+add al,'A'-10
+.store:
+stosb
+pop rax
+ret
+;---------- Print 32-bit Decimal Number ---------------------------------------;
+; INPUT:   EAX = Number value                                                  ;
+;          BL  = Template size, chars. 0=No template                           ;
+;          RDI = Destination Pointer (flat)                                    ;
+; OUTPUT:  RDI = New Destination Pointer (flat)                                ;
+;                modified because string write                                 ;
+;------------------------------------------------------------------------------;
+DecimalPrint32:
+cld
+push rax rbx rcx rdx
+mov bh,80h-10         ; Bit BH.7 = print zeroes flag
+add bh,bl
+mov ecx,1000000000    ; ECX = service divisor
+.mainCycle:
+xor edx,edx
+div ecx               ; Produce current digit, EDX:EAX / ECX
+and al,0Fh
+test bh,bh
+js .firstZero
+cmp ecx,1
+je .firstZero
+cmp al,0              ; Not actual left zero ?
+jz .skipZero
+.firstZero:
+mov bh,80h            ; Flag = 1
+or al,30h
+stosb                 ; Store char
+.skipZero:
+push rdx              ; Push remainder
+xor edx,edx
+mov eax,ecx
+mov ecx,10
+div ecx
+mov ecx,eax          ; ECX = Quotient, used as divisor and cycle condition 
+pop rax              ; EAX = remainder
+inc bh
+test ecx,ecx
+jnz .mainCycle       ; Cycle if (unsigned) quotient still > 0 
+pop rdx rcx rbx rax
+ret
+;---------- Print double precision value --------------------------------------;
+; x87 FPU used, required x87 presence validation by CPUID before call this.    ;
+;                                                                              ;
+; INPUT:   RAX = Double precision number                                       ;
+;          BL  = Number of digits in the INTEGER part,                         ;
+;                used for add left non-signed zeroes.                          ;
+;                BL=0 means not print left unsigned zeroes.                    ;
+;          BH  = Number of digits in the FLOAT part,                           ;
+;                used as precision control.                                    ;
+;          RDI = Destination text buffer pointer                               ;
+;                                                                              ;
+; OUTPUT:  RDI = Modified by text string write                                 ;
+;------------------------------------------------------------------------------;
+DoublePrint:
+push rax rbx rcx rdx r8 r9 r10 r11
+cld
+mov rdx,07FFFFFFFFFFFFFFFh
+and rdx,rax
+jz .fp64_Zero
+mov rcx,07FF8000000000000h
+cmp rdx,rcx
+je .fp64_QNAN
+mov rcx,07FF0000000000000h
+cmp rdx,rcx
+je .fp64_INF
+ja .fp64_NAN
+finit
+push rax
+push rax
+fstcw [rsp]
+pop rax
+or ax,0C00h
+push rax
+fldcw [rsp]
+pop rax
+fld qword [rsp]
+pop rax
+fld st0
+frndint
+fxch
+fsub st0,st1
+mov eax,1
+movzx ecx,bh
+jrcxz .orderDetected
+@@:
+imul rax,rax,10
+loop @b
+.orderDetected:
+push rax
+fimul dword [rsp]
+pop rax
+push rax rax
+fbstp [rsp]
+pop r8 r9
+push rax rax
+fbstp [rsp]
+pop r10 r11
+bt r11,15
+setc dl
+bt r9,15
+setc dh
+test dx,dx
+jz @f
+mov al,'-'
+stosb
+@@:
+mov dl,0
+mov ecx,18 
+.cycleInteger:
+mov al,r11l
+shr al,4
+cmp cl,1
+je .store
+cmp cl,bl
+jbe .store
+test dl,dl
+jnz .store
+test al,al
+jz .position 
+.store:
+mov dl,1
+or al,30h
+stosb
+.position:
+shld r11,r10,4
+shl r10,4
+loop .cycleInteger
+test bh,bh
+jz .exit
+mov al,'.'
+stosb
+std 
+movzx ecx,bh     
+lea rdi,[rdi + rcx]
+push rdi
+dec rdi
+.cycleFloat:
+mov al,r8l
+and al,0Fh
+or al,30h
+stosb
+shrd r8,r9,4
+shr r9,4
+loop .cycleFloat
+pop rdi
+cld
+jmp .exit
+.fp64_Zero:
+mov eax,'0.0 '
+jmp .fp64special
+.fp64_INF:
+mov eax,'INF '
+jmp .fp64special
+.fp64_NAN:
+mov eax,'NAN '
+jmp .fp64special
+.fp64_QNAN:
+mov eax,'QNAN'
+.fp64special:
+stosd
+jmp .exit
+.error:
+mov al,'?'
+stosb
+.exit:
+finit
+pop r11 r10 r9 r8 rdx rcx rbx rax
+ret
 ;---------- Execute binder in the binders pool by index -----------------------;
 ; INPUT:   RBX = Current window handle for get dialogue items                  ;
 ;          AX  = Binder index in the binders pool                              ;
 ; OUTPUT:  None                                                                ;  
 ;------------------------------------------------------------------------------;
 Binder:
-push rbx rsi rdi rbp r14 r15 
+push rbx rsi rdi rbp r13 r14 r15 
 cld
-mov r15,[Registry]      ; R15 = Pointer to global registry
+mov r15,[Registry]      
+mov r14,r15                          ; R14 = Pointer to global registry
+add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData
 mov rsi,[r15 + APPDATA.lockedBinders]
 movzx rcx,ax
 jrcxz .found            ; Go if selected first binder, index = 0
@@ -640,7 +930,7 @@ call [ProcBinders + rcx * 8 - 8]  ; call by ECX = Binder index
 pop rsi
 cmp byte [rsi],0
 jne .found                   ; cycle for next instruction of binder
-pop r15 r14 rbp rdi rsi rbx
+pop r15 r14 r13 rbp rdi rsi rbx
 ret
 ;---------- Script handler: bind indexed string from pool to GUI object -------;  
 BindString:                  ; RDX = Parm#2 = Resource ID for GUI item
@@ -664,9 +954,17 @@ mov rsp,rbp
 ret
 ;---------- Script handler: bind string from temporary buffer to GUI object ---;
 BindInfo:
-mov rsi,[r15 + REGISTRY64.allocatorTempBuffer.objectStart]
+mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
 add rsi,rax
 jmp BindEntry
+;---------- Script handler: bind string referenced by pointer to GUI object ---;
+BindBig:
+mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
+add rsi,rax
+mov rsi,[rsi]
+test rsi,rsi
+jnz BindEntry
+ret
 ;---------- Script handler: enable or disable GUI object by binary flag -------;
 BindBool:
 mov rbp,rsp
@@ -675,7 +973,7 @@ sub rsp,32
 mov ecx,eax
 shr eax,3
 and ecx,0111b
-mov r8,[r15 + REGISTRY64.allocatorTempBuffer.objectStart]
+mov r8,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
 movzx eax,byte [r8 + rax]
 bt eax,ecx
 setc al
@@ -693,25 +991,25 @@ BindCombo:                        ; RDX = Parm#2 = Resource ID for GUI item
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-mov rsi,[r15 + REGISTRY64.allocatorTempBuffer.objectStart]
+mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
 add rsi,rax                       ; RSI = Pointer to combo description list
 mov rcx,rbx                       ; RCX = Parm#1 = Parent window handle  
 call [GetDlgItem]                 ; Return handle of GUI item
 test rax,rax                      ; RAX = Handle of combo box
 jz .exit                          ; Go skip if error, item not found
 xchg rdi,rax                      ; RDI = Handle of combo box
-mov r14d,0FFFF0000h               ; R14D = Store:Counter for selected item
+mov r13d,0FFFF0000h               ; R13D = Store:Counter for selected item
 .scan:
 lodsb                             ; AL = Tag from combo description list 
 movzx rax,al
 call [ProcCombo + rax * 8]        ; Call handler = F(tag)
-inc r14d
+inc r13d
 jnc .scan                         ; Continue if end tag yet not found
-shr r14d,16
-cmp r14w,0FFFFh
+shr r13d,16
+cmp r13w,0FFFFh
 je .exit
 xor r9d,r9d                   ; R9  = Parm#4 = lParam = Not used 
-mov r8d,r14d                  ; R8 =  Parm#3 = wParam = Selected item, 0-based 
+mov r8d,r13d                  ; R8 =  Parm#3 = wParam = Selected item, 0-based 
 mov edx,CB_SETCURSEL          ; RDX = Parm#2 = Msg
 mov rcx,rdi                   ; RCX = Parm#1 = hWnd 
 call [SendMessage]            ; Set string for GUI item
@@ -726,7 +1024,7 @@ stc
 ret
 BindComboCurrent:                 ; Add item to list as current selected
 call HelperBindCombo
-shl r14d,16
+shl r13d,16
 clc
 ret
 BindComboAdd:                     ; Add item to list
@@ -759,6 +1057,13 @@ mov rsp,rbp
 pop rbp rsi
 ret
 
+;---------- Include subroutines from modules ----------------------------------;
+include 'ncrb64\system_info\connect_code.inc'
+include 'ncrb64\threads_manager\connect_code.inc'
+include 'ncrb64\targets_bandwidth\connect_code.inc'
+include 'ncrb64\targets_latency\connect_code.inc'
+include 'ncrb64\targets_math\connect_code.inc'
+
 ;------------------------------------------------------------------------------;
 ;                              Data section.                                   ;        
 ;------------------------------------------------------------------------------;
@@ -784,6 +1089,7 @@ ProcDialogs   DQ  DialogProcSysinfo
 ;---------- Pointers to procedures of GUI bind scripts interpreter ------------;
 ProcBinders   DQ  BindString
               DQ  BindInfo
+              DQ  BindBig
               DQ  BindBool
               DQ  BindCombo
 ProcCombo     DQ  BindComboStopOn     ; End of list, combo box enabled
@@ -791,6 +1097,15 @@ ProcCombo     DQ  BindComboStopOn     ; End of list, combo box enabled
               DQ  BindComboCurrent    ; Add item to list as current selected
               DQ  BindComboAdd        ; Add item to list
               DQ  BindComboInactive   ; Add item to list as inactive (gray)
+;---------- List for load raw resources ---------------------------------------;
+RawList       DW  IDS_STRINGS_POOL
+              DW  IDS_BINDERS_POOL
+              DW  IDS_CPU_COMMON_POOL
+              DW  IDS_CPU_AVX512_POOL
+              DW  IDS_OS_CONTEXT_POOL
+              DW  IDS_CPU_METHOD_POOL
+              DW  IDS_ACPI_DATA_POOL
+              DW  0
 ;---------- Libraries for dynamical import ------------------------------------;
 NameAdvapi32  DB  'ADVAPI32.DLL' , 0
 NameResDll    DB  'DATA.DLL'     , 0
@@ -806,10 +1121,21 @@ MsgErrors     DB  'Memory allocation error.'                 , 0
               DB  'Load resource library failed.'            , 0
               DB  'Handle of this module is NULL.'           , 0
               DB  'Load application icon failed.'            , 0
-              DB  'Resource DLL strings pool access failed.' , 0
-              DB  'Resource DLL icons pool access failed.'   , 0
-              DB  'Resource DLL control pool access failed.' , 0
+              DB  'Load icon data from resource DLL failed.' , 0
+              DB  'Load raw data from resource DLL failed.'  , 0
               DB  'Create dialogue window failed.'           , 0
+;---------- Include constants and pre-defined variables from modules ----------;
+include 'ncrb64\system_info\connect_const.inc'
+include 'ncrb64\threads_manager\connect_const.inc'
+include 'ncrb64\targets_bandwidth\connect_const.inc'
+include 'ncrb64\targets_latency\connect_const.inc'
+include 'ncrb64\targets_math\connect_const.inc'
+;---------- Include non pre-defined variables from modules --------------------;
+include 'ncrb64\system_info\connect_var.inc'
+include 'ncrb64\threads_manager\connect_var.inc'
+include 'ncrb64\targets_bandwidth\connect_var.inc'
+include 'ncrb64\targets_latency\connect_var.inc'
+include 'ncrb64\targets_math\connect_var.inc'
 
 ;------------------------------------------------------------------------------;
 ;                              Import section.                                 ;        
