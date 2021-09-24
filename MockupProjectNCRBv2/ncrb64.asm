@@ -51,7 +51,8 @@ MSG_HANDLE_NULL         = 3        ; it must be valid before DLL loaded
 MSG_ICON_FAILED         = 4 
 MSG_ICONS_POOL_FAILED   = 5
 MSG_RAW_RESOURCE_FAILED = 6  
-MSG_DIALOGUE_FAILED     = 7
+MSG_CREATE_FONT_FAILED  = 7
+MSG_DIALOGUE_FAILED     = 8
 
 ;------------------------------------------------------------------------------;
 ;                                Code section.                                 ;        
@@ -171,10 +172,48 @@ jz .rawResourceFailed              ; Go if handle = NULL, means error
 stosq                              ; Store pointer to strings pool
 jmp .loadRaw
 .endRaw:
-
-
+;---------- Create fonts ------------------------------------------------------;
+mov rsi,[r15 + APPDATA.lockedFontList]
+lea rdi,[r15 + APPDATA.hFont1]
+.createFonts:
+xor eax,eax
+movzx ecx,word [rsi + 00]
+jrcxz .doneFonts
+lea rdx,word [rsi + 16]
+push rdx
+movzx edx,word [rsi + 14]
+push rdx
+movzx edx,word [rsi + 12]
+push rdx
+movzx edx,word [rsi + 10]
+push rdx
+movzx edx,word [rsi + 08]
+push rdx
+movzx edx,word [rsi + 06]
+push rdx
+push rax
+push rax
+push rax
+movzx edx,word [rsi + 04]
+push rdx
+xor r9d,r9d
+xor r8d,r8d
+xor edx,edx
+sub rsp,32
+call [CreateFont]
+add rsp,32+80
+test rax,rax
+jz .createFontFailed
+stosq
+add rsi,16
+@@:
+lodsb
+cmp al,0
+jne @b
+jmp .createFonts
+.doneFonts:
 ;---------- Load configuration file ncrb.inf ----------------------------------; 
-
+; TODO.
 
 
 ;---------- Get system information, user mode routines ------------------------;
@@ -183,11 +222,11 @@ call SysinfoUserMode
 
 
 ;---------- Load kernel mode driver kmd64.sys ---------------------------------;
-
+; TODO.
 
 
 ;---------- Get system information, kernel mode routines ----------------------;
-
+; TODO.
 
 
 ;---------- Create and show main dialogue window ------------------------------; 
@@ -211,20 +250,45 @@ test r15,r15
 jz .exit
 mov r14,r15
 add r15,REGISTRY64.appData
+;---------- Delete created fonts ----------------------------------------------;
+mov rsi,[r15 + APPDATA.lockedFontList]
+lea rdi,[r15 + APPDATA.hFont1]
+.deleteFonts:
+lodsw
+test ax,ax
+jz .doneDeleteFonts
+mov rcx,[rdi]
+add rdi,8
+jrcxz .skipDelete
+call [DeleteObject]
+.skipDelete:
+add rsi,14
+@@:
+lodsb
+cmp al,0
+jnz @b 
+jmp .deleteFonts
+.doneDeleteFonts:
+;---------- Unload resource library -------------------------------------------; 
 mov rcx,[r15 + APPDATA.hAdvapi32]  ; RCX = Library ADVAPI32.DLL handle
 jrcxz .skipUnload                  ; Go skip unload if handle = null
 call [FreeLibrary]                 ; Unload ADVAPI32.DLL
 .skipUnload:
+;---------- Release memory ----------------------------------------------------; 
 mov r8d,MEM_RELEASE                ; R8  = Parm#3 = Memory free operation type
 xor edx,edx                        ; RDX = Parm#2 = Size, 0 = by allocated
 mov rcx,r14                        ; RCX = Parm#1 = Memory block base address  
 call [VirtualFree]                 ; Release memory, allocated for registry
+;---------- Exit --------------------------------------------------------------;
 .exit:
 mov ecx,r13d                       ; RCX = Parm#1 = exit code           
 call [ExitProcess]
 ;---------- This entry points used if application start failed ----------------; 
 .dialogueFailed:
 mov al,MSG_DIALOGUE_FAILED     ; AL = String pool index for error name
+jmp .errorProgram
+.createFontFailed:
+mov al,MSG_CREATE_FONT_FAILED
 jmp .errorProgram
 .rawResourceFailed:
 mov al,MSG_RAW_RESOURCE_FAILED
@@ -895,6 +959,78 @@ stosb
 finit
 pop r11 r10 r9 r8 rdx rcx rbx rax
 ret
+;---------- Print memory block size as Integer.Float --------------------------;
+; INPUT:   RAX = Number value, units = Bytes                                   ;
+;          BL  = Force units (override as smallest only)                       ;
+;                FF = No force units, auto select                              ;
+;                0 = Bytes, 1 = KB, 2 = MB, 3 = GB, 4 = TB                     ;
+;          RDI = Destination Pointer (flat)                                    ;
+; OUTPUT:  RDI = New Destination Pointer (flat)                                ;
+;                modified because string write                                 ;
+;------------------------------------------------------------------------------;
+SizePrint64:
+push rax rbx rcx rdx rsi
+cld
+cmp bl,0FFh
+je .autoUnits
+mov esi,1
+movzx ecx,bl
+jrcxz .unitsAdjusted
+.unitsCycle:
+shl rsi,10
+loop .unitsCycle
+.unitsAdjusted:
+mov cl,bl
+xor edx,edx
+div rsi
+mov bl,0
+call DecimalPrint32
+imul eax,edx,10
+div rsi
+cmp cl,0
+je .afterNumber
+push rax
+mov al,'.'
+stosb
+pop rax
+jmp .decimalMode
+.autoUnits:
+xor ecx,ecx
+test rax,rax
+jz .decimalMode
+.unitsAutoCycle:
+mov rbx,rax
+xor edx,edx
+mov esi,1024                           
+div rsi
+mov esi,0FFFFFFFFh
+cmp rbx,rsi
+ja .above32bit
+test rdx,rdx
+jnz .modNonZero
+.above32bit:
+inc ecx
+jmp .unitsAutoCycle
+.modNonZero:
+cmp ecx,4
+ja .hexMode
+mov eax,ebx
+.decimalMode:
+mov bl,0
+call DecimalPrint32
+.afterNumber:
+mov al,' '
+stosb
+lea eax,[ecx + STR_UNITS_BYTES]
+call PoolStringWrite  
+jmp .exit
+.hexMode:
+call HexPrint64
+mov al,'h'
+stosb 
+.exit:
+pop rsi rdx rcx rbx rax
+ret
 ;---------- Execute binder in the binders pool by index -----------------------;
 ; INPUT:   RBX = Current window handle for get dialogue items                  ;
 ;          AX  = Binder index in the binders pool                              ;
@@ -1034,6 +1170,24 @@ ret
 BindComboInactive:                ; Add item to list as inactive (gray)
 clc
 ret
+;---------- Script handler: bind font from registry to GUI object -------------;
+BindFont:
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+lea rsi,[r15 + APPDATA.hFont1]
+mov rsi,[rsi + rax * 8]
+mov rcx,rbx                  ; RCX = Parm#1 = Parent window handle  
+call [GetDlgItem]            ; Return handle of GUI item
+test rax,rax
+jz BindExit                  ; Go skip if error, item not found
+mov r9d,1                    ; R9  = Parm#4 = lParam = redraw flag
+mov r8,rsi                   ; R8  = Parm#3 = wParam = handle
+mov edx,WM_SETFONT           ; RDX = Parm#2 = Msg
+xchg rcx,rax                 ; RCX = Parm#1 = hWnd
+call [SendMessage]
+jmp BindExit
+
 ;---------- Helper for add string to combo box list ---------------------------;
 ; INPUT:   RSI = Pointer to binder script                                      ;
 ;          RDI = Parent window handle                                          ;
@@ -1092,6 +1246,7 @@ ProcBinders   DQ  BindString
               DQ  BindBig
               DQ  BindBool
               DQ  BindCombo
+              DQ  BindFont
 ProcCombo     DQ  BindComboStopOn     ; End of list, combo box enabled
               DQ  BindComboStopOff    ; End of list, combo box disabled (gray) 
               DQ  BindComboCurrent    ; Add item to list as current selected
@@ -1105,9 +1260,12 @@ RawList       DW  IDS_STRINGS_POOL
               DW  IDS_OS_CONTEXT_POOL
               DW  IDS_CPU_METHOD_POOL
               DW  IDS_ACPI_DATA_POOL
+              DW  IDS_IMPORT_POOL
+              DW  IDS_FONTS_POOL
               DW  0
 ;---------- Libraries for dynamical import ------------------------------------;
-NameAdvapi32  DB  'ADVAPI32.DLL' , 0
+NameKernel32  DB  'KERNEL32.DLL' , 0      ; Must be sequental list of WinAPI
+NameAdvapi32  DB  'ADVAPI32.DLL' , 0 , 0  ; Two zeroes means end of list
 NameResDll    DB  'DATA.DLL'     , 0
 ;---------- Text strings about application ------------------------------------;
 ProgName      DB  'NUMA CPU&RAM Benchmarks for Win64',0
@@ -1123,6 +1281,7 @@ MsgErrors     DB  'Memory allocation error.'                 , 0
               DB  'Load application icon failed.'            , 0
               DB  'Load icon data from resource DLL failed.' , 0
               DB  'Load raw data from resource DLL failed.'  , 0
+              DB  'Create font failed.'                      , 0
               DB  'Create dialogue window failed.'           , 0
 ;---------- Include constants and pre-defined variables from modules ----------;
 include 'ncrb64\system_info\connect_const.inc'
@@ -1142,12 +1301,14 @@ include 'ncrb64\targets_math\connect_var.inc'
 ;------------------------------------------------------------------------------;
 
 section '.idata' import data readable writeable
-library kernel32 , 'kernel32.dll', \
-        user32   , 'user32.dll'  , \
-        comctl32 , 'comctl32.dll'
+library kernel32 , 'kernel32.dll' , \
+        user32   , 'user32.dll'   , \
+        comctl32 , 'comctl32.dll' , \
+        gdi32    , 'gdi32.dll' 
 include 'api\kernel32.inc'
 include 'api\user32.inc'
 include 'api\comctl32.inc'
+include 'api\gdi32.inc'
 
 ;------------------------------------------------------------------------------;
 ;                            Resources section.                                ;        

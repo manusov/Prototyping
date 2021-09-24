@@ -3,11 +3,302 @@
 
 SysinfoUserMode:
 push rbx rsi rdi rbp r12 r13 r14 r15
+mov rbp,rsp                  ; RBP used for RSP restore before return 
+and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment by Microsoft x64 calling convention
+sub rsp,32                   ; Parameter shadow by Microsoft x64 calling convention 
 cld
-mov r15,[Registry]                               ; R15 = Registry base address
+mov r15,[Registry]           ; R15 = Registry base address
+;---------- Initializing dynamical import WinAPI list -------------------------; 
+lea rsi,[NameKernel32]
+mov rbx,[r15 + REGISTRY64.appData.lockedImportList]
+lea rdi,[r15 + REGISTRY64.dynaImport]
+.scanLibs:
+cmp byte [rsi],0
+je .doneLibs
+mov rcx,rsi                 ; RCX = Parm#1 = Pointer to module name
+call [GetModuleHandle]      ; RAX = Return module handle
+xchg r12,rax                ; R12 = DLL handle, XCHG is compact
+.scanFnc:
+cmp byte [rbx],0
+je .doneFnc
+mov rcx,r12                 ; RCX = Parm#1 = Module handle
+mov rdx,rbx                 ; RDX = Parm#2 = Pointer to function name
+call [GetProcAddress]       ; RAX = Return function address
+stosq                       ; Store function address to import list
+.skipName:
+inc rbx
+cmp byte [rbx],0
+jne .skipName
+inc rbx
+jmp .scanFnc                ; Internal cycle for functions list per one library
+.doneFnc:
+inc rbx
+.skipLib:
+lodsb
+cmp al,0
+jne .skipLib
+jmp .scanLibs               ; External cycle for libraries list
+.doneLibs:
+;---------- Get system and memory information parameters ----------------------;
+lea rsi,[r15 + REGISTRY64.dynaImport]
+lea rdi,[r15 + REGISTRY64.osData]
+mov rax,[rsi + DYNAIMPORT._GlobalMemoryStatusEx]
+test rax,rax
+jz .error
+lea rcx,[rdi + OSDATA.memoryStatusEx]
+mov [rcx + MEMORYSTATUSEX_DEF.dwLength],sizeof.MEMORYSTATUSEX_DEF
+call rax 
+test rax,rax
+jz .error
+lea rcx,[rdi + OSDATA.systemInfo]
+call [GetSystemInfo]
+mov rax,[rsi + DYNAIMPORT._GetActiveProcessorGroupCount]
+test rax,rax
+jz @f
+call rax
+movzx eax,ax
+@@:
+mov [rdi + OSDATA.activeProcessorGroupCount],eax
+mov rax,[rsi + DYNAIMPORT._GetActiveProcessorCount]
+test rax,rax
+jz @f
+mov ecx,ALL_PROCESSOR_GROUPS
+call rax
+@@:
+mov [rdi + OSDATA.activeProcessorCount],eax
+mov rax,[rsi + DYNAIMPORT._GetNumaHighestNodeNumber]
+test rax,rax
+jz @f
+lea rbx,[rdi + OSDATA.numaNodeCount]
+mov rcx,rbx
+call rax
+test rax,rax
+jz @f
+mov eax,[rbx]
+inc eax
+@@:               ; If no data, EAX=0 at this point, means no nodes found
+mov [rbx],eax
+;---------- Get large page size -----------------------------------------------;
+mov rax,[rsi + DYNAIMPORT._GetLargePageMinimum]
+test rax,rax
+jz @f
+call rax
+@@:
+mov [rdi + OSDATA.largePageSize],rax
+;---------- Get large page information: try allocation ------------------------;
+push rbp
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,128 + 32
+xor eax,eax
+mov [rdi + OSDATA.largePageEnable],eax
+cmp [rsi + DYNAIMPORT._OpenProcessToken],rax
+je .exit
+cmp [rsi + DYNAIMPORT._AdjustTokenPrivileges],rax 
+je .exit
+cmp [rdi + OSDATA.largePageSize],rax 
+je .exit
+call [GetCurrentProcess]
+test rax,rax
+jz .skip
+mov rcx,rax
+mov edx,MAXIMUM_ALLOWED 
+lea r8,[rsp + 120 - 32]
+call [rsi + DYNAIMPORT._OpenProcessToken] 
+test rax,rax 
+jz .skip   
+mov rcx,[rsp + 120 - 32]  
+xor edx,edx
+lea r8,[rsp + 48]
+xor r9d,r9d
+mov [rsp + 32],r9
+mov [rsp + 40],r9
+mov [tp.PrivilegeCount],1 
+mov [tp.Privileges.Luid.usedpart],SE_LOCK_MEMORY_PRIVILEGE 
+and [tp.Privileges.Luid.ignorehigh32bitpart],0  
+mov [tp.Privileges.Attributes],SE_PRIVILEGE_ENABLED
+call [rsi + DYNAIMPORT._AdjustTokenPrivileges] 
+mov rbx,rax 
+mov rcx,[rsp + 120 - 32] 
+call [CloseHandle] 
+.skip:
+test rax,rax
+jz .exit
+xor eax,eax
+test rbx,rbx
+jz .exit 
+call [GetCurrentProcess]
+test rax,rax
+jz .exit
+mov rbx,rax
+mov rcx,rax 
+xor edx,edx
+mov r8,[rdi + OSDATA.largePageSize]
+mov r9d,MEM_COMMIT + MEM_LARGE_PAGES
+push 0
+push PAGE_READWRITE
+sub rsp,32
+call [VirtualAllocEx]
+add rsp,32 + 16
+test rax,rax
+jz @f
+mov rcx,rbx
+mov rdx,rax
+xor r8d,r8d
+mov r9d,MEM_RELEASE
+call [VirtualFreeEx]
+@@:
+test rax,rax
+setnz al
+movzx eax,al
+mov [rdi + OSDATA.largePageEnable],eax 
+.exit:
+mov rsp,rbp
+pop rbp
+;---------- Build text block for operating system information screen ----------; 
+lea r13,[r15 + REGISTRY64.unformatted]
+mov r12,rdi
+push rbp
+mov rbp,r13
+mov [r15 + REGISTRY64.textOs.objectStart],rbp
+mov ax,STR_OS_MEMORY_LOAD                        ; Memory load percentage
+call HelperOsInfoString
+mov eax,[r12 + OSDATA.memoryStatusEx.dwMemoryLoad]
+push rax
+mov bl,0
+call DecimalPrint32
+mov ax,' %'
+stosw
+pop rax
+mov rdi,r8
+call HexPrint32 
+mov ax,STR_OS_TOTAL_PHYSICAL                     ; Total physical memory
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullTotalPhys
+call HelperOsInfoSize
+mov ax,STR_OS_AVAIL_PHYSICAL                     ; Available physical memory
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullAvailPhys
+call HelperOsInfoSize
+mov ax,STR_OS_TOTAL_PAGE_FILE                    ; Total page file 
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullTotalPageFile
+call HelperOsInfoSize
+mov ax,STR_OS_AVAIL_PAGE_FILE                    ; Available page file
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullAvailPageFile
+call HelperOsInfoSize
+mov ax,STR_OS_TOTAL_VIRTUAL                      ; Total virtual user space
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullTotalVirtual
+call HelperOsInfoSize
+mov ax,STR_OS_AVAIL_VIRTUAL                      ; Available virtual user space
+call HelperOsInfoString
+mov al,MEMORYSTATUSEX_DEF.ullAvailVirtual
+call HelperOsInfoSize
+mov ax,STR_OS_EXT_VIRTUAL                        ; Extended virtual
+call HelperOsInfoString
+mov al,'-'
+stosb
+mov al,MEMORYSTATUSEX_DEF.ullAvailExtendedVirtual
+call HelperOsInfoHex
+mov rdi,rbp
+mov ax,0A0Dh                                     ; Interval
+stosw
+mov rbp,rdi 
+mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMinimumApplicationAddress
+call HelperOsInfoSizeAuto
+mov ax,STR_OS_MAX_ADDRESS                        ; Application maximum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMaximumApplicationAddress
+call HelperOsInfoSizeAuto
+mov ax,STR_OS_PROC_MASK                          ; Active processor mask 
+call HelperOsInfoString
+mov al,'-'
+stosb
+mov rax,[r15 + REGISTRY64.osData.systemInfo.dwActiveProcessorMask]
+mov rdi,r8
+call HexPrint64 
+mov ax,STR_OS_PROC_TYPE                          ; Processor type
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwProcessorType
+call HelperOsInfoNumber32
+mov ax,STR_OS_ALLOC_GRAN                         ; Allocation granularity
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwAllocationGranularity
+call HelperOsInfoNumber32
+mov ax,STR_OS_PROC_LEVEL                         ; Processor level
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorLevel
+call HelperOsInfoNumber16
+mov ax,STR_OS_PROC_REVISION                      ; Processor revision
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorRevision
+call HelperOsInfoNumber16
+mov rdi,rbp
+mov ax,0A0Dh                                     ; Interval
+stosw
+mov rbp,rdi 
+mov ax,STR_OS_PROC_CURRENT                       ; Processors at currebt group
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwNumberOfProcessors
+call HelperOsInfoNumber32
+mov ecx,[r15 + REGISTRY64.osData.activeProcessorCount]      ; Processors total
+jecxz @f
+push rcx
+mov ax,STR_OS_PROC_TOTAL
+call HelperOsInfoString
+pop rax
+call HelperOsInfoValue32
+@@:
+mov ecx,[r15 + REGISTRY64.osData.activeProcessorGroupCount] ; Processors groups
+jecxz @f
+push rcx
+mov ax,STR_OS_PROC_GROUPS
+call HelperOsInfoString
+pop rax
+call HelperOsInfoValue32
+@@:
+mov ecx,[r15 + REGISTRY64.osData.numaNodeCount]  ; NUMA domains
+jecxz @f
+push rcx
+mov ax,STR_OS_NUMA_DOMAINS
+call HelperOsInfoString
+pop rax
+call HelperOsInfoValue32
+@@:
+mov ax,STR_OS_NORMAL_PAGE                        ; Normal page size
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwPageSize
+call HelperOsInfoSizeAuto32
+mov rcx,[r15 + REGISTRY64.osData.largePageSize]  ; Large page size and status
+jrcxz .skipLargePages
+push rcx
+mov ax,STR_OS_LARGE_PAGE
+call HelperOsInfoString
+pop rax
+push rax
+mov bl,0FFh
+call SizePrint64
+cmp [r15 + REGISTRY64.osData.largePageEnable],0
+mov ax,STR_OS_DISABLED
+je @f
+mov ax,STR_OS_ENABLED
+@@:
+call PoolStringWrite
+pop rax
+mov rdi,r8
+call HexPrint64
+.skipLargePages:
+mov al,0
+stosb
+mov [r15 + REGISTRY64.textOs.objectStop],rbp
+pop rbp
+;---------- Check CPUID instruction support, get 12-chars vendor string -------;
 lea rdi,[r15 + REGISTRY64.cpuData.vendorString]  ; RDI = Destination pointer
 mov r14,rdi                                      ; R14 = Destination base
-;---------- Check CPUID instruction support, get 12-chars vendor string -------;
 call HelperCheckCpuid
 jc .error
 cmp eax,1
@@ -53,6 +344,7 @@ stosq          ; *** DEBUG ***
 ;---------- Measure TSC frequency ---------------------------------------------;
 call HelperMeasureTsc
 ; TODO. Check for errors, CF=1
+
 ;---------- Build bind buffer -------------------------------------------------;
 mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
 ;---------- CPU vendor string, 12 chars ---------------------------------------; 
@@ -98,10 +390,16 @@ mov rax,[r14 + CPUDATA.extractedContextBitmap]
 stosq
 mov rax,[r14 + CPUDATA.extractedMethodsBitmap]
 stosq
+;---------- Text blocks for viewers -------------------------------------------;
+mov rax,[r15 + REGISTRY64.textOs.objectStart]
+stosq       ; Operating system information
+
+
 ;---------- Exit points -------------------------------------------------------;
 ; TODO. Error Handling.
 .error:
 ; TODO. Error Handling.
+mov rsp,rbp
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
 
@@ -448,4 +746,133 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
-
+;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
+; INPUT:   RBP = Pointer to destination buffer                                 ;
+;          AX  = Index for parameter name for write to string                  ; 
+; OUTPUT:  RDI = Pointer to parameter value position in the string             ;
+;          R8  = Pointer to parameter hex value position in the string         ;
+;          RBP = Updated pointer to destination buffer                         ;   
+;------------------------------------------------------------------------------;
+HelperOsInfoString:
+push rsi
+mov rdi,rbp
+push rax
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop rax
+mov rbp,rdi
+mov rsi,[Registry]
+mov rsi,[rsi + REGISTRY64.appData.lockedStrings]
+call IndexString
+lea rdi,[rbp - 82 + 01]
+call StringWrite
+lea rdi,[rbp - 82 + 33]
+lea r8,[rbp - 82 + 62]
+pop rsi
+ret
+;---------- Write memory block size to pre-blanked string, include hex --------;
+;           This variant for units fixed = megabytes.                          ;
+;           This variant for memory status structure.                          ;
+;           This variant for 64-bit value.                                     ;
+; INPUT:   RDI = Pointer to destination buffer, value position                 ;
+;          R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoSize:
+mov bl,2
+SizeHelperEntry:
+movzx eax,al
+mov rcx,[Registry]
+cmp bl,0FFh
+je .sysinfo
+lea rcx,[rcx + REGISTRY64.osData.memoryStatusEx]
+jmp .done
+.sysinfo:
+lea rcx,[rcx + REGISTRY64.osData.systemInfo]
+.done:
+mov rax,[rcx + rax]
+cmp bl,0
+je .skip
+call SizePrint64
+.skip:
+mov rdi,r8
+jmp HexPrint64
+;---------- Write memory block size to pre-blanked string, include hex --------;
+;           This variant for units auto selected                               ;
+;           This variant for system information structure.                     ;
+;           This variant for 64-bit value.                                     ;
+; INPUT:   RDI = Pointer to destination buffer, value position                 ;
+;          R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the SYSTEM_INFO structure                           ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoSizeAuto:
+mov bl,0FFh
+jmp SizeHelperEntry
+;---------- Write memory block size to pre-blanked, hex only ------------------;
+;           This variant for memory status structure.                          ;
+;           This variant for 64-bit value.                                     ;
+; INPUT:   R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoHex:
+mov bl,0
+jmp SizeHelperEntry 
+;---------- Write memory block size to pre-blanked string, include hex --------;
+;           This variant for units fixed = megabytes.                          ;
+;           This variant for system information structure.                     ;
+;           This variant for 32-bit value.                                     ;
+; INPUT:   RDI = Pointer to destination buffer, value position                 ;
+;          R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the SYSTEM_INFO structure                           ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoSizeAuto32:
+mov bl,0FFh
+movzx eax,al
+mov rcx,[Registry]
+mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+push rax
+call SizePrint64
+pop rax
+mov rdi,r8
+jmp HexPrint32
+;---------- Write 32-bit number to pre-blanked string, decimal and hex --------;
+; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
+;          R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the SYSTEM_INFO structure                           ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoNumber32:
+movzx eax,al
+mov rcx,[Registry]
+mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+HelperOsInfoValue32:     ; Entry point for EAX = value, RDI, R8 same usage
+push rax
+mov bl,0
+call DecimalPrint32
+pop rax
+mov rdi,r8
+jmp HexPrint32
+;---------- Write 16-bit number to pre-blanked string, decimal and hex --------;
+; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
+;          R8  = Pointer to destination buffer, hex value position             ; 
+;          AL  = Offset in the SYSTEM_INFO structure                           ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperOsInfoNumber16:
+movzx eax,al
+mov rcx,[Registry]
+movzx eax,word [rcx + REGISTRY64.osData.systemInfo + rax]
+push rax
+mov bl,0
+call DecimalPrint32
+pop rax
+mov rdi,r8
+jmp HexPrint16

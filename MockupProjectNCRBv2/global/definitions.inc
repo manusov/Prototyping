@@ -37,6 +37,8 @@ IDS_CPU_AVX512_POOL     = 123
 IDS_OS_CONTEXT_POOL     = 124
 IDS_CPU_METHOD_POOL     = 125
 IDS_ACPI_DATA_POOL      = 126
+IDS_IMPORT_POOL         = 127
+IDS_FONTS_POOL          = 128
 ;---------- Identifiers for icons ---------------------------------------------;
 IDI_SYSINFO             = 130
 IDI_MEMORY              = 131
@@ -539,6 +541,41 @@ STR_TRUE_CLOCK         = STR_UNITS_BYTES + 19
 STR_TFMS               = STR_UNITS_BYTES + 20
 STR_TSC                = STR_UNITS_BYTES + 21
 STR_H                  = STR_UNITS_BYTES + 22
+;---------- Up strings for GUI tables -----------------------------------------;
+STR_PARM_VALUE_HEX     = STR_H + 1
+STR_PARM_VALUE         = STR_PARM_VALUE_HEX + 1
+STR_TOPOLOGY           = STR_PARM_VALUE_HEX + 2
+STR_TOPOLOGY_SUMMARY   = STR_PARM_VALUE_HEX + 3
+STR_NUMA               = STR_PARM_VALUE_HEX + 4 
+STR_GROUPS             = STR_PARM_VALUE_HEX + 5 
+STR_ACPI_LIST          = STR_PARM_VALUE_HEX + 6
+STR_ACPI_SUMMARY       = STR_PARM_VALUE_HEX + 7
+STR_AFF_CPUID          = STR_PARM_VALUE_HEX + 8 
+STR_KMD                = STR_PARM_VALUE_HEX + 9
+;---------- Strings for operating system information text ---------------------;
+STR_OS_MEMORY_LOAD     = STR_KMD + 1
+STR_OS_TOTAL_PHYSICAL  = STR_OS_MEMORY_LOAD + 1
+STR_OS_AVAIL_PHYSICAL  = STR_OS_MEMORY_LOAD + 2 
+STR_OS_TOTAL_PAGE_FILE = STR_OS_MEMORY_LOAD + 3
+STR_OS_AVAIL_PAGE_FILE = STR_OS_MEMORY_LOAD + 4
+STR_OS_TOTAL_VIRTUAL   = STR_OS_MEMORY_LOAD + 5
+STR_OS_AVAIL_VIRTUAL   = STR_OS_MEMORY_LOAD + 6
+STR_OS_EXT_VIRTUAL     = STR_OS_MEMORY_LOAD + 7
+STR_OS_MIN_ADDRESS     = STR_OS_MEMORY_LOAD + 8
+STR_OS_MAX_ADDRESS     = STR_OS_MEMORY_LOAD + 9
+STR_OS_PROC_MASK       = STR_OS_MEMORY_LOAD + 10
+STR_OS_PROC_TYPE       = STR_OS_MEMORY_LOAD + 11
+STR_OS_ALLOC_GRAN      = STR_OS_MEMORY_LOAD + 12
+STR_OS_PROC_LEVEL      = STR_OS_MEMORY_LOAD + 13
+STR_OS_PROC_REVISION   = STR_OS_MEMORY_LOAD + 14
+STR_OS_PROC_CURRENT    = STR_OS_MEMORY_LOAD + 15
+STR_OS_PROC_TOTAL      = STR_OS_MEMORY_LOAD + 16
+STR_OS_PROC_GROUPS     = STR_OS_MEMORY_LOAD + 17
+STR_OS_NUMA_DOMAINS    = STR_OS_MEMORY_LOAD + 18
+STR_OS_NORMAL_PAGE     = STR_OS_MEMORY_LOAD + 19
+STR_OS_LARGE_PAGE      = STR_OS_MEMORY_LOAD + 20
+STR_OS_DISABLED        = STR_OS_MEMORY_LOAD + 21
+STR_OS_ENABLED         = STR_OS_MEMORY_LOAD + 22
 
 ;---------- Binders numbers for GUI scripts -----------------------------------;
 BINDER_SYSINFO         = 0   
@@ -565,7 +602,8 @@ BUFFER_CPU_TSC         = BUFFER_CPU_NAME      + 8
 BUFFER_CPU_BITMAP      = BUFFER_CPU_TSC       + 32
 BUFFER_AVX512_BITMAP   = BUFFER_CPU_BITMAP    + 8
 BUFFER_OS_BITMAP       = BUFFER_AVX512_BITMAP + 8
-BUFFER_METHOD_BITMAP   = BUFFER_OS_BITMAP     + 8 
+BUFFER_METHOD_BITMAP   = BUFFER_OS_BITMAP     + 8
+BUFFER_VIEWER_OS       = BUFFER_METHOD_BITMAP + 8 
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
 macro BIND_STOP
@@ -585,6 +623,8 @@ COMBO_ADD      = 3
 COMBO_INACTIVE = 4
 MACRO BIND_COMBO srcid, dstid
 { DD 05h + (srcid) SHL 6 + (dstid) SHL 19 }
+MACRO BIND_FONT srcid, dstid
+{ DD 06h + (srcid) SHL 6 + (dstid) SHL 19 }
 
 ;---------- Macro definitions for CPU/OS features bitmaps builders scripts ----;
 R_EAX = 0
@@ -622,5 +662,8 @@ MACRO ENTRY_XCR0 bit
 MACRO PREFIX_XCR0 bit
 { DB  06h , bit }
 
-
+;---------- GUI definitions ---------------------------------------------------; 
+CLEARTYPE_QUALITY = 5
+ID_FONT_1         = 0
+ID_FONT_2         = 1
 

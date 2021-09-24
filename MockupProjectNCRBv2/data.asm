@@ -374,7 +374,9 @@ IDS_CPU_COMMON_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuCommonFeatures , \
 IDS_CPU_AVX512_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuAvx512Features , \
 IDS_OS_CONTEXT_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , osContextFeatures , \
 IDS_CPU_METHOD_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuMethodFeatures , \
-IDS_ACPI_DATA_POOL  , LANG_ENGLISH + SUBLANG_DEFAULT , acpiData
+IDS_ACPI_DATA_POOL  , LANG_ENGLISH + SUBLANG_DEFAULT , acpiData          , \
+IDS_IMPORT_POOL     , LANG_ENGLISH + SUBLANG_DEFAULT , importList        , \ 
+IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList 
 
 ;---------- Raw resource for strings pool -------------------------------------;
 resdata stringsPool
@@ -583,6 +585,41 @@ DB  'True clock'   , 0
 DB  'TFMS='        , 0
 DB  'TSC='         , 0
 DB  'h'            , 0
+;---------- Up strings for GUI tables -----------------------------------------; 
+DB  ' Parameter                     | Value                      | Hex'   , 0
+DB  ' Parameter                     | Value'                              , 0
+DB  ' Topology unit  | Logical CPU affinity | Comments'                   , 0
+DB  ' Cache          | Size                 | Count'                      , 0
+DB  ' NUMA domain  | Affinity (hex)           | Available memory at node' , 0
+DB  ' Group  | Processors count'                                          , 0
+DB  ' Sign | OEM ID | OEM Table ID | Creator ID | OEM Rev   | Creator Rev | Rev' , 0
+DB  ' Summary'                                                            , 0
+DB  ' Thread  | Function   | EAX      | EBX      | ECX      | EDX'        , 0
+DB  ' APIC ID  | TSC(MHz)   | APERF(MHz) | MPERF(MHz) | APIC(MHz)  | CR0      | CR4' , 0 
+;---------- Strings for operating system information text ---------------------;
+DB  'Memory load'                  , 0
+DB  'Total physical memory'        , 0
+DB  'Available physical memory'    , 0
+DB  'Total page file'              , 0
+DB  'Available page file'          , 0
+DB  'Total virtual user space'     , 0
+DB  'Available virtual user space' , 0
+DB  'Extended virtual'             , 0
+DB  'Application minimum address'  , 0
+DB  'Application maximum address'  , 0
+DB  'Active processor mask'        , 0
+DB  'Processor type'               , 0
+DB  'Allocation granularity'       , 0
+DB  'Processor level'              , 0
+DB  'Processor revision'           , 0
+DB  'Processors at current group'  , 0
+DB  'Processors total'             , 0
+DB  'Processor groups'             , 0
+DB  'NUMA domains'                 , 0
+DB  'Normal page size'             , 0
+DB  'Minimum large page size'      , 0
+DB  ' ( DISABLED )'                , 0
+DB  ' ( ENABLED )'                 , 0
 endres
 
 ;---------- Raw resource for binders pool -------------------------------------;
@@ -801,60 +838,77 @@ BIND_STOP
 
 ;---------- GUI binder script operating system for screen ---------------------;
 BIND_STRING  STR_FULL_OS          , IDC_OS
+BIND_FONT    ID_FONT_2            , IDE_OS_UP
+BIND_FONT    ID_FONT_2            , IDE_OS_TEXT
+BIND_STRING  STR_PARM_VALUE_HEX   , IDE_OS_UP
+BIND_BIG     BUFFER_VIEWER_OS     , IDE_OS_TEXT
 BIND_STRING  STR_REPORT           , IDB_OS_REPORT
 BIND_STRING  STR_EXIT             , IDB_OS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for native operating system screen --------------;
 BIND_STRING  STR_FULL_NATIVE_OS   , IDC_NATIVE_OS
+BIND_STRING  STR_PARM_VALUE_HEX   , IDE_NATIVE_OS_UP
 BIND_STRING  STR_REPORT           , IDB_NAT_OS_REPORT
 BIND_STRING  STR_EXIT             , IDB_NAT_OS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for processor information screen ----------------;
 BIND_STRING  STR_FULL_PROCESSOR   , IDC_PROCESSOR
+BIND_STRING  STR_PARM_VALUE       , IDE_PROC_UP
 BIND_STRING  STR_REPORT           , IDB_PROC_REPORT
 BIND_STRING  STR_EXIT             , IDB_PROC_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for topology screen -----------------------------;
 BIND_STRING  STR_FULL_TOPOLOGY    , IDC_TOPOLOGY
+BIND_STRING  STR_TOPOLOGY         , IDE_TOPOL_UP_1
+BIND_STRING  STR_TOPOLOGY_SUMMARY , IDE_TOPOL_UP_2
 BIND_STRING  STR_REPORT           , IDB_TOPOL_REPORT
 BIND_STRING  STR_EXIT             , IDB_TOPOL_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for extended topology screen --------------------;
-BIND_STRING  STR_FULL_TOPOLOGY_EX , IDC_TOPOLOGY_EX 
+BIND_STRING  STR_FULL_TOPOLOGY_EX , IDC_TOPOLOGY_EX
+BIND_STRING  STR_TOPOLOGY         , IDE_TOP_EX_UP_1
+BIND_STRING  STR_TOPOLOGY_SUMMARY , IDE_TOP_EX_UP_2
 BIND_STRING  STR_REPORT           , IDB_TOPOL_EX_REPORT
 BIND_STRING  STR_EXIT             , IDB_TOPOL_EX_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for NUMA nodes list screen ----------------------;
 BIND_STRING  STR_FULL_NUMA        , IDC_NUMA
+BIND_STRING  STR_NUMA             , IDE_NUMA_UP
 BIND_STRING  STR_REPORT           , IDB_NUMA_REPORT
 BIND_STRING  STR_EXIT             , IDB_NUMA_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for processor groups list screen ----------------;
 BIND_STRING  STR_FULL_P_GROUPS    , IDC_P_GROUPS
+BIND_STRING  STR_GROUPS           , IDE_P_GROUPS_UP
 BIND_STRING  STR_REPORT           , IDB_P_GROUPS_REPORT
 BIND_STRING  STR_EXIT             , IDB_P_GROUPS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for ACPI information screen ---------------------;
 BIND_STRING  STR_FULL_ACPI        , IDC_ACPI
+BIND_STRING  STR_ACPI_LIST        , IDE_ACPI_UP_1
+BIND_STRING  STR_ACPI_SUMMARY     , IDE_ACPI_UP_2
 BIND_STRING  STR_REPORT           , IDB_ACPI_REPORT
 BIND_STRING  STR_EXIT             , IDB_ACPI_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for affinized CPUID dump screen -----------------;
 BIND_STRING  STR_FULL_AFF_CPUID   , IDC_AFF_CPUID
+BIND_STRING  STR_AFF_CPUID        , IDE_A_CPUID_UP
 BIND_STRING  STR_REPORT           , IDB_A_CPUID_REPORT
 BIND_STRING  STR_EXIT             , IDB_A_CPUID_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for kernel mode driver operations screen --------;
 BIND_STRING  STR_FULL_KMD         , IDC_KMD
+BIND_STRING  STR_PARM_VALUE       , IDE_KMD_UP_1
+BIND_STRING  STR_KMD              , IDE_KMD_UP_2
 BIND_STRING  STR_REPORT           , IDB_KMD_REPORT
 BIND_STRING  STR_EXIT             , IDB_KMD_CANCEL
 BIND_STOP
@@ -918,7 +972,34 @@ endres
 
 ;---------- CPU instruction-based methods bitmap builder script ---------------;
 resdata cpuMethodFeatures
+; TODO.
 endres  
+
+;---------- Raw resource for dynamical imported functions list ----------------;
+resdata importList
+DB  'GlobalMemoryStatusEx'         , 0      ; This functions from KERNEL32.DLL          
+DB  'GetActiveProcessorGroupCount' , 0    
+DB  'GetActiveProcessorCount'      , 0              
+DB  'GetNumaHighestNodeNumber'     , 0            
+DB  'GetLargePageMinimum'          , 0                      
+DB  'EnumSystemFirmwareTables'     , 0      
+DB  'GetSystemFirmwareTable'       , 0 , 0  ; Two zeroes means end of sub-list        
+DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              
+DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list                  
+endres
+
+;---------- Raw resource for dynamical created fonts list ---------------------;
+resdata fontList
+; cHeight, cWidth, cWeight, iCharset, iOutPrecision,
+; iClipPrecision, iQuality, iPitchAndFamily  
+DW  17 , 10 , FW_DONTCARE , DEFAULT_CHARSET
+DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
+DB  'Verdana' , 0
+DW  16 , 40 , FW_DONTCARE , DEFAULT_CHARSET
+DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
+DB  'System monospace' , 0
+DW  0
+endres
 
 ;---------- ACPI tables data base ---------------------------------------------; 
 resdata acpiData
