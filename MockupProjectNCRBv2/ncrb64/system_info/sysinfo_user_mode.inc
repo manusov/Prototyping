@@ -1,27 +1,41 @@
-; UNDER CONSTRUCTION (x64).
-; Can destroy registers, volatile by Microsoft x64 calling convention.
+;==============================================================================;
+;                                                                              ;
+;        Scan system configuration and store results t system registry.        ;
+;             This procedure for user mode resources, x64 version.             ;
+;                                                                              ;
+; INPUT:   Application registry information,                                   ;
+;          unformatted part of registry and yet non initialized structures     ;
+;          must be pre-blanked (contain 0) before this procedure call.         ;
+;                                                                              ;
+; OUTPUT:  Application registry information                                    ; 
+;                                                                              ;
+; Can destroy registers, volatile by Microsoft x64 calling convention.         ;
+;==============================================================================;
 
 SysinfoUserMode:
 push rbx rsi rdi rbp r12 r13 r14 r15
-mov rbp,rsp                  ; RBP used for RSP restore before return 
+push 0                       ; qword at [r13] = temporary variable
+mov r13,rsp                  ; R13 used for RSP restore before return 
 and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment by Microsoft x64 calling convention
 sub rsp,32                   ; Parameter shadow by Microsoft x64 calling convention 
 cld
 mov r15,[Registry]           ; R15 = Registry base address
+
 ;---------- Initializing dynamical import WinAPI list -------------------------; 
-lea rsi,[NameKernel32]
-mov rbx,[r15 + REGISTRY64.appData.lockedImportList]
-lea rdi,[r15 + REGISTRY64.dynaImport]
+
+lea rsi,[NameKernel32]       ; RSI = Pointer to libraries names array
+mov rbx,[r15 + REGISTRY64.appData.lockedImportList] ; RBX = to functions names
+lea rdi,[r15 + REGISTRY64.dynaImport]               ; RDI = to fnc. addresses               
 .scanLibs:
 cmp byte [rsi],0
 je .doneLibs
 mov rcx,rsi                 ; RCX = Parm#1 = Pointer to module name
 call [GetModuleHandle]      ; RAX = Return module handle
-xchg r12,rax                ; R12 = DLL handle, XCHG is compact
+xchg r14,rax                ; R14 = DLL handle, XCHG is compact
 .scanFnc:
 cmp byte [rbx],0
 je .doneFnc
-mov rcx,r12                 ; RCX = Parm#1 = Module handle
+mov rcx,r14                 ; RCX = Parm#1 = Module handle
 mov rdx,rbx                 ; RDX = Parm#2 = Pointer to function name
 call [GetProcAddress]       ; RAX = Return function address
 stosq                       ; Store function address to import list
@@ -39,7 +53,9 @@ cmp al,0
 jne .skipLib
 jmp .scanLibs               ; External cycle for libraries list
 .doneLibs:
+
 ;---------- Get system and memory information parameters ----------------------;
+
 lea rsi,[r15 + REGISTRY64.dynaImport]
 lea rdi,[r15 + REGISTRY64.osData]
 mov rax,[rsi + DYNAIMPORT._GlobalMemoryStatusEx]
@@ -78,15 +94,18 @@ mov eax,[rbx]
 inc eax
 @@:               ; If no data, EAX=0 at this point, means no nodes found
 mov [rbx],eax
+
 ;---------- Get large page size -----------------------------------------------;
+
 mov rax,[rsi + DYNAIMPORT._GetLargePageMinimum]
 test rax,rax
 jz @f
 call rax
 @@:
 mov [rdi + OSDATA.largePageSize],rax
+
 ;---------- Get large page information: try allocation ------------------------;
-push rbp
+
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,128 + 32
@@ -154,16 +173,84 @@ movzx eax,al
 mov [rdi + OSDATA.largePageEnable],eax 
 .exit:
 mov rsp,rbp
-pop rbp
+
+;---------- Get native operating system information ---------------------------;
+
+mov rax,[rsi + DYNAIMPORT._GetNativeSystemInfo]
+test rax,rax
+jz @f
+lea rcx,[rdi + OSDATA.nativeSystemInfo]
+call rax
+@@:
+
+;---------- Get platform topology by WinAPI -----------------------------------;
+; Start operations with unformatted part of application registry,
+; RBP = Pointer for unformatted part addressing 
+
+lea rbp,[r15 + REGISTRY64.unformatted]
+call HelperAlignment
+mov rbx,[rsi + DYNAIMPORT._GetLogicalProcessorInformation]
+test rbx,rbx
+jz @f
+mov dword [r13],0            ; dword [r13]  = Buffer size variable, stack
+mov rdx,r13                  ; RDX = Parm#2 = Pointer to buffer size variable 
+mov rcx,rbp                  ; RCX = Parm#1 = Pointer to buffer 
+call rbx
+test rax,rax
+jnz .error                   ; Go if unexpected error: zero-sized buffer
+call [GetLastError]
+cmp rax,ERROR_BUFFER_LIMIT
+jne .error                   ; Go if other errors detected
+mov r14d,[r13]
+cmp r14d,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big 
+mov rdx,r13                  ; RDX = Parm#2 = Pointer to buffer size variable 
+mov rcx,rbp                  ; RCX = Parm#1 = Pointer to buffer 
+call rbx
+test rax,rax
+jz .error                    ; Go if unexpected error: zero-sized buffer
+mov [r15 + REGISTRY64.listTopology.objectStart],rbp
+add rbp,r14
+mov [r15 + REGISTRY64.listTopology.objectStop],rbp
+@@:
+
+;---------- Get platform extended topology by WinAPI --------------------------;
+; Separate get each type of information for build ordered list.
+
+call HelperAlignment
+mov rbx,[rsi + DYNAIMPORT._GetLogicalProcessorInformationEx]
+test rbx,rbx
+jz @f
+xor r14d,r14d
+mov al,0                  ; 0 = RelationProcessorCore
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,2                  ; 2 = RelationCache 
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,3                  ; 3 = RelationProcessorPackage
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,1                  ; 1 = RelationNumaNode
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,4                  ; 4 = RelationGroup
+call HelperTopologyEx
+.errorTopologyEx:
+jc .error
+mov [r15 + REGISTRY64.listTopologyEx.objectStart],rbp
+add rbp,r14
+mov [r15 + REGISTRY64.listTopologyEx.objectStop],rbp
+@@:
+
 ;---------- Build text block for operating system information screen ----------; 
-lea r13,[r15 + REGISTRY64.unformatted]
-mov r12,rdi
-push rbp
-mov rbp,r13
+; Start text blocks build operations.
+
+mov r14,rdi
 mov [r15 + REGISTRY64.textOs.objectStart],rbp
 mov ax,STR_OS_MEMORY_LOAD                        ; Memory load percentage
 call HelperOsInfoString
-mov eax,[r12 + OSDATA.memoryStatusEx.dwMemoryLoad]
+mov eax,[r14 + OSDATA.memoryStatusEx.dwMemoryLoad]
 push rax
 mov bl,0
 call DecimalPrint32
@@ -206,37 +293,8 @@ mov rdi,rbp
 mov ax,0A0Dh                                     ; Interval
 stosw
 mov rbp,rdi 
-mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
-call HelperOsInfoString
-mov al,SYSTEM_INFO.lpMinimumApplicationAddress
-call HelperOsInfoSizeAuto
-mov ax,STR_OS_MAX_ADDRESS                        ; Application maximum address
-call HelperOsInfoString
-mov al,SYSTEM_INFO.lpMaximumApplicationAddress
-call HelperOsInfoSizeAuto
-mov ax,STR_OS_PROC_MASK                          ; Active processor mask 
-call HelperOsInfoString
-mov al,'-'
-stosb
-mov rax,[r15 + REGISTRY64.osData.systemInfo.dwActiveProcessorMask]
-mov rdi,r8
-call HexPrint64 
-mov ax,STR_OS_PROC_TYPE                          ; Processor type
-call HelperOsInfoString
-mov al,SYSTEM_INFO.dwProcessorType
-call HelperOsInfoNumber32
-mov ax,STR_OS_ALLOC_GRAN                         ; Allocation granularity
-call HelperOsInfoString
-mov al,SYSTEM_INFO.dwAllocationGranularity
-call HelperOsInfoNumber32
-mov ax,STR_OS_PROC_LEVEL                         ; Processor level
-call HelperOsInfoString
-mov al,SYSTEM_INFO.wProcessorLevel
-call HelperOsInfoNumber16
-mov ax,STR_OS_PROC_REVISION                      ; Processor revision
-call HelperOsInfoString
-mov al,SYSTEM_INFO.wProcessorRevision
-call HelperOsInfoNumber16
+mov bh,0                                         ; BH = 0 means system info
+call HelperSystemInfo
 mov rdi,rbp
 mov ax,0A0Dh                                     ; Interval
 stosw
@@ -294,22 +352,312 @@ call HexPrint64
 .skipLargePages:
 mov al,0
 stosb
+mov rbp,rdi
 mov [r15 + REGISTRY64.textOs.objectStop],rbp
-pop rbp
+
+;---------- Build text block for native operating system information screen ---;
+
+mov [r15 + REGISTRY64.textNativeOs.objectStart],rbp
+mov bh,1                                  ; BH = 1 means native system info
+call HelperSystemInfo
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textNativeOs.objectStop],rbp
+
+;---------- Build text block for processor details screen ---------------------;
+
+
+;---------- Build text block for topology screen, first block = list ----------;
+
+mov [r15 + REGISTRY64.textTopology1.objectStart],rbp
+mov rsi,[r15 + REGISTRY64.listTopology.objectStart]
+mov rcx,[r15 + REGISTRY64.listTopology.objectStop]
+sub rcx,rsi
+test cl,00011111b
+jnz .error
+shr ecx,5
+jz .error
+push rsi rcx
+mov rdi,rbp
+.scanRelations:
+mov rdx,rdi
+push rcx
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop rcx
+push rdi
+mov eax,[rsi + 08]
+cmp eax,3
+ja .relationUnknown
+je .relationPackage
+cmp al,2
+je .relationCache
+cmp al,1
+je .relationNuma
+cmp al,0
+je .relationCore
+.relationUnknown:
+mov ax,STR_TP_UNKNOWN_ID
+call HelperRelationName 
+jmp .doneRelation
+.relationCore:
+mov ax,STR_TP_CPU_CORE
+call HelperRelationName 
+call HelperAffinity
+mov eax,( STR_TP_HT SHL 16 ) + 2910h
+call HelperParameter8
+jmp .doneRelation
+.relationNuma: 
+mov ax,STR_TP_NUMA_NODE
+call HelperRelationName 
+call HelperAffinity
+mov eax,( STR_TP_NODE SHL 16 ) + 2910h
+call HelperParameter32
+jmp .doneRelation
+.relationCache:
+mov ax,STR_TP_L
+call HelperRelationName
+mov al,[rsi + 16]
+cmp al,1
+jb .levelBad
+cmp al,4
+ja .levelBad
+or al,30h
+jmp .levelStore
+.levelBad:
+mov al,'?'
+.levelStore:
+mov ah,' '
+stosw
+mov eax,[rsi + 24]
+cmp eax,3
+ja .typeBad
+add ax,STR_TP_UNIFIED
+jmp .typeStore
+.typeBad:
+mov ax,STR_TP_UNKNOWN_TYPE
+.typeStore:
+lea rdi,[rdx + 04] 
+call RelationNameEntry
+call HelperAffinity
+mov eax,( STR_TP_CACHE_WAYS SHL 16 ) + 2911h
+call HelperParameter8
+mov eax,( STR_TP_CACHE_LINE SHL 16 ) + 3212h
+call HelperParameter16
+lea rdi,[rdx + 3Fh]
+push rcx rsi
+mov eax,[rsi + 14h]
+push rax
+mov ax,STR_TP_CACHE_SIZE
+call PoolStringWrite
+mov bl,0
+pop rax
+call DecimalPrint32
+pop rsi rcx
+jmp .doneRelation 
+.relationPackage:
+mov ax,STR_TP_CPU_PACKAGE
+call HelperRelationName 
+call HelperAffinity
+.doneRelation:
+add rsi,32
+pop rdi
+dec ecx
+jnz .scanRelations
+pop rcx rsi
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textTopology1.objectStop],rbp
+
+;---------- Build text block for topology screen, second block = summary ------;
+
+mov [r15 + REGISTRY64.textTopology2.objectStart],rbp
+mov rdi,rbp
+mov ax,0101h                 ; Instruction cache , L1
+call HelperCacheSummary 
+mov ax,0201h                 ; Data cache , L1
+call HelperCacheSummary 
+mov ax,0002h                 ; Unified cache , L2
+call HelperCacheSummary 
+mov ax,0003h                 ; Unified cache , L3
+call HelperCacheSummary 
+mov ax,0004h                 ; Unified cache , L4
+call HelperCacheSummary 
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textTopology2.objectStop],rbp
+
+;--- Build text block for extended topology screen, first block = list --------;
+
+mov [r15 + REGISTRY64.textTopologyEx1.objectStart],rbp
+mov rsi,[r15 + REGISTRY64.listTopologyEx.objectStart]
+mov rcx,[r15 + REGISTRY64.listTopologyEx.objectStop]
+test rcx,rcx
+jz .noTopologyEx
+push rsi rcx
+mov rdi,rbp
+.scanRelationsEx:
+mov rdx,rdi
+push rcx
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop rcx
+push rdi
+mov eax,[rsi + 00]
+cmp eax,4
+ja .relationUnknownEx
+je .relationGroupEx
+cmp al,3
+je .relationPackageEx
+cmp al,2
+je .relationCacheEx
+cmp al,1
+je .relationNumaEx
+cmp al,0
+je .relationCoreEx
+.relationUnknownEx:
+mov ax,STR_TP_UNKNOWN_ID
+call HelperRelationName 
+jmp .doneRelationEx
+.relationCoreEx:
+mov ax,STR_TP_CPU_CORE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_ET_SMT SHL 16 ) + 2908h
+call HelperParameter8
+mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
+call HelperParameter8
+jmp .doneRelationEx
+.relationNumaEx: 
+mov ax,STR_TP_NUMA_NODE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_TP_NODE SHL 16 ) + 2908h
+call HelperParameter32
+jmp .doneRelationEx
+.relationCacheEx:
+mov ax,STR_TP_L
+call HelperRelationName
+mov al,[rsi + 08]
+cmp al,1
+jb .levelBadEx
+cmp al,4
+ja .levelBadEx
+or al,30h
+jmp .levelStoreEx
+.levelBadEx:
+mov al,'?'
+.levelStoreEx:
+mov ah,' '
+stosw
+mov eax,[rsi + 16]
+cmp eax,3
+ja .typeBadEx
+add ax,STR_TP_UNIFIED
+jmp .typeStoreEx
+.typeBadEx:
+mov ax,STR_TP_UNKNOWN_TYPE
+.typeStoreEx:
+lea rdi,[rdx + 04] 
+call RelationNameEntry
+mov al,40
+call HelperAffinityGroup
+mov eax,( STR_TP_CACHE_WAYS SHL 16 ) + 2909h
+call HelperParameter8
+mov eax,( STR_TP_CACHE_LINE SHL 16 ) + 320Ah
+call HelperParameter16
+lea rdi,[rdx + 3Fh]
+push rcx rsi
+mov eax,[rsi + 0Ch]
+push rax
+mov ax,STR_TP_CACHE_SIZE
+call PoolStringWrite
+mov bl,0
+pop rax
+call DecimalPrint32
+pop rsi rcx
+jmp .doneRelationEx 
+.relationPackageEx:
+mov ax,STR_TP_CPU_PACKAGE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_ET_SMT SHL 16 ) + 2908h
+call HelperParameter8
+mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
+call HelperParameter8
+jmp .doneRelationEx
+.relationGroupEx: 
+mov ax,STR_ET_GROUP
+call HelperRelationName 
+mov al,32
+call HelperAffinityMask
+.doneRelationEx:
+pop rdi
+mov eax,[rsi + 04]
+add rsi,rax
+cmp rsi,rcx
+jb .scanRelationsEx
+pop rcx rsi
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textTopologyEx1.objectStop],rbp
+.noTopologyEx:
+
+;--- Build text block for extended topology screen, second block = summary ----;
+
+mov [r15 + REGISTRY64.textTopologyEx2.objectStart],rbp
+mov rdi,rbp
+mov ax,0101h                 ; Instruction cache , L1
+call HelperCacheSummaryEx 
+mov ax,0201h                 ; Data cache , L1
+call HelperCacheSummaryEx 
+mov ax,0002h                 ; Unified cache , L2
+call HelperCacheSummaryEx 
+mov ax,0003h                 ; Unified cache , L3
+call HelperCacheSummaryEx 
+mov ax,0004h                 ; Unified cache , L4
+call HelperCacheSummaryEx 
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textTopologyEx2.objectStop],rbp
+
 ;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+
 lea rdi,[r15 + REGISTRY64.cpuData.vendorString]  ; RDI = Destination pointer
 mov r14,rdi                                      ; R14 = Destination base
 call HelperCheckCpuid
 jc .error
 cmp eax,1
 jb .error
+
 ;---------- Get 48-chars CPU model string -------------------------------------;
+
 call HelperGetCpuName
+
 ;---------- Get CPU signature: type, family, model, stepping ------------------;
+
 mov eax,1
 cpuid
 stosd
+
 ;------- Build CPU common features bitmap, for system information screen ------; 
+
 xor eax,eax
 mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuCommon]
 test rsi,rsi
@@ -318,7 +666,9 @@ call HelperBuildBitmap
 @@:
 bts rax,63
 stosq
+
 ;------- Build CPU AVX512 features bitmap, for system information screen ------;
+
 xor eax,eax
 mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuAvx512]
 test rsi,rsi
@@ -326,7 +676,9 @@ jz @f
 call HelperBuildBitmap
 @@:
 stosq
+
 ;------- Build OS context features bitmap, for system information screen ------;
+
 xor eax,eax
 mov rsi,[r15 + REGISTRY64.appData.lockedDataOsContext]
 test rsi,rsi
@@ -338,19 +690,30 @@ jz @f
 bts rax,63
 @@:
 stosq
+
 ;------- Build CPU methods features bitmap, for system information screen -----;
+
 xor eax,eax    ; *** DEBUG ***
 stosq          ; *** DEBUG ***
+
 ;---------- Measure TSC frequency ---------------------------------------------;
+
 call HelperMeasureTsc
 ; TODO. Check for errors, CF=1
 
 ;---------- Build bind buffer -------------------------------------------------;
+; Start operations with bind buffer part of application registry,
+; RDI = Pointer for bind buffer addressing.
+
 mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+
 ;---------- CPU vendor string, 12 chars ---------------------------------------; 
+
 mov rax,r14
 stosq
+
 ;---------- CPU signature: type, family, model, stepping ----------------------;
+
 mov ax,STR_TFMS
 call PoolStringWrite
 mov eax,[r14 + CPUDATA.cpuSignature]
@@ -359,10 +722,14 @@ mov ax,STR_H
 call PoolStringWrite
 mov al,0
 stosb 
+
 ;---------- CPU model string, maximum 48 chars --------------------------------;
+
 lea rax,[r14 + CPUDATA.modelString]
 stosq
+
 ;---------- TSC frequency -----------------------------------------------------;
+
 mov ecx,32
 mov al,0
 rep stosb
@@ -381,7 +748,9 @@ call DoublePrint
 mov ax,STR_MHZ
 call PoolStringWrite
 pop rdi
+
 ;---------- CPU instructions and OS context management features bitmaps -------;
+
 mov rax,[r14 + CPUDATA.extractedFeaturesBitmap]
 stosq
 mov rax,[r14 + CPUDATA.extractedAvx512Bitmap]
@@ -390,19 +759,47 @@ mov rax,[r14 + CPUDATA.extractedContextBitmap]
 stosq
 mov rax,[r14 + CPUDATA.extractedMethodsBitmap]
 stosq
+
 ;---------- Text blocks for viewers -------------------------------------------;
+
 mov rax,[r15 + REGISTRY64.textOs.objectStart]
 stosq       ; Operating system information
+mov rax,[r15 + REGISTRY64.textNativeOs.objectStart]
+stosq       ; Native operating system information
+mov rax,[r15 + REGISTRY64.textTopology1.objectStart]
+stosq       ; Topology information by operating system, text block 1, list
+mov rax,[r15 + REGISTRY64.textTopology2.objectStart]
+stosq       ; Topology information by operating system, text block 2, summary
+mov rax,[r15 + REGISTRY64.textTopologyEx1.objectStart]
+stosq       ; Extended topology information by OS, text block 1, list
+mov rax,[r15 + REGISTRY64.textTopologyEx2.objectStart]
+stosq       ; Extended topology information by OS, text block 2, summary
 
+; ...
 
 ;---------- Exit points -------------------------------------------------------;
+
 ; TODO. Error Handling.
 .error:
 ; TODO. Error Handling.
-mov rsp,rbp
+mov rsp,r13
+pop rcx     ; this POP for remove temporary variable
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
 
+
+
+;---------- Align memory pointer, required for WinAPI calls -------------------;
+; INPUT:   RBP = Pointer                                                       ;
+; OUTPUT:  RBP = Aligned pointer, updated if required                          ;
+;------------------------------------------------------------------------------;
+HelperAlignment:
+test bpl,00001111b
+jz @f
+and bpl,0F0h
+add rbp,010h
+@@: 
+ret
 ;---------- Detect CPUID support and execute CPUID function #0. ---------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -765,11 +1162,8 @@ mov ax,0A0Dh
 stosw
 pop rax
 mov rbp,rdi
-mov rsi,[Registry]
-mov rsi,[rsi + REGISTRY64.appData.lockedStrings]
-call IndexString
 lea rdi,[rbp - 82 + 01]
-call StringWrite
+call PoolStringWrite
 lea rdi,[rbp - 82 + 33]
 lea r8,[rbp - 82 + 62]
 pop rsi
@@ -781,7 +1175,8 @@ ret
 ; INPUT:   RDI = Pointer to destination buffer, value position                 ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSize:
 mov bl,2
@@ -793,7 +1188,12 @@ je .sysinfo
 lea rcx,[rcx + REGISTRY64.osData.memoryStatusEx]
 jmp .done
 .sysinfo:
+test bh,bh
+jnz .nativeInfo
 lea rcx,[rcx + REGISTRY64.osData.systemInfo]
+jmp .done
+.nativeInfo:
+lea rcx,[rcx + REGISTRY64.osData.nativeSystemInfo]
 .done:
 mov rax,[rcx + rax]
 cmp bl,0
@@ -809,7 +1209,8 @@ jmp HexPrint64
 ; INPUT:   RDI = Pointer to destination buffer, value position                 ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSizeAuto:
 mov bl,0FFh
@@ -819,7 +1220,8 @@ jmp SizeHelperEntry
 ;           This variant for 64-bit value.                                     ;
 ; INPUT:   R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoHex:
 mov bl,0
@@ -831,13 +1233,20 @@ jmp SizeHelperEntry
 ; INPUT:   RDI = Pointer to destination buffer, value position                 ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
 mov rcx,[Registry]
+test bh,bh
+jnz .nativeInfo
 mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+jmp .doneInfo
+.nativeInfo:
+mov eax,[rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+.doneInfo:
 push rax
 call SizePrint64
 pop rax
@@ -847,12 +1256,19 @@ jmp HexPrint32
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoNumber32:
 movzx eax,al
 mov rcx,[Registry]
+test bh,bh
+jnz .nativeInfo
 mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+jmp .doneInfo
+.nativeInfo:
+mov eax,[rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+.doneInfo:
 HelperOsInfoValue32:     ; Entry point for EAX = value, RDI, R8 same usage
 push rax
 mov bl,0
@@ -864,15 +1280,387 @@ jmp HexPrint32
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoNumber16:
 movzx eax,al
 mov rcx,[Registry]
+test bh,bh
+jnz .nativeInfo
 movzx eax,word [rcx + REGISTRY64.osData.systemInfo + rax]
+jmp .doneInfo
+.nativeInfo:
+movzx eax,word [rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+.doneInfo:
 push rax
 mov bl,0
 call DecimalPrint32
 pop rax
 mov rdi,r8
 jmp HexPrint16
+;---------- Write system information strings ----------------------------------;
+; INPUT:   RBP = Pointer to destination buffer                                 ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  RBP = Updated pointer to destination buffer                         ;
+;          RDI = Last used and updated destination pointer                     ;
+;------------------------------------------------------------------------------;
+HelperSystemInfo:
+mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMinimumApplicationAddress
+call HelperOsInfoSizeAuto
+mov ax,STR_OS_MAX_ADDRESS                        ; Application maximum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMaximumApplicationAddress
+call HelperOsInfoSizeAuto
+mov ax,STR_OS_PROC_MASK                          ; Active processor mask 
+call HelperOsInfoString
+mov al,'-'
+stosb
+test bh,bh
+jnz .nativeInfo
+mov rax,[r15 + REGISTRY64.osData.systemInfo.dwActiveProcessorMask]
+jmp .doneInfo
+.nativeInfo:
+mov rax,[r15 + REGISTRY64.osData.nativeSystemInfo.dwActiveProcessorMask]
+.doneInfo:
+mov rdi,r8
+call HexPrint64 
+mov ax,STR_OS_PROC_TYPE                          ; Processor type
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwProcessorType
+call HelperOsInfoNumber32
+mov ax,STR_OS_ALLOC_GRAN                         ; Allocation granularity
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwAllocationGranularity
+call HelperOsInfoSizeAuto32 ; HelperOsInfoNumber32
+mov ax,STR_OS_PROC_LEVEL                         ; Processor level
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorLevel
+call HelperOsInfoNumber16
+mov ax,STR_OS_PROC_REVISION                      ; Processor revision
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorRevision
+jmp HelperOsInfoNumber16
+;--- Write relation name string for text generation by topology parsing -------;
+; INPUT:   RDX = Destination base address                                      ;
+;          AX  = String ID at application strings pool                         ;
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperRelationName:
+lea rdi,[rdx + 01]
+RelationNameEntry:
+push rcx rsi
+call PoolStringWrite
+pop rsi rcx
+ret
+;--- Write affinity mask string for text generation by topology parsing -------;
+; INPUT:   RDX = Destination base address                                      ;
+;          RSI = Pointer to parsed topology entry: affinity mask               ;
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinity:
+lea rdi,[rdx + 18]   ; RDI = Destination text pointer
+mov rax,[rsi + 00]   ; RAX = Affinity mask
+lea r8,[rdi + 16]    ; R8  = Mask text format limit
+EntryAffinity:
+push rcx rdx rsi
+bsf rcx,rax
+bsr rdx,rax
+cmp ecx,edx
+je .modeSingle
+push rcx rdx
+.scanMask:
+bt eax,ecx
+jz .endMask
+inc ecx
+cmp ecx,edx
+jb .scanMask
+.endMask:
+cmp ecx,edx
+pop rdx rcx
+je .modeInterval
+.modeIndividual:
+xor ecx,ecx
+xor edx,edx
+.cycleIndividual:
+cmp rdi,r8
+jae .overIndividual
+shr rax,1
+jnc .skipIndividual
+push rax
+test edx,edx
+jz .firstIndividual
+mov al,','
+stosb
+.firstIndividual:
+inc edx
+mov eax,ecx
+mov bl,0
+call DecimalPrint32
+pop rax
+.skipIndividual:
+inc ecx
+cmp cl,64
+jb .cycleIndividual
+jmp .done
+.overIndividual:
+mov ax,STR_TP_POINTS
+call PoolStringWrite
+jmp .done
+.modeInterval:
+xchg eax,ecx
+mov bl,0
+call DecimalPrint32 
+mov al,'-'
+stosb
+.modeSingle:
+xchg eax,edx
+call DecimalPrint32
+.done:
+pop rsi rdx rcx
+ret
+;--- Write number value string for text generation by topology parsing --------;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   RDX = Destination base address                                      ;
+;          RSI = Pointer to parsed topology entry                              ;
+;          AL          = Parameter offset in the topology entry structure      ; 
+;          AH          = Text string position offset at destination            ;   
+;          EAX.[31-16] = Parameter name String ID at application strings pool  ;  
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperParameter8:         ; Entry point for addressed 8-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+movzx eax,byte [rsi + rax]
+ParameterEntry:
+push rcx rsi
+lea rdi,[rdx + rdi]
+push rax
+xchg eax,ebx
+call PoolStringWrite
+pop rax
+mov bl,0
+call DecimalPrint32
+pop rsi rcx
+ret
+HelperParameter16:         ; Same entry point for addressed 16-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+movzx eax,word [rsi + rax]
+jmp ParameterEntry
+HelperParameter32:         ; Same entry point for addressed 32-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+mov eax,dword [rsi + rax]
+jmp ParameterEntry
+;--- Write cache size and count string for text gener. by topology parsing ----;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   RSI = Pointer to topology information buffer                        ;
+;          ECX = Entries count at topology information buffer                  ;  
+;          AL  = Cache level                                                   ;  
+;          AH  = Cache type                                                    ;    
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperCacheSummary:
+push rcx rsi
+test rcx,rcx
+jz .nodata
+movzx ebx,ah
+xchg edx,eax
+xor r8d,r8d
+xor r9d,r9d
+.scanCaches:
+cmp dword [rsi + 08],2
+jne .done
+cmp byte [rsi + 16],dl
+jne .done
+cmp dword [rsi + 24],ebx
+jne .done
+mov r8d,[rsi + 20]
+inc r9d
+.done:
+add rsi,32
+loop .scanCaches
+test r8d,r8d
+jz .nodata
+mov bh,dl
+mov rdx,rdi
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+push rdi
+lea rdi,[rdx + 01]
+mov ax,STR_TP_L
+call PoolStringWrite
+mov al,bh
+or al,30h
+stosb
+movzx ax,bl
+add ax,STR_TP_UNIFIED
+lea rdi,[rdx + 04] 
+call RelationNameEntry
+lea rdi,[rdx + 18]
+mov bl,0FFh
+mov eax,r8d
+call SizePrint64
+lea rdi,[rdx + 41]
+mov ax,STR_TP_X
+call PoolStringWrite
+mov eax,r9d
+mov bl,0
+call DecimalPrint32
+pop rdi
+.nodata:
+pop rsi rcx
+ret
+;---------- Get topological information ---------------------------------------;
+; INPUT:   RBX = WinAPI function address                                       ;
+;          RBP = Pointer to buffer for topology information                    ;
+;          R14 = Buffer used size accumulator                                  ;
+;          R13 = Pointer to temporary DWORD variable, located at stack frame   ;
+;          AL  = Relation type by WinAPI encoding                              ;
+; OUTPUT:  R14 = Updated buffer size accumulator                               ;
+;------------------------------------------------------------------------------;             
+HelperTopologyEx:
+push rsi rdi
+mov rsi,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+movzx edi,al
+mov dword [r13],0            ; dword [r13]  = Buffer size variable, stack
+mov r8,r13                   ; R8  = Parm#3 = Pointer to size
+lea rdx,[rbp + r14]          ; RDX = Parm#2 = Pointer to buffer
+mov ecx,edi                  ; RCX = Parm#1 = Relation type
+call rbx
+test rax,rax
+jnz .error
+call [GetLastError]
+cmp rax,ERROR_BUFFER_LIMIT
+jne .error                   ; Go if other errors detected
+mov r12d,[r13]
+cmp r12d,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big 
+mov r8,r13                   ; R8  = Parm#3 = Pointer to size
+lea rdx,[rbp + r14]          ; RDX = Parm#2 = Pointer to buffer
+mov ecx,edi                  ; RCX = Parm#1 = Relation type
+add r14d,r12d
+cmp r14d,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big 
+call rbx
+test rax,rax
+jz .error
+.exit:
+mov rsp,rsi
+pop rdi rsi
+ret
+.error:
+stc
+jmp .exit
+;--- Write affinity mask string for text generation by topology parsing -------;
+; INPUT:   RDX = Destination base address                                      ;
+;          RSI = Pointer to parsed topology entry: affinity mask               ;
+;          AL  = Field offset in the parsed structure                          ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinityGroup:
+push rsi
+movzx eax,al
+add rsi,rax
+lea rdi,[rdx + 18]   ; RDI = Destination text pointer
+lea r8,[rdi + 16]    ; R8  = Mask text format limit
+mov ax,[rsi + 08]    ; AX  = Processor group for affinity mask
+call HexPrint16
+mov al,'.'
+stosb
+mov rax,[rsi + 00]   ; RAX = Affinity mask
+call EntryAffinity
+pop rsi
+ret
+;--- Write proc. group string for text generation by topology parsing ---------;
+; INPUT:   RDX = Destination base address                                      ;
+;          RSI = Pointer to parsed topology entry: affinity mask               ;
+;          AL  = Field offset in the parsed structure                          ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinityMask:
+push rsi
+movzx eax,al
+add rsi,rax
+lea rdi,[rdx + 18]
+mov ax,[rsi + 08]
+call HexPrint16
+pop rsi
+ret
+;--- Write cache size and count string for text gener. by topology parsing ----;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   RSI = Pointer to topology information buffer                        ;
+;          RCX = Topology information buffer address limit                     ;  
+;          AL  = Cache level                                                   ;  
+;          AH  = Cache type                                                    ;    
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperCacheSummaryEx:
+push rcx rsi
+test ecx,ecx
+jz .nodata
+movzx ebx,ah
+xchg edx,eax
+xor r8d,r8d
+xor r9d,r9d
+.scanCaches:
+cmp dword [rsi + 00],2
+jne .done
+cmp byte [rsi + 08],dl
+jne .done
+cmp dword [rsi + 16],ebx
+jne .done
+mov r8d,[rsi + 12]
+inc r9d
+.done:
+mov eax,[rsi + 04]
+add rsi,rax
+cmp rsi,rcx
+jb .scanCaches
+test r8d,r8d
+jz .nodata
+mov bh,dl
+mov rdx,rdi
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+push rdi
+lea rdi,[rdx + 01]
+mov ax,STR_TP_L
+call PoolStringWrite
+mov al,bh
+or al,30h
+stosb
+movzx ax,bl
+add ax,STR_TP_UNIFIED
+lea rdi,[rdx + 04] 
+call RelationNameEntry
+lea rdi,[rdx + 18]
+mov bl,0FFh
+mov eax,r8d
+call SizePrint64
+lea rdi,[rdx + 41]
+mov ax,STR_TP_X
+call PoolStringWrite
+mov eax,r9d
+mov bl,0
+call DecimalPrint32
+pop rdi
+.nodata:
+pop rsi rcx
+ret

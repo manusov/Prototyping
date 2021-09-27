@@ -413,7 +413,9 @@ call [CreateIconFromResourceEx]     ; Create icon, return handle
 add rsp,32 + 32
 xchg rdx,rax                        ; RDX = Parm#2 = Handle to icon
 mov rcx,[r15 + APPDATA.hImageList]  ; RCX = Parm#1 = Handle to image list 
+sub rsp,32
 call [ImageList_AddIcon] 
+add rsp,32
 dec edi
 jnz .createIcons
 pop rdi rsi

@@ -576,7 +576,28 @@ STR_OS_NORMAL_PAGE     = STR_OS_MEMORY_LOAD + 19
 STR_OS_LARGE_PAGE      = STR_OS_MEMORY_LOAD + 20
 STR_OS_DISABLED        = STR_OS_MEMORY_LOAD + 21
 STR_OS_ENABLED         = STR_OS_MEMORY_LOAD + 22
-
+;---------- Strings for topology information text -----------------------------;
+STR_TP_CPU_CORE        = STR_OS_ENABLED + 1
+STR_TP_NUMA_NODE       = STR_TP_CPU_CORE + 1
+STR_TP_L               = STR_TP_CPU_CORE + 2
+STR_TP_CPU_PACKAGE     = STR_TP_CPU_CORE + 3
+STR_TP_UNKNOWN_ID      = STR_TP_CPU_CORE + 4
+STR_TP_UNIFIED         = STR_TP_CPU_CORE + 5
+STR_TP_INSTRUCTION     = STR_TP_CPU_CORE + 6
+STR_TP_DATA            = STR_TP_CPU_CORE + 7
+STR_TP_TRACE           = STR_TP_CPU_CORE + 8
+STR_TP_UNKNOWN_TYPE    = STR_TP_CPU_CORE + 9
+STR_TP_POINTS          = STR_TP_CPU_CORE + 10
+STR_TP_HT              = STR_TP_CPU_CORE + 11
+STR_TP_NODE            = STR_TP_CPU_CORE + 12
+STR_TP_CACHE_WAYS      = STR_TP_CPU_CORE + 13
+STR_TP_CACHE_LINE      = STR_TP_CPU_CORE + 14
+STR_TP_CACHE_SIZE      = STR_TP_CPU_CORE + 15
+STR_TP_X               = STR_TP_CPU_CORE + 16
+;---------- Strings for extended topology information text --------------------;
+STR_ET_GROUP           = STR_TP_X + 1 
+STR_ET_EFFICIENCY      = STR_ET_GROUP + 1
+STR_ET_SMT             = STR_ET_GROUP + 2
 ;---------- Binders numbers for GUI scripts -----------------------------------;
 BINDER_SYSINFO         = 0   
 BINDER_MEMORY          = 1
@@ -603,7 +624,12 @@ BUFFER_CPU_BITMAP      = BUFFER_CPU_TSC       + 32
 BUFFER_AVX512_BITMAP   = BUFFER_CPU_BITMAP    + 8
 BUFFER_OS_BITMAP       = BUFFER_AVX512_BITMAP + 8
 BUFFER_METHOD_BITMAP   = BUFFER_OS_BITMAP     + 8
-BUFFER_VIEWER_OS       = BUFFER_METHOD_BITMAP + 8 
+BUFFER_VIEWER_OS       = BUFFER_METHOD_BITMAP + 8
+BUFFER_VIEWER_NATIVE   = BUFFER_VIEWER_OS     + 8
+BUFFER_VIEWER_TP       = BUFFER_VIEWER_NATIVE + 8
+BUFFER_VIEWER_TP_SUM   = BUFFER_VIEWER_TP     + 8 
+BUFFER_VIEWER_ET       = BUFFER_VIEWER_TP_SUM + 8 
+BUFFER_VIEWER_ET_SUM   = BUFFER_VIEWER_ET     + 8  
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
 macro BIND_STOP
@@ -662,8 +688,12 @@ MACRO ENTRY_XCR0 bit
 MACRO PREFIX_XCR0 bit
 { DB  06h , bit }
 
+;---------- Operating system definitions --------------------------------------;
+ERROR_BUFFER_LIMIT  = 07Ah
+VALUE_BUFFER_LIMIT  = 128 * 1024 
+
 ;---------- GUI definitions ---------------------------------------------------; 
-CLEARTYPE_QUALITY = 5
-ID_FONT_1         = 0
-ID_FONT_2         = 1
+CLEARTYPE_QUALITY   = 5
+ID_FONT_1           = 0
+ID_FONT_2           = 1
 

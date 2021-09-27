@@ -292,9 +292,9 @@ enddialog
 dialog      tabTopology   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY        ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_1      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_1    ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'EDIT'        , '', IDE_TOPOL_UP_2      ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_2    ,   3, 139, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
+dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_1    ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
+dialogitem  'EDIT'        , '', IDE_TOPOL_UP_2      ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
+dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_2    ,   3, 179, 400,  49, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_TOPOL_REPORT    , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_CANCEL    , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
@@ -302,9 +302,9 @@ enddialog
 dialog      tabTopologyEx , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY_EX     ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_1     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_1   ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_2     ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_2   ,   3, 139, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
+dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_1   ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
+dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_2     ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
+dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_2   ,   3, 179, 400,  49, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
@@ -620,6 +620,28 @@ DB  'Normal page size'             , 0
 DB  'Minimum large page size'      , 0
 DB  ' ( DISABLED )'                , 0
 DB  ' ( ENABLED )'                 , 0
+;---------- Strings for topology information text -----------------------------;
+DB  'CPU core'     , 0
+DB  'NUMA node'    , 0
+DB  'L'            , 0
+DB  'CPU package'  , 0
+DB  'Unknown ID'   , 0
+DB  'Unified'      , 0
+DB  'Instruction'  , 0
+DB  'Data'         , 0
+DB  'Trace'        , 0
+DB  'Unknown'      , 0
+DB  ' ...'         , 0
+DB  'ht='          , 0
+DB  'node='        , 0
+DB  'ways='        , 0
+DB  'line='        , 0
+DB  'size='        , 0
+DB  'x '           , 0
+;---------- Strings for extended topology information text --------------------;
+DB  'Processor group' , 0
+DB  'efficiency='     , 0
+DB  'smt='            , 0
 endres
 
 ;---------- Raw resource for binders pool -------------------------------------;
@@ -848,13 +870,18 @@ BIND_STOP
 
 ;---------- GUI binder script for native operating system screen --------------;
 BIND_STRING  STR_FULL_NATIVE_OS   , IDC_NATIVE_OS
+BIND_FONT    ID_FONT_2            , IDE_NATIVE_OS_UP
+BIND_FONT    ID_FONT_2            , IDE_NATIVE_OS_TEXT
 BIND_STRING  STR_PARM_VALUE_HEX   , IDE_NATIVE_OS_UP
+BIND_BIG     BUFFER_VIEWER_NATIVE , IDE_NATIVE_OS_TEXT
 BIND_STRING  STR_REPORT           , IDB_NAT_OS_REPORT
 BIND_STRING  STR_EXIT             , IDB_NAT_OS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for processor information screen ----------------;
 BIND_STRING  STR_FULL_PROCESSOR   , IDC_PROCESSOR
+BIND_FONT    ID_FONT_2            , IDE_PROC_UP
+BIND_FONT    ID_FONT_2            , IDE_PROC_TEXT
 BIND_STRING  STR_PARM_VALUE       , IDE_PROC_UP
 BIND_STRING  STR_REPORT           , IDB_PROC_REPORT
 BIND_STRING  STR_EXIT             , IDB_PROC_CANCEL
@@ -862,22 +889,36 @@ BIND_STOP
 
 ;---------- GUI binder script for topology screen -----------------------------;
 BIND_STRING  STR_FULL_TOPOLOGY    , IDC_TOPOLOGY
+BIND_FONT    ID_FONT_2            , IDE_TOPOL_UP_1 
+BIND_FONT    ID_FONT_2            , IDE_TOPOL_TEXT_1
+BIND_FONT    ID_FONT_2            , IDE_TOPOL_UP_2
+BIND_FONT    ID_FONT_2            , IDE_TOPOL_TEXT_2
 BIND_STRING  STR_TOPOLOGY         , IDE_TOPOL_UP_1
 BIND_STRING  STR_TOPOLOGY_SUMMARY , IDE_TOPOL_UP_2
+BIND_BIG     BUFFER_VIEWER_TP     , IDE_TOPOL_TEXT_1
+BIND_BIG     BUFFER_VIEWER_TP_SUM , IDE_TOPOL_TEXT_2
 BIND_STRING  STR_REPORT           , IDB_TOPOL_REPORT
 BIND_STRING  STR_EXIT             , IDB_TOPOL_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for extended topology screen --------------------;
 BIND_STRING  STR_FULL_TOPOLOGY_EX , IDC_TOPOLOGY_EX
+BIND_FONT    ID_FONT_2            , IDE_TOP_EX_UP_1 
+BIND_FONT    ID_FONT_2            , IDE_TOP_EX_TEXT_1
+BIND_FONT    ID_FONT_2            , IDE_TOP_EX_UP_2
+BIND_FONT    ID_FONT_2            , IDE_TOP_EX_TEXT_2
 BIND_STRING  STR_TOPOLOGY         , IDE_TOP_EX_UP_1
 BIND_STRING  STR_TOPOLOGY_SUMMARY , IDE_TOP_EX_UP_2
+BIND_BIG     BUFFER_VIEWER_ET     , IDE_TOP_EX_TEXT_1
+BIND_BIG     BUFFER_VIEWER_ET_SUM , IDE_TOP_EX_TEXT_2
 BIND_STRING  STR_REPORT           , IDB_TOPOL_EX_REPORT
 BIND_STRING  STR_EXIT             , IDB_TOPOL_EX_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for NUMA nodes list screen ----------------------;
 BIND_STRING  STR_FULL_NUMA        , IDC_NUMA
+BIND_FONT    ID_FONT_2            , IDE_NUMA_UP 
+BIND_FONT    ID_FONT_2            , IDE_NUMA_TEXT
 BIND_STRING  STR_NUMA             , IDE_NUMA_UP
 BIND_STRING  STR_REPORT           , IDB_NUMA_REPORT
 BIND_STRING  STR_EXIT             , IDB_NUMA_CANCEL
@@ -885,6 +926,8 @@ BIND_STOP
 
 ;---------- GUI binder script for processor groups list screen ----------------;
 BIND_STRING  STR_FULL_P_GROUPS    , IDC_P_GROUPS
+BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_UP 
+BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_TEXT
 BIND_STRING  STR_GROUPS           , IDE_P_GROUPS_UP
 BIND_STRING  STR_REPORT           , IDB_P_GROUPS_REPORT
 BIND_STRING  STR_EXIT             , IDB_P_GROUPS_CANCEL
@@ -892,6 +935,10 @@ BIND_STOP
 
 ;---------- GUI binder script for ACPI information screen ---------------------;
 BIND_STRING  STR_FULL_ACPI        , IDC_ACPI
+BIND_FONT    ID_FONT_2            , IDE_ACPI_UP_1 
+BIND_FONT    ID_FONT_2            , IDE_ACPI_TEXT_1
+BIND_FONT    ID_FONT_2            , IDE_ACPI_UP_2 
+BIND_FONT    ID_FONT_2            , IDE_ACPI_TEXT_2
 BIND_STRING  STR_ACPI_LIST        , IDE_ACPI_UP_1
 BIND_STRING  STR_ACPI_SUMMARY     , IDE_ACPI_UP_2
 BIND_STRING  STR_REPORT           , IDB_ACPI_REPORT
@@ -900,6 +947,8 @@ BIND_STOP
 
 ;---------- GUI binder script for affinized CPUID dump screen -----------------;
 BIND_STRING  STR_FULL_AFF_CPUID   , IDC_AFF_CPUID
+BIND_FONT    ID_FONT_2            , IDE_A_CPUID_UP 
+BIND_FONT    ID_FONT_2            , IDE_A_CPUID_TEXT
 BIND_STRING  STR_AFF_CPUID        , IDE_A_CPUID_UP
 BIND_STRING  STR_REPORT           , IDB_A_CPUID_REPORT
 BIND_STRING  STR_EXIT             , IDB_A_CPUID_CANCEL
@@ -907,6 +956,10 @@ BIND_STOP
 
 ;---------- GUI binder script for kernel mode driver operations screen --------;
 BIND_STRING  STR_FULL_KMD         , IDC_KMD
+BIND_FONT    ID_FONT_2            , IDE_KMD_UP_1 
+BIND_FONT    ID_FONT_2            , IDE_KMD_TEXT_1
+BIND_FONT    ID_FONT_2            , IDE_KMD_UP_2 
+BIND_FONT    ID_FONT_2            , IDE_KMD_TEXT_2
 BIND_STRING  STR_PARM_VALUE       , IDE_KMD_UP_1
 BIND_STRING  STR_KMD              , IDE_KMD_UP_2
 BIND_STRING  STR_REPORT           , IDB_KMD_REPORT
@@ -978,10 +1031,13 @@ endres
 ;---------- Raw resource for dynamical imported functions list ----------------;
 resdata importList
 DB  'GlobalMemoryStatusEx'         , 0      ; This functions from KERNEL32.DLL          
+DB  'GetNativeSystemInfo'          , 0
+DB  'GetLogicalProcessorInformation'   , 0
+DB  'GetLogicalProcessorInformationEx' , 0
 DB  'GetActiveProcessorGroupCount' , 0    
 DB  'GetActiveProcessorCount'      , 0              
 DB  'GetNumaHighestNodeNumber'     , 0            
-DB  'GetLargePageMinimum'          , 0                      
+DB  'GetLargePageMinimum'          , 0
 DB  'EnumSystemFirmwareTables'     , 0      
 DB  'GetSystemFirmwareTable'       , 0 , 0  ; Two zeroes means end of sub-list        
 DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              

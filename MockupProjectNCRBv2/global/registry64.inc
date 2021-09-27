@@ -47,15 +47,18 @@ objectStop                 dq ?
 ends
 ;---------- Dynamical imported WinAPI functions pointers list -----------------;
 struct DYNAIMPORT
-_GlobalMemoryStatusEx          dq ?   ; This functions from KERNEL32.DLL          
-_GetActiveProcessorGroupCount  dq ?  
-_GetActiveProcessorCount       dq ?       
-_GetNumaHighestNodeNumber      dq ?      
-_GetLargePageMinimum           dq ?           
-_EnumSystemFirmwareTables      dq ?
-_GetSystemFirmwareTable        dq ?
-_OpenProcessToken              dq ?   ; This functions from ADVAPI32.DLL              
-_AdjustTokenPrivileges         dq ?         
+_GlobalMemoryStatusEx              dq ?   ; This functions from KERNEL32.DLL          
+_GetNativeSystemInfo               dq ?
+_GetLogicalProcessorInformation    dq ?
+_GetLogicalProcessorInformationEx  dq ?
+_GetActiveProcessorGroupCount      dq ?  
+_GetActiveProcessorCount           dq ?       
+_GetNumaHighestNodeNumber          dq ?      
+_GetLargePageMinimum               dq ?
+_EnumSystemFirmwareTables          dq ?
+_GetSystemFirmwareTable            dq ?
+_OpenProcessToken                  dq ?   ; This functions from ADVAPI32.DLL              
+_AdjustTokenPrivileges             dq ?         
 ends
 ;---------- Key data for GUI application with resources -----------------------;  
 struct APPDATA
@@ -86,6 +89,7 @@ ends
 struct OSDATA
 memoryStatusEx             MEMORYSTATUSEX_DEF ?
 systemInfo                 SYSTEM_INFO        ?
+nativeSystemInfo           SYSTEM_INFO        ?
 activeProcessorGroupCount  dd ?
 activeProcessorCount       dd ?
 numaNodeCount              dd ?

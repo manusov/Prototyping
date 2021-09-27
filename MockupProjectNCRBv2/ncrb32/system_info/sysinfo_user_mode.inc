@@ -1,15 +1,29 @@
-; UNDER CONSTRUCTION (ia32).
-; Can destroy registers, volatile by Microsoft ia32 calling convention.
+;==============================================================================;
+;                                                                              ;
+;        Scan system configuration and store results t system registry.        ;
+;             This procedure for user mode resources, x64 version.             ;
+;                                                                              ;
+; INPUT:   Application registry information,                                   ;
+;          unformatted part of registry and yet non initialized structures     ;
+;          must be pre-blanked (contain 0) before this procedure call.         ;
+;                                                                              ;
+; OUTPUT:  Application registry information                                    ; 
+;                                                                              ;
+; Can destroy registers, volatile by Microsoft ia32 calling convention.        ;
+;==============================================================================;
 
 SysinfoUserMode:
 push ebx esi edi ebp
+push 0                  ; Variable dword at [esp], if original ESP, no pushes
 cld
-mov esi,[Registry]
+mov esi,[Registry]      ; ESI = Registry base address
+
 ;---------- Initializing dynamical import WinAPI list -------------------------;
+
 push esi
-mov ebx,[esi + REGISTRY32.appData.lockedImportList]
-lea edi,[esi + REGISTRY32.dynaImport]
-lea esi,[NameKernel32]
+mov ebx,[esi + REGISTRY32.appData.lockedImportList]  ; EBX = to functions names
+lea edi,[esi + REGISTRY32.dynaImport]                ; EDI = to fnc. addresses
+lea esi,[NameKernel32]      ; ESI = Pointer to libraries names array
 .scanLibs:
 cmp byte [esi],0
 je .doneLibs
@@ -38,7 +52,9 @@ jne .skipLib
 jmp .scanLibs               ; External cycle for libraries list
 .doneLibs:
 pop esi
+
 ;---------- Get system and memory information parameters ----------------------;
+
 lea ebx,[esi + REGISTRY32.dynaImport]
 lea edi,[esi + REGISTRY32.osData]
 mov eax,[ebx + DYNAIMPORT._GlobalMemoryStatusEx]
@@ -79,14 +95,18 @@ mov eax,[edi + OSDATA.numaNodeCount]
 inc eax
 @@:               ; If no data, EAX=0 at this point, means no nodes found
 mov [edi + OSDATA.numaNodeCount],eax
+
 ;---------- Get large page size -----------------------------------------------;
+
 mov eax,[ebx + DYNAIMPORT._GetLargePageMinimum]
 test eax,eax
 jz @f
 call eax
 @@:
 mov [edi + OSDATA.largePageSize],eax
+
 ;---------- Get large page information: try allocation ------------------------;
+
 push esi
 sub esp,128
 xor eax,eax
@@ -154,9 +174,82 @@ mov [edi + OSDATA.largePageEnable],eax
 .exit:
 add esp,128
 pop esi
-;---------- Build text block for operating system information screen ----------;
+
+;---------- Get native operating system information ---------------------------;
+
+mov eax,[ebx + DYNAIMPORT._GetNativeSystemInfo]
+test eax,eax
+jz @f
+lea ecx,[edi + OSDATA.nativeSystemInfo]
+push ecx
+call eax
+@@:
+
+;---------- Get platform topology by WinAPI -----------------------------------;
+; Start operations with unformatted part of application registry,
+; EBP = Pointer for unformatted part addressing 
+
 lea ebp,[esi + REGISTRY32.unformatted]
-push ebp
+call HelperAlignment
+mov ebx,[esi + REGISTRY32.dynaImport._GetLogicalProcessorInformation]
+test ebx,ebx
+jz @f
+mov dword [esp],0            ; dword [esp]  = Buffer size variable, stack
+mov eax,esp
+push eax                     ; Parm#2 = Pointer to buffer size variable 
+push ebp                     ; Parm#1 = Pointer to buffer 
+call ebx
+test eax,eax
+jnz .error                   ; Go if unexpected error: zero-sized buffer
+call [GetLastError]
+cmp eax,ERROR_BUFFER_LIMIT
+jne .error                   ; Go if other errors detected
+mov edi,[esp]
+cmp edi,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big
+mov eax,esp 
+push eax                     ; Parm#2 = Pointer to buffer size variable 
+push ebp                     ; Parm#1 = Pointer to buffer 
+call ebx
+test eax,eax
+jz .error                    ; Go if unexpected error: zero-sized buffer
+mov [esi + REGISTRY32.listTopology.objectStart],ebp
+add ebp,edi
+mov [esi + REGISTRY32.listTopology.objectStop],ebp
+@@:
+
+;---------- Get platform extended topology by WinAPI --------------------------;
+; Separate get each type of information for build ordered list.
+
+call HelperAlignment
+mov ebx,[esi + REGISTRY32.dynaImport._GetLogicalProcessorInformationEx]
+test ebx,ebx
+jz @f
+xor edi,edi
+mov al,0                  ; 0 = RelationProcessorCore
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,2                  ; 2 = RelationCache 
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,3                  ; 3 = RelationProcessorPackage
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,1                  ; 1 = RelationNumaNode
+call HelperTopologyEx
+jc .errorTopologyEx
+mov al,4                  ; 4 = RelationGroup
+call HelperTopologyEx
+.errorTopologyEx:
+jc .error
+mov [esi + REGISTRY32.listTopologyEx.objectStart],ebp
+add ebp,edi
+mov [esi + REGISTRY32.listTopologyEx.objectStop],ebp
+@@:
+
+;---------- Build text block for operating system information screen ----------;
+; Start text blocks build operations.
+
 mov [esi + REGISTRY32.textOs.objectStart],ebp
 mov ax,STR_OS_MEMORY_LOAD
 call HelperOsInfoString                          ; Memory load percentage
@@ -203,37 +296,8 @@ mov edi,ebp
 mov ax,0A0Dh                                     ; Interval
 stosw
 mov ebp,edi 
-mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
-call HelperOsInfoString
-mov al,SYSTEM_INFO.lpMinimumApplicationAddress
-call HelperOsInfoSizeAuto32
-mov ax,STR_OS_MAX_ADDRESS                        ; Application maximum address
-call HelperOsInfoString
-mov al,SYSTEM_INFO.lpMaximumApplicationAddress
-call HelperOsInfoSizeAuto32
-mov ax,STR_OS_PROC_MASK                          ; Active processor mask 
-call HelperOsInfoString
-mov al,'-'
-stosb
-mov eax,[esi + REGISTRY32.osData.systemInfo.dwActiveProcessorMask]
-mov edi,ecx
-call HexPrint32 
-mov ax,STR_OS_PROC_TYPE                          ; Processor type
-call HelperOsInfoString
-mov al,SYSTEM_INFO.dwProcessorType
-call HelperOsInfoNumber32
-mov ax,STR_OS_ALLOC_GRAN                         ; Allocation granularity
-call HelperOsInfoString
-mov al,SYSTEM_INFO.dwAllocationGranularity
-call HelperOsInfoNumber32
-mov ax,STR_OS_PROC_LEVEL                         ; Processor level
-call HelperOsInfoString
-mov al,SYSTEM_INFO.wProcessorLevel
-call HelperOsInfoNumber16
-mov ax,STR_OS_PROC_REVISION                      ; Processor revision
-call HelperOsInfoString
-mov al,SYSTEM_INFO.wProcessorRevision
-call HelperOsInfoNumber16
+mov bh,0                                         ; BH = 0 means system info
+call HelperSystemInfo
 mov edi,ebp
 mov ax,0A0Dh                                     ; Interval
 stosw
@@ -292,22 +356,324 @@ call HexPrint64
 .skipLargePages:
 mov al,0
 stosb
+mov ebp,edi
 mov [esi + REGISTRY32.textOs.objectStop],ebp
-pop ebp
+
+;---------- Build text block for native operating system information screen ---;
+
+mov [esi + REGISTRY32.textNativeOs.objectStart],ebp
+mov bh,1                                  ; BH = 1 means native system info
+call HelperSystemInfo
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textNativeOs.objectStop],ebp
+
+;---------- Build text block for processor details screen ---------------------;
+
+
+
+;---------- Build text block for topology screen, first block = list ----------;
+
+mov [esi + REGISTRY32.textTopology1.objectStart],ebp
+mov ebx,[esi + REGISTRY32.listTopology.objectStart]
+mov eax,[esi + REGISTRY32.listTopology.objectStop]
+sub eax,ebx
+mov ecx,24
+xor edx,edx
+div ecx
+test edx,edx
+jnz .error
+xchg ecx,eax
+test ecx,ecx
+jz .error
+mov edi,ebp
+push ebx ecx esi
+mov esi,ebx
+.scanRelations:
+mov edx,edi
+push ecx
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop ecx
+push edi
+mov eax,[esi + 04]
+cmp eax,3
+ja .relationUnknown
+je .relationPackage
+cmp al,2
+je .relationCache
+cmp al,1
+je .relationNuma
+cmp al,0
+je .relationCore
+.relationUnknown:
+mov ax,STR_TP_UNKNOWN_ID
+call HelperRelationName 
+jmp .doneRelation
+.relationCore:
+mov ax,STR_TP_CPU_CORE
+call HelperRelationName 
+call HelperAffinity
+mov eax,( STR_TP_HT SHL 16 ) + 2908h
+call HelperParameter8
+jmp .doneRelation
+.relationNuma: 
+mov ax,STR_TP_NUMA_NODE
+call HelperRelationName 
+call HelperAffinity
+mov eax,( STR_TP_NODE SHL 16 ) + 2908h
+call HelperParameter32
+jmp .doneRelation
+.relationCache:
+mov ax,STR_TP_L
+call HelperRelationName
+mov al,[esi + 08]
+cmp al,1
+jb .levelBad
+cmp al,4
+ja .levelBad
+or al,30h
+jmp .levelStore
+.levelBad:
+mov al,'?'
+.levelStore:
+mov ah,' '
+stosw
+mov eax,[esi + 16]
+cmp eax,3
+ja .typeBad
+add ax,STR_TP_UNIFIED
+jmp .typeStore
+.typeBad:
+mov ax,STR_TP_UNKNOWN_TYPE
+.typeStore:
+lea edi,[edx + 04] 
+call RelationNameEntry
+call HelperAffinity
+mov eax,( STR_TP_CACHE_WAYS SHL 16 ) + 2909h
+call HelperParameter8
+mov eax,( STR_TP_CACHE_LINE SHL 16 ) + 320Ah
+call HelperParameter16
+lea edi,[edx + 3Fh]
+push ecx esi
+mov eax,[esi + 0Ch]
+push eax
+mov ax,STR_TP_CACHE_SIZE
+call PoolStringWrite
+mov bl,0
+pop eax
+call DecimalPrint32
+pop esi ecx
+jmp .doneRelation 
+.relationPackage:
+mov ax,STR_TP_CPU_PACKAGE
+call HelperRelationName 
+call HelperAffinity
+.doneRelation:
+add esi,24
+pop edi
+dec ecx
+jnz .scanRelations
+pop esi ecx ebx
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textTopology1.objectStop],ebp
+
+;---------- Build text block for topology screen, second block = summary ------;
+
+mov [esi + REGISTRY32.textTopology2.objectStart],ebp
+push esi
+mov edi,ebp
+mov esi,ebx
+mov ax,0101h                 ; Instruction cache , L1
+call HelperCacheSummary 
+mov ax,0201h                 ; Data cache , L1
+call HelperCacheSummary 
+mov ax,0002h                 ; Unified cache , L2
+call HelperCacheSummary 
+mov ax,0003h                 ; Unified cache , L3
+call HelperCacheSummary 
+mov ax,0004h                 ; Unified cache , L4
+call HelperCacheSummary 
+mov al,0
+stosb
+mov ebp,edi
+pop esi
+mov [esi + REGISTRY32.textTopology2.objectStop],ebp
+
+;--- Build text block for extended topology screen, first block = list --------;
+
+mov [esi + REGISTRY32.textTopologyEx1.objectStart],ebp
+mov ebx,[esi + REGISTRY32.listTopologyEx.objectStart]
+mov ecx,[esi + REGISTRY32.listTopologyEx.objectStop]
+test ecx,ecx
+jz .noTopologyEx
+mov edi,ebp
+push ebx ecx esi
+mov esi,ebx
+.scanRelationsEx:
+mov edx,edi
+push ecx
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop ecx
+push edi
+mov eax,[esi + 00]
+cmp eax,4
+ja .relationUnknownEx
+je .relationGroupEx
+cmp al,3
+je .relationPackageEx
+cmp al,2
+je .relationCacheEx
+cmp al,1
+je .relationNumaEx
+cmp al,0
+je .relationCoreEx
+.relationUnknownEx:
+mov ax,STR_TP_UNKNOWN_ID
+call HelperRelationName 
+jmp .doneRelationEx
+.relationCoreEx:
+mov ax,STR_TP_CPU_CORE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_ET_SMT SHL 16 ) + 2908h
+call HelperParameter8
+mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
+call HelperParameter8
+jmp .doneRelationEx
+.relationNumaEx: 
+mov ax,STR_TP_NUMA_NODE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_TP_NODE SHL 16 ) + 2908h
+call HelperParameter32
+jmp .doneRelationEx
+.relationCacheEx:
+mov ax,STR_TP_L
+call HelperRelationName
+mov al,[esi + 08]
+cmp al,1
+jb .levelBadEx
+cmp al,4
+ja .levelBadEx
+or al,30h
+jmp .levelStoreEx
+.levelBadEx:
+mov al,'?'
+.levelStoreEx:
+mov ah,' '
+stosw
+mov eax,[esi + 16]
+cmp eax,3
+ja .typeBadEx
+add ax,STR_TP_UNIFIED
+jmp .typeStoreEx
+.typeBadEx:
+mov ax,STR_TP_UNKNOWN_TYPE
+.typeStoreEx:
+lea edi,[edx + 04] 
+call RelationNameEntry
+mov al,40
+call HelperAffinityGroup
+mov eax,( STR_TP_CACHE_WAYS SHL 16 ) + 2909h
+call HelperParameter8
+mov eax,( STR_TP_CACHE_LINE SHL 16 ) + 320Ah
+call HelperParameter16
+lea edi,[edx + 3Fh]
+push ecx esi
+mov eax,[esi + 0Ch]
+push eax
+mov ax,STR_TP_CACHE_SIZE
+call PoolStringWrite
+mov bl,0
+pop eax
+call DecimalPrint32
+pop esi ecx
+jmp .doneRelationEx 
+.relationPackageEx:
+mov ax,STR_TP_CPU_PACKAGE
+call HelperRelationName 
+mov al,32
+call HelperAffinityGroup
+mov eax,( STR_ET_SMT SHL 16 ) + 2908h
+call HelperParameter8
+mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
+call HelperParameter8
+jmp .doneRelationEx
+.relationGroupEx: 
+mov ax,STR_ET_GROUP
+call HelperRelationName 
+mov al,32
+call HelperAffinityMask
+.doneRelationEx:
+pop edi
+add esi,[esi + 04]
+cmp esi,ecx
+jb .scanRelationsEx
+pop esi ecx ebx
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textTopologyEx1.objectStop],ebp
+.noTopologyEx:
+
+;--- Build text block for extended topology screen, second block = summary ----;
+
+mov [esi + REGISTRY32.textTopologyEx2.objectStart],ebp
+push esi
+mov edi,ebp
+mov esi,ebx
+mov ax,0101h                 ; Instruction cache , L1
+call HelperCacheSummaryEx 
+mov ax,0201h                 ; Data cache , L1
+call HelperCacheSummaryEx 
+mov ax,0002h                 ; Unified cache , L2
+call HelperCacheSummaryEx 
+mov ax,0003h                 ; Unified cache , L3
+call HelperCacheSummaryEx 
+mov ax,0004h                 ; Unified cache , L4
+call HelperCacheSummaryEx 
+mov al,0
+stosb
+mov ebp,edi
+pop esi
+mov [esi + REGISTRY32.textTopologyEx2.objectStop],ebp
+
 ;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+
 lea edi,[esi + REGISTRY32.cpuData.vendorString]
 mov ebp,edi
 call HelperCheckCpuid
 jc .error
 cmp eax,1
 jb .error
+
 ;---------- Get 48-chars CPU model string -------------------------------------;
+
 call HelperGetCpuName
+
 ;---------- Get CPU signature: type, family, model, stepping ------------------;
+
 mov eax,1
 cpuid
 stosd
+
 ;------- Build CPU common features bitmap, for system information screen ------; 
+
 push esi
 mov ebx,esi
 xor eax,eax
@@ -319,7 +685,9 @@ call HelperBuildBitmap
 stosd
 mov eax,80000000h
 stosd
+
 ;------- Build CPU AVX512 features bitmap, for system information screen ------;
+
 xor eax,eax
 mov esi,[ebx + REGISTRY32.appData.lockedDataCpuAvx512]
 test esi,esi
@@ -329,7 +697,9 @@ call HelperBuildBitmap
 stosd
 xor eax,eax
 stosd
+
 ;------- Build OS context features bitmap, for system information screen ------;
+
 xor eax,eax
 mov esi,[ebx + REGISTRY32.appData.lockedDataOsContext]
 test esi,esi
@@ -344,25 +714,36 @@ bts edx,31
 stosd
 xchg eax,edx
 stosd
+
 ;------- Build CPU methods features bitmap, for system information screen -----;
+
 xor eax,eax    ; *** DEBUG ***
 stosd          ; *** DEBUG ***
 stosd          ; *** DEBUG ***
 pop esi
+
 ;---------- Measure TSC frequency ---------------------------------------------;
+
 call HelperMeasureTsc
 ; TODO. Check for errors, CF=1
 
 ;---------- Build bind buffer -------------------------------------------------;
+; Start operations with bind buffer part of application registry,
+; EDI = Pointer for bind buffer addressing.
+
 push esi
 mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
 mov ebx,ebp
+
 ;---------- CPU vendor string, 12 chars ---------------------------------------;
+
 xchg eax,ebp
 stosd
 xor eax,eax
 stosd
+
 ;---------- CPU signature: type, family, model, stepping ----------------------;
+
 mov ax,STR_TFMS
 call PoolStringWrite
 mov eax,[ebx + CPUDATA.cpuSignature]
@@ -371,12 +752,16 @@ mov ax,STR_H
 call PoolStringWrite
 mov al,0
 stosb 
+
 ;---------- CPU model string, maximum 48 chars --------------------------------;
+
 lea eax,[ebx + CPUDATA.modelString]
 stosd
 xor eax,eax
 stosd
+
 ;---------- TSC frequency -----------------------------------------------------;
+
 mov ecx,32
 mov al,0
 rep stosb
@@ -395,7 +780,9 @@ call DoublePrint
 mov ax,STR_MHZ
 call PoolStringWrite
 pop ebx edi
+
 ;---------- CPU instructions and OS context management features bitmaps -------; 
+
 mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 0]
 stosd
 mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 4]
@@ -413,20 +800,58 @@ stosd
 mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 4]
 stosd
 pop esi
+
 ;---------- Text blocks for viewers -------------------------------------------;
+
 mov eax,[esi + REGISTRY32.textOs.objectStart]
 stosd       ; Operating system information
 xor eax,eax
 stosd
+mov eax,[esi + REGISTRY32.textNativeOs.objectStart]
+stosd       ; Native operating system information
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textTopology1.objectStart]
+stosd       ; Topology information by operating system, text block 1, list
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textTopology2.objectStart]
+stosd       ; Topology information by operating system, text block 2, summary
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textTopologyEx1.objectStart]
+stosd       ; Extended topology information by OS, text block 1, list
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textTopologyEx2.objectStart]
+stosd       ; Extended topology information by OS, text block 2, summary
+xor eax,eax
+stosd
 
+; ...
 
 ;---------- Exit points -------------------------------------------------------;
+
 ; TODO. Error Handling.
 .error:
 ; TODO. Error Handling.
+pop ecx     ; this POP for remove temporary variable
 pop ebp edi esi ebx
 ret
 
+
+
+;---------- Align memory pointer, required for WinAPI calls -------------------;
+; INPUT:   EBP = Pointer                                                       ;
+; OUTPUT:  EBP = Aligned pointer, updated if required                          ;
+;------------------------------------------------------------------------------;
+HelperAlignment:
+test bp,00001111b
+jz @f
+and ebp,0FFFFFFF0h
+add ebp,010h
+@@: 
+ret
 ;---------- Detect CPUID support and execute CPUID function #0 ----------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -797,11 +1222,8 @@ mov ax,0A0Dh
 stosw
 pop eax
 mov ebp,edi
-mov esi,[Registry]
-mov esi,[esi + REGISTRY32.appData.lockedStrings]
-call IndexString
 lea edi,[ebp - 82 + 01]
-call StringWrite
+call PoolStringWrite
 lea edi,[ebp - 82 + 33]
 lea ecx,[ebp - 82 + 62]
 pop esi
@@ -813,7 +1235,8 @@ ret
 ; INPUT:   EDI = Pointer to destination buffer, value position                 ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSize:
 mov bl,2
@@ -826,7 +1249,12 @@ je .sysinfo
 lea ecx,[ecx + REGISTRY32.osData.memoryStatusEx]
 jmp .done
 .sysinfo:
+test bh,bh
+jnz .nativeInfo
 lea ecx,[ecx + REGISTRY32.osData.systemInfo]
+jmp .done
+.nativeInfo:
+lea ecx,[ecx + REGISTRY32.osData.nativeSystemInfo]
 .done:
 mov edx,[ecx + eax + 4]
 mov eax,[ecx + eax + 0]
@@ -843,7 +1271,8 @@ jmp HexPrint64
 ; INPUT:   EDI = Pointer to destination buffer, value position                 ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSizeAuto:
 mov bl,0FFh
@@ -853,7 +1282,8 @@ jmp SizeHelperEntry
 ;           This variant for 64-bit value.                                     ;
 ; INPUT:   ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the MEMORYSTATUSEX structure                        ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoHex:
 mov bl,0
@@ -865,14 +1295,21 @@ jmp SizeHelperEntry
 ; INPUT:   EDI = Pointer to destination buffer, value position                 ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
 push ecx
 mov ecx,[Registry]
+test bh,bh
+jnz .nativeInfo
 mov eax,[ecx + REGISTRY32.osData.systemInfo + eax]
+jmp .doneInfo
+.nativeInfo:
+mov eax,[ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+.doneInfo:
 push eax
 xor edx,edx
 call SizePrint64
@@ -882,13 +1319,20 @@ jmp HexPrint32
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoNumber32:
 movzx eax,al
 push ecx
 mov ecx,[Registry]
+test bh,bh
+jnz .nativeInfo
 mov eax,[ecx + REGISTRY32.osData.systemInfo + eax]
+jmp .doneInfo
+.nativeInfo:
+mov eax,[ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+.doneInfo:
 pop ecx
 HelperOsInfoValue32:     ; Entry point for EAX = value, EDI, ECX same usage
 push eax
@@ -901,17 +1345,445 @@ jmp HexPrint32
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
 ;          AL  = Offset in the SYSTEM_INFO structure                           ; 
-; OUTPUT:  None                                                                ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
 HelperOsInfoNumber16:
 movzx eax,al
 push ecx
 mov ecx,[Registry]
+test bh,bh
+jnz .nativeInfo
 movzx eax,word [ecx + REGISTRY32.osData.systemInfo + eax]
+jmp .doneInfo
+.nativeInfo:
+movzx eax,word [ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+.doneInfo:
 push eax
 mov bl,0
 call DecimalPrint32
 pop eax edi
 jmp HexPrint16
+;---------- Write system information strings ----------------------------------;
+; INPUT:   EBP = Pointer to destination buffer                                 ;
+;          BH = information type: 0 = OS info , 1 = native OS info             ;
+; OUTPUT:  EBP = Updated pointer to destination buffer                         ;
+;          EDI = Last used and updated destination pointer                     ;
+;------------------------------------------------------------------------------;
+HelperSystemInfo:
+mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMinimumApplicationAddress
+call HelperOsInfoSizeAuto32
+mov ax,STR_OS_MAX_ADDRESS                        ; Application maximum address
+call HelperOsInfoString
+mov al,SYSTEM_INFO.lpMaximumApplicationAddress
+call HelperOsInfoSizeAuto32
+mov ax,STR_OS_PROC_MASK                          ; Active processor mask 
+call HelperOsInfoString
+mov al,'-'
+stosb
+test bh,bh
+jnz .nativeInfo
+mov eax,[esi + REGISTRY32.osData.systemInfo.dwActiveProcessorMask]
+jmp .doneInfo
+.nativeInfo:
+mov eax,[esi + REGISTRY32.osData.nativeSystemInfo.dwActiveProcessorMask]
+.doneInfo:
+mov edi,ecx
+call HexPrint32 
+mov ax,STR_OS_PROC_TYPE                          ; Processor type
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwProcessorType
+call HelperOsInfoNumber32
+mov ax,STR_OS_ALLOC_GRAN                         ; Allocation granularity
+call HelperOsInfoString
+mov al,SYSTEM_INFO.dwAllocationGranularity
+call HelperOsInfoSizeAuto32 ; HelperOsInfoNumber32
+mov ax,STR_OS_PROC_LEVEL                         ; Processor level
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorLevel
+call HelperOsInfoNumber16
+mov ax,STR_OS_PROC_REVISION                      ; Processor revision
+call HelperOsInfoString
+mov al,SYSTEM_INFO.wProcessorRevision
+jmp HelperOsInfoNumber16
+;--- Write relation name string for text generation by topology parsing -------;
+; INPUT:   RDX = Destination base address                                      ;
+;          AX  = String ID at application strings pool                         ;
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperRelationName:
+lea edi,[edx + 01]
+RelationNameEntry:
+push ecx esi
+call PoolStringWrite
+pop esi ecx
+ret
+;--- Write affinity mask string for text generation by topology parsing -------;
+; INPUT:   EDX = Destination base address                                      ;
+;          ESI = Pointer to parsed topology entry: affinity mask               ;
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinity:
+push ecx edx esi ebp
+lea edi,[edx + 18]   ; EDI = Destination text pointer
+mov eax,[esi + 00]   ; EAX = Affinity mask
+lea ebp,[edi + 16]   ; EBP  = Mask text format limit
+bsf ecx,eax
+bsr edx,eax
+cmp ecx,edx
+je .modeSingle
+push ecx edx
+.scanMask:
+bt eax,ecx
+jz .endMask
+inc ecx
+cmp ecx,edx
+jb .scanMask
+.endMask:
+cmp ecx,edx
+pop edx ecx
+je .modeInterval
+.modeIndividual:
+xor ecx,ecx
+xor edx,edx
+.cycleIndividual:
+cmp edi,ebp
+jae .overIndividual
+shr eax,1
+jnc .skipIndividual
+push eax
+test edx,edx
+jz .firstIndividual
+mov al,','
+stosb
+.firstIndividual:
+inc edx
+mov eax,ecx
+mov bl,0
+call DecimalPrint32
+pop eax
+.skipIndividual:
+inc ecx
+cmp cl,64
+jb .cycleIndividual
+jmp .done
+.overIndividual:
+mov ax,STR_TP_POINTS
+call PoolStringWrite
+jmp .done
+.modeInterval:
+xchg eax,ecx
+mov bl,0
+call DecimalPrint32 
+mov al,'-'
+stosb
+.modeSingle:
+xchg eax,edx
+call DecimalPrint32
+.done:
+pop ebp esi edx ecx
+ret
 
-
+;--- Write number value string for text generation by topology parsing --------;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   EDX = Destination base address                                      ;
+;          ESI = Pointer to parsed topology entry                              ;
+;          AL          = Parameter offset in the topology entry structure      ; 
+;          AH          = Text string position offset at destination            ;   
+;          EAX.[31-16] = Parameter name String ID at application strings pool  ;  
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperParameter8:         ; Entry point for addressed 8-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+movzx eax,byte [esi + eax]
+ParameterEntry:
+push ecx esi
+lea edi,[edx + edi]
+push eax
+xchg eax,ebx
+call PoolStringWrite
+pop eax
+mov bl,0
+call DecimalPrint32
+pop esi ecx
+ret
+HelperParameter16:         ; Same entry point for addressed 16-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+movzx eax,word [esi + eax]
+jmp ParameterEntry
+HelperParameter32:         ; Same entry point for addressed 32-bit parameter
+shld ebx,eax,16
+movzx edi,ah
+movzx eax,al
+mov eax,dword [esi + eax]
+jmp ParameterEntry
+;--- Write cache size and count string for text gener. by topology parsing ----;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   ESI = Pointer to topology information buffer                        ;
+;          ECX = Entries count at topology information buffer                  ;  
+;          AL  = Cache level                                                   ;  
+;          AH  = Cache type                                                    ;    
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperCacheSummary:
+push ecx esi 0 0 ebp
+mov ebp,esp
+test ecx,ecx
+jz .nodata
+movzx ebx,ah
+xchg edx,eax
+.scanCaches:
+cmp dword [esi + 04],2
+jne .done
+cmp byte [esi + 08],dl
+jne .done
+cmp dword [esi + 16],ebx
+jne .done
+mov eax,[esi + 12]
+mov [ebp + 04],eax
+inc dword [ebp + 08]
+.done:
+add esi,24
+loop .scanCaches
+cmp dword [ebp + 08],0
+je .nodata
+mov bh,dl
+mov edx,edi
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+push edi
+lea edi,[edx + 01]
+mov ax,STR_TP_L
+call PoolStringWrite
+mov al,bh
+or al,30h
+stosb
+movzx ax,bl
+add ax,STR_TP_UNIFIED
+lea edi,[edx + 04] 
+call RelationNameEntry
+lea edi,[edx + 18]
+mov bl,0FFh
+push edx
+mov eax,[ebp + 04]
+xor edx,edx
+call SizePrint64
+pop edx
+lea edi,[edx + 41]
+mov ax,STR_TP_X
+call PoolStringWrite
+mov eax,[ebp + 08]
+mov bl,0
+call DecimalPrint32
+pop edi
+.nodata:
+pop ebp eax eax esi ecx
+ret
+;---------- Get topological information ---------------------------------------;
+; INPUT:   EBX = WinAPI function address                                       ;
+;          EBP = Pointer to buffer for topology information                    ;
+;          EDI = Buffer used size accumulator                                  ;
+;          AL  = Relation type by WinAPI encoding                              ;
+; OUTPUT:  EDI = Updated buffer size accumulator                               ;
+;------------------------------------------------------------------------------;             
+HelperTopologyEx:
+push ebx esi eax 0
+mov eax,esp
+push eax                     ; Parm#3 = Pointer to size
+lea eax,[ebp + edi]
+push eax                     ; Parm#2 = Pointer to buffer
+movzx eax,byte [esp + 12]
+push eax                     ; Parm#1 = Relation type
+call ebx
+test eax,eax
+jnz .error
+call [GetLastError]
+cmp eax,ERROR_BUFFER_LIMIT
+jne .error                   ; Go if other errors detected
+mov edx,[esp]
+cmp edx,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big 
+lea ecx,[ebp + edi]
+add edi,edx
+cmp edi,VALUE_BUFFER_LIMIT
+ja .error                    ; Go if required buffer size too big 
+mov eax,esp
+push eax                     ; Parm#3 = Pointer to size
+push ecx                     ; Parm#2 = Pointer to buffer
+movzx eax,byte [esp + 12]
+push eax                     ; Parm#1 = Relation type
+call ebx
+test eax,eax
+jz .error
+.exit:
+pop eax eax esi ebx
+ret
+.error:
+stc
+jmp .exit
+;--- Write affinity mask string for text generation by topology parsing -------;
+; INPUT:   EDX = Destination base address                                      ;
+;          ESI = Pointer to parsed topology entry: affinity mask               ;
+;          AL  = Field offset in the parsed structure                          ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinityGroup:    ; TODO. Optimize by EntryAffinity
+push esi ebp
+movzx eax,al
+add esi,eax
+lea edi,[edx + 18]
+lea ebp,[edi + 16]
+mov ax,[esi + 04]
+call HexPrint16
+mov al,'.'
+stosb
+push ecx edx
+mov eax,[esi + 00]
+bsf ecx,eax
+bsr edx,eax
+cmp ecx,edx
+je .modeSingle
+push ecx edx
+.scanMask:
+bt eax,ecx
+jz .endMask
+inc ecx
+cmp ecx,edx
+jb .scanMask
+.endMask:
+cmp ecx,edx
+pop edx ecx
+je .modeInterval
+.modeIndividual:
+xor ecx,ecx
+xor edx,edx
+.cycleIndividual:
+cmp edi,ebp
+jae .overIndividual
+shr eax,1
+jnc .skipIndividual
+push eax
+test edx,edx
+jz .firstIndividual
+mov al,','
+stosb
+.firstIndividual:
+inc edx
+mov eax,ecx
+mov bl,0
+call DecimalPrint32
+pop eax
+.skipIndividual:
+inc ecx
+cmp cl,64
+jb .cycleIndividual
+jmp .done
+.overIndividual:
+mov ax,STR_TP_POINTS
+call PoolStringWrite
+jmp .done
+.modeInterval:
+xchg eax,ecx
+mov bl,0
+call DecimalPrint32 
+mov al,'-'
+stosb
+.modeSingle:
+xchg eax,edx
+call DecimalPrint32
+.done:
+pop edx ecx ebp esi
+ret
+;--- Write proc. group string for text generation by topology parsing ---------;
+; INPUT:   EDX = Destination base address                                      ;
+;          ESI = Pointer to parsed topology entry: affinity mask               ;
+;          AL  = Field offset in the parsed structure                          ; 
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperAffinityMask:
+push esi
+movzx eax,al
+add esi,eax
+lea edi,[edx + 18]
+mov ax,[esi + 08]
+call HexPrint16
+pop esi
+ret
+;--- Write cache size and count string for text gener. by topology parsing ----;
+; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
+; INPUT:   ESI = Pointer to topology information buffer                        ;
+;          ECX = Topology information buffer address limit                     ;  
+;          AL  = Cache level                                                   ;  
+;          AH  = Cache type                                                    ;    
+; OUTPUT:  None                                                                ;
+;------------------------------------------------------------------------------;
+HelperCacheSummaryEx:
+push ecx esi 0 0 ebp
+mov ebp,esp
+test ecx,ecx
+jz .nodata
+movzx ebx,ah
+xchg edx,eax
+.scanCaches:
+cmp dword [esi + 00],2
+jne .done
+cmp byte [esi + 08],dl
+jne .done
+cmp dword [esi + 16],ebx
+jne .done
+mov eax,[esi + 12]
+mov [ebp + 04],eax
+inc dword [ebp + 08]
+.done:
+mov eax,[esi + 04]
+add esi,eax
+cmp esi,ecx
+jb .scanCaches
+cmp dword [ebp + 08],0
+je .nodata
+mov bh,dl
+mov edx,edi
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+push edi
+lea edi,[edx + 01]
+mov ax,STR_TP_L
+call PoolStringWrite
+mov al,bh
+or al,30h
+stosb
+movzx ax,bl
+add ax,STR_TP_UNIFIED
+lea edi,[edx + 04] 
+call RelationNameEntry
+lea edi,[edx + 18]
+mov bl,0FFh
+push edx
+mov eax,[ebp + 04]
+xor edx,edx
+call SizePrint64
+pop edx
+lea edi,[edx + 41]
+mov ax,STR_TP_X
+call PoolStringWrite
+mov eax,[ebp + 08]
+mov bl,0
+call DecimalPrint32
+pop edi
+.nodata:
+pop ebp eax eax esi ecx
+ret
