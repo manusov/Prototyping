@@ -247,6 +247,160 @@ add ebp,edi
 mov [esi + REGISTRY32.listTopologyEx.objectStop],ebp
 @@:
 
+;---------- Get NUMA nodes list -----------------------------------------------;
+
+mov eax,[esi + REGISTRY32.dynaImport._GetNumaHighestNodeNumber]
+test eax,eax
+jz .skipNumaList
+mov ecx,esp
+push ecx               ; Parm#1 = Pointer to output variable
+call eax
+test eax,eax
+jz .error              ; dword [esp] = Maximum node number
+mov edi,ebp            ; RDI = Pointer, RBP = Start
+xor ebx,ebx            ; EBX = Node number and compare pattern
+cmp [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMaskEx],ebx
+je .standardTry
+cmp [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNodeEx],ebx
+je .standardTry
+mov eax,1         ; dword 00000001h = marker for extended topology scan results
+stosd
+.extendedNumaList:
+mov [edi],ebx
+lea eax,[edi + 4]
+push eax               ; Parm#2 = Pointer to output variable: group + mask
+push ebx               ; Parm#1 = Node 
+call [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMaskEx]
+test eax,eax
+jz @f
+lea eax,[edi + 20]     
+push eax               ; Parm#2 = Pointer to output variable: memory size
+push ebx               ; Parm#1 = Node 
+call [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNodeEx]
+test eax,eax
+jz @f
+add edi,28
+@@:
+inc ebx
+cmp ebx,[esp]
+jbe .extendedNumaList 
+jmp .doneNumaList
+.standardTry:
+cmp [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMask],ebx
+je .skipNumaList
+cmp [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNode],ebx
+je .skipNumaList
+xor eax,eax       ; dword 00000000h = marker for standard topology scan results
+stosd
+.standardNumaList:
+mov [edi],ebx
+lea eax,[edi + 4]
+push eax               ; Parm#2 = Pointer to output variable: mask
+push ebx               ; Parm#1 = Node 
+call [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMask]
+test eax,eax
+jz @f
+lea eax,[edi + 12]    
+push eax               ; Parm#2 = Pointer to output variable: memory size
+push ebx               ; Parm#1 = Node 
+call [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNode]
+test eax,eax
+jz @f
+add edi,20
+@@:
+inc ebx
+cmp ebx,[esp]
+jbe .standardNumaList 
+.doneNumaList:
+mov [esi + REGISTRY32.listNuma.objectStart],ebp
+mov [esi + REGISTRY32.listNuma.objectStop],edi
+mov ebp,edi
+.skipNumaList:
+
+;---------- Get processor groups list -----------------------------------------;
+
+xor ebx,ebx           ; EBX = Node number and compare pattern
+cmp [esi + REGISTRY32.dynaImport._GetActiveProcessorGroupCount],ebx  
+je .skipGroupList 
+cmp [esi + REGISTRY32.dynaImport._GetActiveProcessorCount],ebx       
+je .skipGroupList
+call [esi + REGISTRY32.dynaImport._GetActiveProcessorGroupCount]
+test ax,ax
+jz .skipGroupList
+mov [esp],ax 
+mov edi,ebp           ; EDI = Pointer, EBP = Start
+.groupList:
+mov eax,ebx
+stosd
+push ebx              ; Parm#1 = Group number
+call [esi + REGISTRY32.dynaImport._GetActiveProcessorCount]
+; no check for EAX = 0, empty group is acceptable ?
+stosd
+inc ebx
+cmp bx,[esp]
+jb .groupList
+.doneGroupList:
+mov [esi + REGISTRY32.listGroup.objectStart],ebp
+mov [esi + REGISTRY32.listGroup.objectStop],edi
+mov ebp,edi
+.skipGroupList:
+
+;---------- Get ACPI tables list ----------------------------------------------;
+
+xor eax,eax
+cmp [esi + REGISTRY32.dynaImport._EnumSystemFirmwareTables],eax
+je .skipAcpiList
+cmp [esi + REGISTRY32.dynaImport._GetSystemFirmwareTable],eax
+je .skipAcpiList
+call HelperAlignment
+push VALUE_BUFFER_LIMIT      ; Parm#3 = Buffer size limit
+lea eax,[ebp + 16]
+push eax                     ; Parm#2 = Pointer to buffer
+push 'IPCA'                  ; Parm#1 = Signature, select data type = ACPI
+call [esi + REGISTRY32.dynaImport._EnumSystemFirmwareTables]
+test eax,eax
+jz .error
+cmp eax,VALUE_BUFFER_LIMIT
+ja .error
+mov ebx,ebp
+lea edi,[ebp + 16 + eax]     ; EDI = Pointer to 36-byte entries list
+mov ecx,edi                  ; ECX = Limit of 4-byte entries  
+mov [ebx],edi
+add ebx,16                   ; EBX = Pointer to 4-byte tables signatures list
+imul eax,eax,9
+lea edx,[edi + eax]          ; EDX = Pointer to buffer for read table
+test dl,00001111b
+jz .scanAcpiList
+and dl,11110000b
+add edx,10h 
+.scanAcpiList:
+push ecx edx
+push VALUE_BUFFER_LIMIT      ; Parm#4 = Buffer size limit  
+push edx                     ; Parm#3 = Buffer pointer
+push dword [ebx]             ; Parm#2 = Table signature
+push 'IPCA'                  ; Parm#1 = Table provider signature
+call [esi + REGISTRY32.dynaImport._GetSystemFirmwareTable]
+pop edx ecx
+test eax,eax
+jz .skipOneTable
+cmp eax,VALUE_BUFFER_LIMIT
+ja .skipOneTable 
+push ecx esi
+cld
+mov ecx,9
+mov esi,edx
+rep movsd
+pop esi ecx
+.skipOneTable:
+add ebx,4
+cmp ebx,ecx
+jb .scanAcpiList 
+.doneAcpiList:
+mov [esi + REGISTRY32.listAcpi.objectStart],ebp
+mov [esi + REGISTRY32.listAcpi.objectStop],edi
+mov ebp,edi
+.skipAcpiList:
+
 ;---------- Build text block for operating system information screen ----------;
 ; Start text blocks build operations.
 
@@ -653,6 +807,193 @@ mov ebp,edi
 pop esi
 mov [esi + REGISTRY32.textTopologyEx2.objectStop],ebp
 
+;---------- Build text block for NUMA domains list screen ---------------------;
+
+mov edx,[esi + REGISTRY32.listNuma.objectStart]
+mov ecx,[esi + REGISTRY32.listNuma.objectStop]
+test ecx,ecx
+jz .noNuma
+mov [esi + REGISTRY32.textNuma.objectStart],ebp
+push esi
+mov esi,edx
+lodsd
+test eax,eax
+jnz .numaExt
+.numaStd:
+cmp esi,ecx
+jae .numaDone
+lodsd
+call HelperNumberString
+lea edx,[ebp - 82 - 02]
+call HelperAffinity
+lea edi,[ebp - 82 + 43]
+mov bl,2
+mov eax,[esi + 08]
+mov edx,[esi + 12]
+call SizePrint64
+add esi,16
+inc ebx
+jmp .numaStd
+.numaExt:
+cmp esi,ecx
+jae .numaDone
+lodsd
+call HelperNumberString
+lea edx,[ebp - 82 - 02]
+mov al,0
+call HelperAffinityGroup
+lea edi,[ebp - 82 + 43]
+mov bl,2
+mov eax,[esi + 16]
+mov edx,[esi + 20]
+call SizePrint64
+add esi,24
+jmp .numaExt
+.numaDone:
+pop esi
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textNuma.objectStop],ebp
+.noNuma:
+
+;---------- Build text block for processor groups list screen -----------------;
+
+mov edx,[esi + REGISTRY32.listGroup.objectStart]
+mov ecx,[esi + REGISTRY32.listGroup.objectStop]
+test ecx,ecx
+jz .noGroups
+mov [esi + REGISTRY32.textGroup.objectStart],ebp
+push esi
+mov esi,edx
+.groupsScan:
+cmp esi,ecx
+jae .groupsDone
+lodsd
+call HelperNumberString
+lea edi,[ebp - 82 + 10]
+lodsd
+mov bl,0
+call DecimalPrint32
+jmp .groupsScan 
+.groupsDone:
+pop esi
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textGroup.objectStop],ebp
+.noGroups:
+
+;---------- Build text block for ACPI screen, first block = tables list -------;
+
+mov edx,[esi + REGISTRY32.listAcpi.objectStart]
+mov ecx,[esi + REGISTRY32.listAcpi.objectStop]
+test ecx,ecx
+jz .noAcpi
+mov ecx,[edx]
+mov ebx,ecx
+sub ecx,edx
+sub ecx,16
+shr ecx,2
+jecxz .noAcpi
+mov [esi + REGISTRY32.textAcpi1.objectStart],ebp
+push esi
+mov esi,edx
+.acpiScan:
+mov edi,ebp
+push ecx
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+mov eax,00040100h
+call HelperCopyString
+mov eax,0006080Ah
+call HelperCopyString 
+mov eax,00081110h
+call HelperCopyString 
+mov eax,0004201Ch
+call HelperCopyString 
+mov ax,2D18h
+call HelperHexString
+mov ax,3920h
+call HelperHexString 
+mov ax,4708h
+call HelperDecimalString
+add ebx,36
+add ebp,82
+pop ecx
+loop .acpiScan 
+.acpiDone:
+pop esi
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textAcpi1.objectStop],ebp
+.noAcpi: 
+
+;--- Build text block for ACPI screen, second block = tables detection --------;
+
+mov edx,[esi + REGISTRY32.appData.lockedDataAcpi]
+test edx,edx
+jz .noAcpiData 
+mov eax,[esi + REGISTRY32.listAcpi.objectStart]
+mov ecx,[esi + REGISTRY32.listAcpi.objectStop]
+jecxz .noAcpiData
+mov ecx,[eax]
+sub ecx,eax
+sub ecx,16
+shr ecx,2
+jecxz .noAcpiData
+lea ebx,[eax + 16]
+mov [esi + REGISTRY32.textAcpi2.objectStart],ebp
+push esi
+.acpiDataScan:
+mov edi,ebp
+push ecx edx
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+mov eax,00040100h
+call HelperCopyString
+mov ax,', '
+stosw
+pop edx
+mov esi,edx
+mov ecx,[ebx]
+.findAcpi:
+cmp byte [esi],0
+je .notFoundAcpi
+cmp ecx,[esi]
+je .foundAcpi
+.skipAcpi:
+lodsb
+cmp al,0
+jne .skipAcpi
+jmp .findAcpi
+.notFoundAcpi:
+mov ax,STR_ACPI_UNKNOWN
+call PoolStringWrite
+jmp .doneAcpi
+.foundAcpi:
+add esi,4
+call StringWrite
+.doneAcpi:
+add ebx,4
+add ebp,82
+pop ecx
+loop .acpiDataScan
+pop esi
+.acpiDataDone:
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textAcpi2.objectStop],ebp
+.noAcpiData:
+
 ;---------- Check CPUID instruction support, get 12-chars vendor string -------;
 
 lea edi,[esi + REGISTRY32.cpuData.vendorString]
@@ -825,6 +1166,22 @@ xor eax,eax
 stosd
 mov eax,[esi + REGISTRY32.textTopologyEx2.objectStart]
 stosd       ; Extended topology information by OS, text block 2, summary
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textNuma.objectStart]
+stosd       ; NUMA domains list by OS
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textGroup.objectStart]
+stosd       ; Processor groups list by OS
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textAcpi1.objectStart]
+stosd       ; ACPI tables, text block 1 = tables list
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textAcpi2.objectStart]
+stosd       ; ACPI tables, text block 2 = tables detection by data base
 xor eax,eax
 stosd
 
@@ -1787,3 +2144,93 @@ pop edi
 .nodata:
 pop ebp eax eax esi ecx
 ret
+;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
+; INPUT:   EBP = Pointer to destination buffer                                 ;
+;          EAX = Number write to string                                        ; 
+; OUTPUT:  EBP = Updated pointer to destination buffer                         ;   
+;------------------------------------------------------------------------------;
+HelperNumberString:
+push ecx eax
+mov edi,ebp
+cld
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop eax
+mov ebp,edi
+lea edi,[ebp - 82 + 01]
+mov bl,0
+call DecimalPrint32
+pop ecx
+ret
+;---------- Copy text string with chars checks --------------------------------;
+; INPUT:   EBX = Source base                                                   ;
+;          EBP = Destination base                                              ;
+;          AL  = Offset for source string                                      ;
+;          AH  = Offset for destination string                                 ;
+;          EAX.[31-16] = String size                                           ;    
+; OUTPUT:  EDI = Last used updated pointer                                     ;
+;          String at [EBP + AH] size EAX.[31-16] updated                       ;   
+;------------------------------------------------------------------------------;
+HelperCopyString:
+movzx ecx,al
+lea esi,[ebx + ecx]
+movzx ecx,ah
+lea edi,[ebp + ecx]
+xor ecx,ecx
+shld ecx,eax,16
+.copy:
+lodsb
+cmp al,0
+je .space
+cmp al,' '
+jb .change
+cmp al,'z'
+jbe .store 
+.change:
+mov al,'.'
+jmp .store
+.space:
+mov al,' '
+.store:
+stosb
+loop .copy
+ret
+;---------- Write decimal number text string, 8 bit value ---------------------;
+; INPUT:   EBX = Source base                                                   ;
+;          EBP = Destination base                                              ;
+;          AL  = Offset for source data contain 8-bit value                    ;
+;          AH  = Offset for destination string                                 ;
+; OUTPUT:  EDI = Last used updated pointer                                     ;
+;          String at [EBP + AH] updated                                        ;   
+;------------------------------------------------------------------------------;
+HelperDecimalString:
+push ebx
+movzx ecx,ah
+lea edi,[ebp + ecx]
+movzx ecx,al
+movzx eax,byte [ebx + ecx]
+mov bl,0
+call DecimalPrint32 
+pop ebx
+ret
+;---------- Write hex number text string, 32 bit value ------------------------;
+; INPUT:   RBX = Source base                                                   ;
+;          RBP = Destination base                                              ;
+;          AL  = Offset for source data contain 8-bit value                    ;
+;          AH  = Offset for destination string                                 ;
+; OUTPUT:  EDI = Last used updated pointer                                     ;
+;          String at [RBP + AH] updated                                        ;   
+;------------------------------------------------------------------------------;
+HelperHexString:
+movzx ecx,ah
+lea edi,[ebp + ecx]
+movzx ecx,al
+mov eax,[ebx + ecx]
+call HexPrint32
+mov al,'h'
+stosb 
+ret
+

@@ -594,7 +594,7 @@ DB  ' NUMA domain  | Affinity (hex)           | Available memory at node' , 0
 DB  ' Group  | Processors count'                                          , 0
 DB  ' Sign | OEM ID | OEM Table ID | Creator ID | OEM Rev   | Creator Rev | Rev' , 0
 DB  ' Summary'                                                            , 0
-DB  ' Thread  | Function   | EAX      | EBX      | ECX      | EDX'        , 0
+DB  ' Thread   | Function   | EAX      | EBX      | ECX      | EDX'       , 0
 DB  ' APIC ID  | TSC(MHz)   | APERF(MHz) | MPERF(MHz) | APIC(MHz)  | CR0      | CR4' , 0 
 ;---------- Strings for operating system information text ---------------------;
 DB  'Memory load'                  , 0
@@ -642,6 +642,8 @@ DB  'x '           , 0
 DB  'Processor group' , 0
 DB  'efficiency='     , 0
 DB  'smt='            , 0
+;---------- Strings for ACPI information text ---------------------------------;
+DB  'UNKNOWN table signature' , 0
 endres
 
 ;---------- Raw resource for binders pool -------------------------------------;
@@ -920,6 +922,7 @@ BIND_STRING  STR_FULL_NUMA        , IDC_NUMA
 BIND_FONT    ID_FONT_2            , IDE_NUMA_UP 
 BIND_FONT    ID_FONT_2            , IDE_NUMA_TEXT
 BIND_STRING  STR_NUMA             , IDE_NUMA_UP
+BIND_BIG     BUFFER_VIEWER_NUMA   , IDE_NUMA_TEXT 
 BIND_STRING  STR_REPORT           , IDB_NUMA_REPORT
 BIND_STRING  STR_EXIT             , IDB_NUMA_CANCEL
 BIND_STOP
@@ -929,6 +932,7 @@ BIND_STRING  STR_FULL_P_GROUPS    , IDC_P_GROUPS
 BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_UP 
 BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_TEXT
 BIND_STRING  STR_GROUPS           , IDE_P_GROUPS_UP
+BIND_BIG     BUFFER_VIEWER_GROUP  , IDE_P_GROUPS_TEXT 
 BIND_STRING  STR_REPORT           , IDB_P_GROUPS_REPORT
 BIND_STRING  STR_EXIT             , IDB_P_GROUPS_CANCEL
 BIND_STOP
@@ -941,6 +945,8 @@ BIND_FONT    ID_FONT_2            , IDE_ACPI_UP_2
 BIND_FONT    ID_FONT_2            , IDE_ACPI_TEXT_2
 BIND_STRING  STR_ACPI_LIST        , IDE_ACPI_UP_1
 BIND_STRING  STR_ACPI_SUMMARY     , IDE_ACPI_UP_2
+BIND_BIG     BUFFER_VIEWER_ACPI   , IDE_ACPI_TEXT_1
+BIND_BIG     BUFFER_VIEWER_ACPI_S , IDE_ACPI_TEXT_2
 BIND_STRING  STR_REPORT           , IDB_ACPI_REPORT
 BIND_STRING  STR_EXIT             , IDB_ACPI_CANCEL
 BIND_STOP
@@ -1036,8 +1042,12 @@ DB  'GetLogicalProcessorInformation'   , 0
 DB  'GetLogicalProcessorInformationEx' , 0
 DB  'GetActiveProcessorGroupCount' , 0    
 DB  'GetActiveProcessorCount'      , 0              
-DB  'GetNumaHighestNodeNumber'     , 0            
 DB  'GetLargePageMinimum'          , 0
+DB  'GetNumaHighestNodeNumber'     , 0
+DB  'GetNumaNodeProcessorMask'     , 0
+DB  'GetNumaAvailableMemoryNode'   , 0
+DB  'GetNumaNodeProcessorMaskEx'   , 0
+DB  'GetNumaAvailableMemoryNodeEx' , 0
 DB  'EnumSystemFirmwareTables'     , 0      
 DB  'GetSystemFirmwareTable'       , 0 , 0  ; Two zeroes means end of sub-list        
 DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              

@@ -598,6 +598,9 @@ STR_TP_X               = STR_TP_CPU_CORE + 16
 STR_ET_GROUP           = STR_TP_X + 1 
 STR_ET_EFFICIENCY      = STR_ET_GROUP + 1
 STR_ET_SMT             = STR_ET_GROUP + 2
+;---------- Strings for ACPI information text ---------------------------------;
+STR_ACPI_UNKNOWN       = STR_ET_SMT + 1 
+
 ;---------- Binders numbers for GUI scripts -----------------------------------;
 BINDER_SYSINFO         = 0   
 BINDER_MEMORY          = 1
@@ -629,7 +632,11 @@ BUFFER_VIEWER_NATIVE   = BUFFER_VIEWER_OS     + 8
 BUFFER_VIEWER_TP       = BUFFER_VIEWER_NATIVE + 8
 BUFFER_VIEWER_TP_SUM   = BUFFER_VIEWER_TP     + 8 
 BUFFER_VIEWER_ET       = BUFFER_VIEWER_TP_SUM + 8 
-BUFFER_VIEWER_ET_SUM   = BUFFER_VIEWER_ET     + 8  
+BUFFER_VIEWER_ET_SUM   = BUFFER_VIEWER_ET     + 8
+BUFFER_VIEWER_NUMA     = BUFFER_VIEWER_ET_SUM + 8   
+BUFFER_VIEWER_GROUP    = BUFFER_VIEWER_NUMA   + 8 
+BUFFER_VIEWER_ACPI     = BUFFER_VIEWER_GROUP  + 8
+BUFFER_VIEWER_ACPI_S   = BUFFER_VIEWER_ACPI   + 8  
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
 macro BIND_STOP

@@ -53,8 +53,12 @@ _GetLogicalProcessorInformation    dq ?
 _GetLogicalProcessorInformationEx  dq ?
 _GetActiveProcessorGroupCount      dq ?  
 _GetActiveProcessorCount           dq ?       
-_GetNumaHighestNodeNumber          dq ?      
 _GetLargePageMinimum               dq ?
+_GetNumaHighestNodeNumber          dq ?
+_GetNumaNodeProcessorMask          dq ?
+_GetNumaAvailableMemoryNode        dq ?
+_GetNumaNodeProcessorMaskEx        dq ?
+_GetNumaAvailableMemoryNodeEx      dq ?
 _EnumSystemFirmwareTables          dq ?
 _GetSystemFirmwareTable            dq ?
 _OpenProcessToken                  dq ?   ; This functions from ADVAPI32.DLL              
@@ -127,7 +131,7 @@ dynaImport                 DYNAIMPORT ?
 listTopology               ALLOCATOR  ?
 listTopologyEx             ALLOCATOR  ?
 listNuma                   ALLOCATOR  ?
-listGroups                 ALLOCATOR  ?
+listGroup                  ALLOCATOR  ?
 listAcpi                   ALLOCATOR  ?
 listAffCpuid               ALLOCATOR  ?
 listKmd                    ALLOCATOR  ?
@@ -139,7 +143,7 @@ textTopology2              ALLOCATOR  ?
 textTopologyEx1            ALLOCATOR  ?
 textTopologyEx2            ALLOCATOR  ?
 textNuma                   ALLOCATOR  ?
-textGroups                 ALLOCATOR  ?
+textGroup                  ALLOCATOR  ?
 textAcpi1                  ALLOCATOR  ?
 textAcpi2                  ALLOCATOR  ?
 textAffCpuid               ALLOCATOR  ?
