@@ -1,4 +1,4 @@
-;==============================================================================;
+;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;        Scan system configuration and store results t system registry.        ;
 ;             This procedure for user mode resources, x64 version.             ;
@@ -10,13 +10,86 @@
 ; OUTPUT:  Application registry information                                    ; 
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft ia32 calling convention.        ;
-;==============================================================================;
+;------------------------------------------------------------------------------;
 
 SysinfoUserMode:
 push ebx esi edi ebp
 push 0                  ; Variable dword at [esp], if original ESP, no pushes
 cld
 mov esi,[Registry]      ; ESI = Registry base address
+
+;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+
+lea edi,[esi + REGISTRY32.cpuData.vendorString]
+call HelperCheckCpuid
+jc .error
+cmp eax,1
+jb .error
+
+;---------- Get 48-chars CPU model string -------------------------------------;
+
+call HelperGetCpuName
+
+;---------- Get CPU signature: type, family, model, stepping ------------------;
+
+mov eax,1
+cpuid
+stosd
+
+;------- Build CPU common features bitmap, for system information screen ------; 
+
+push esi
+mov ebx,esi
+xor eax,eax
+mov esi,[ebx + REGISTRY32.appData.lockedDataCpuCommon]
+test esi,esi
+jz @f
+call HelperBuildBitmap
+@@:
+stosd
+mov eax,80000000h
+stosd
+
+;------- Build CPU AVX512 features bitmap, for system information screen ------;
+
+xor eax,eax
+mov esi,[ebx + REGISTRY32.appData.lockedDataCpuAvx512]
+test esi,esi
+jz @f
+call HelperBuildBitmap
+@@:
+stosd
+xor eax,eax
+stosd
+
+;------- Build OS context features bitmap, for system information screen ------;
+
+xor eax,eax
+mov esi,[ebx + REGISTRY32.appData.lockedDataOsContext]
+test esi,esi
+jz @f
+call HelperBuildBitmap
+@@:
+xor edx,edx
+test eax,eax
+jz @f
+bts edx,31
+@@:
+stosd
+xchg eax,edx
+stosd
+
+;------- Build CPU methods features bitmap, for system information screen -----;
+
+xor eax,eax    ; *** DEBUG ***
+stosd          ; *** DEBUG ***
+stosd          ; *** DEBUG ***
+pop esi
+
+;---------- Measure TSC frequency ---------------------------------------------;
+
+call HelperMeasureTsc
+; TODO. Check for errors, CF=1
 
 ;---------- Initializing dynamical import WinAPI list -------------------------;
 
@@ -52,6 +125,23 @@ jne .skipLib
 jmp .scanLibs               ; External cycle for libraries list
 .doneLibs:
 pop esi
+
+;---------- Check for WoW64 process: ia32 application under Win64 -------------;
+
+lea edi,[esi + REGISTRY32.osData.isWow64]
+mov ecx,[esi + REGISTRY32.dynaImport._IsWow64Process]
+jecxz .noWow64
+call [GetCurrentProcess]
+test eax,eax
+jz .noWow64
+push edi                ; Parm#2 = Pointer to BOOL WoW64 Process
+push eax                ; Parm#1 = hProcess handle 
+call ecx                ; Call function: IsWow64Process 
+test eax,eax
+jnz .doneWow64          ; Go if WoW64 detected
+.noWow64:
+mov dword [edi],0       ; Clear WoW64 flag if WoW64 not detected  
+.doneWow64: 
 
 ;---------- Get system and memory information parameters ----------------------;
 
@@ -400,6 +490,56 @@ mov [esi + REGISTRY32.listAcpi.objectStart],ebp
 mov [esi + REGISTRY32.listAcpi.objectStop],edi
 mov ebp,edi
 .skipAcpiList:
+
+;---------- Get affinized CPUID dump ------------------------------------------;
+
+mov edi,ebp
+cmp [esi + REGISTRY32.dynaImport._SetThreadAffinityMask],0
+je .skipAffCpuid
+call [GetCurrentThread]
+test eax,eax
+jz .skipAffCpuid 
+xchg ebx,eax             ; EBX = Current thread handle
+mov ecx,[esi + REGISTRY32.osData.systemInfo.dwNumberOfProcessors]
+jecxz .skipAffCpuid
+cmp ecx,16              ; Yet limited for maximum 16 logical processors
+jbe @f
+mov ecx,16      
+@@:                      ; ECX = Logical processors count
+xor edx,edx              ; EDX = Storage for original affinity mask
+mov eax,1                ; EAX = Variable affinity mask for dump
+.affinizedDump:
+push eax ecx edx
+push eax                 ; Parm#2 = Affinity mask
+push ebx                 ; Parm#1 = Current thread handle 
+call [esi + REGISTRY32.dynaImport._SetThreadAffinityMask]
+pop edx
+test edx,edx
+jnz @f
+xchg edx,eax
+@@:
+push edx
+call GetCPUID
+mov eax,[edi]
+shl eax,5
+lea edi,[edi + eax + 32]
+pop edx ecx eax
+rol eax,1
+push eax
+bsf eax,eax
+cmp eax,ecx
+pop eax
+jb .affinizedDump 
+test edx,edx
+jz @f
+push edx                 ; Parm#2 = Affinity mask
+push ebx                 ; Parm#1 = Current thread handle 
+call [esi + REGISTRY32.dynaImport._SetThreadAffinityMask]
+@@:
+mov [esi + REGISTRY32.listAffCpuid.objectStart],ebp
+mov [esi + REGISTRY32.listAffCpuid.objectStop],edi
+mov ebp,edi
+.skipAffCpuid:
 
 ;---------- Build text block for operating system information screen ----------;
 ; Start text blocks build operations.
@@ -994,86 +1134,78 @@ mov ebp,edi
 mov [esi + REGISTRY32.textAcpi2.objectStop],ebp
 .noAcpiData:
 
-;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+;---------- Build text block for affinized CPUID dump -------------------------;
 
-lea edi,[esi + REGISTRY32.cpuData.vendorString]
-mov ebp,edi
-call HelperCheckCpuid
-jc .error
-cmp eax,1
-jb .error
-
-;---------- Get 48-chars CPU model string -------------------------------------;
-
-call HelperGetCpuName
-
-;---------- Get CPU signature: type, family, model, stepping ------------------;
-
-mov eax,1
-cpuid
-stosd
-
-;------- Build CPU common features bitmap, for system information screen ------; 
-
+mov edx,[esi + REGISTRY32.listAffCpuid.objectStart]
+mov ecx,[esi + REGISTRY32.listAffCpuid.objectStop]
+test ecx,ecx
+jz .noAffCpuidData
+mov [esi + REGISTRY32.textAffCpuid.objectStart],ebp
 push esi
-mov ebx,esi
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataCpuCommon]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
-stosd
-mov eax,80000000h
-stosd
-
-;------- Build CPU AVX512 features bitmap, for system information screen ------;
-
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataCpuAvx512]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
-stosd
-xor eax,eax
-stosd
-
-;------- Build OS context features bitmap, for system information screen ------;
-
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataOsContext]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
+mov esi,edx
 xor edx,edx
-test eax,eax
-jz @f
-bts edx,31
+.scanBlocks:
+push ecx
+mov ecx,[esi]
+bts ecx,31
+add esi,32
+.scanLines:
+mov edi,ebp
+push ecx
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+pop ecx
+btr ecx,31
+jnc @f
+lea edi,[ebp + 2]
+mov bl,0
+mov eax,edx
+call DecimalPrint32
 @@:
-stosd
-xchg eax,edx
-stosd
-
-;------- Build CPU methods features bitmap, for system information screen -----;
-
-xor eax,eax    ; *** DEBUG ***
-stosd          ; *** DEBUG ***
-stosd          ; *** DEBUG ***
+mov ebx,esi
+push ecx edx
+mov ax,0C04h
+call HelperHexStringNh
+mov ax,1910h
+call HelperHexStringNh
+mov ax,2414h
+call HelperHexStringNh
+mov ax,2F18h
+call HelperHexStringNh
+mov ax,3A1Ch
+call HelperHexStringNh
+pop edx ecx
+add esi,32
+add ebp,82
+dec ecx
+jnz .scanLines
+mov edi,ebp
+mov ax,0A0Dh
+stosw
+mov ebp,edi
+inc edx
+pop ecx
+cmp esi,ecx
+jb .scanBlocks
+.affCpuidDataDone:
 pop esi
-
-;---------- Measure TSC frequency ---------------------------------------------;
-
-call HelperMeasureTsc
-; TODO. Check for errors, CF=1
+mov al,0
+stosb
+mov ebp,edi
+mov [esi + REGISTRY32.textAffCpuid.objectStop],ebp
+.noAffCpuidData:
 
 ;---------- Build bind buffer -------------------------------------------------;
 ; Start operations with bind buffer part of application registry,
 ; EDI = Pointer for bind buffer addressing.
+; EBP = Pointer for CPU data addressing in the application registry
 
 push esi
 mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ebp,[esi + REGISTRY32.cpuData.vendorString]
 mov ebx,ebp
 
 ;---------- CPU vendor string, 12 chars ---------------------------------------;
@@ -1182,6 +1314,10 @@ xor eax,eax
 stosd
 mov eax,[esi + REGISTRY32.textAcpi2.objectStart]
 stosd       ; ACPI tables, text block 2 = tables detection by data base
+xor eax,eax
+stosd
+mov eax,[esi + REGISTRY32.textAffCpuid.objectStart]
+stosd       ; Affinized CPUID dump
 xor eax,eax
 stosd
 
@@ -2225,12 +2361,14 @@ ret
 ;          String at [RBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
 HelperHexString:
+call HelperHexStringNh
+mov al,'h'
+stosb 
+ret
+HelperHexStringNh:    ; This entry point for write without "h"
 movzx ecx,ah
 lea edi,[ebp + ecx]
 movzx ecx,al
 mov eax,[ebx + ecx]
-call HexPrint32
-mov al,'h'
-stosb 
-ret
+jmp HexPrint32
 

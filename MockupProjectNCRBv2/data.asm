@@ -40,6 +40,7 @@ include 'global\definitions.inc'
 section '.rsrc' resource data readable
 
 ;---------- Root directory of resources ---------------------------------------;
+
 directory \
 RT_DIALOG     , dialogs , \ 
 RT_MENU       , menus   , \ 
@@ -48,6 +49,7 @@ RT_ICON       , icons   , \
 RT_GROUP_ICON , gicons 
 
 ;---------- Resources directory for application main window and tabs ----------;
+
 resource dialogs,\
 IDD_MAIN        , LANG_ENGLISH + SUBLANG_DEFAULT, mainDialog    , \
 IDD_SYSINFO     , LANG_ENGLISH + SUBLANG_DEFAULT, tabSysinfo    , \
@@ -65,10 +67,13 @@ IDD_AFF_CPUID   , LANG_ENGLISH + SUBLANG_DEFAULT, tabAffCpuid   , \
 IDD_KMD         , LANG_ENGLISH + SUBLANG_DEFAULT, tabKmd
 
 ;---------- Tabbed sheet ------------------------------------------------------;
+
 dialog      mainDialog,        '',                      0,   0, 410, 282, DS_CENTER + WS_CAPTION + WS_SYSMENU, 0, IDR_MENU, 'Verdana', 10
 dialogitem  'SysTabControl32', '', IDC_TAB          ,   1,   1, 408,  29, WS_VISIBLE + TCS_MULTILINE
 enddialog
+
 ;---------- Tab 1 = system information ----------------------------------------;
+
 dialog      tabSysinfo    , '',                         2, 30, 403,  253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_SYSINFO         ,   0,  3, 380,   10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_VENDOR  ,   1,  17,  55,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
@@ -164,7 +169,9 @@ dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_E  , 361, 217,  38,  10, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_SYSINFO_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_SYSINFO_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 2 = memory and cache benchmark --------------------------------; 
+
 dialog      tabMemory     , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_MEMORY          ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_MEMORY_FRAME_1  ,   1,  17, 400,  90, WS_VISIBLE + SS_ETCHEDFRAME
@@ -256,7 +263,9 @@ dialogitem  'BUTTON'      , '', IDB_MEMORY_RUN      , 284, 234,  38,  13, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_MEMORY_DEFAULTS , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_MEMORY_CANCEL   , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 3 = processor mathematics benchmarks --------------------------; 
+
 dialog      tabMath       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_MATH            ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'BUTTON'      , '', IDB_MATH_DRAW       , 245, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -264,7 +273,9 @@ dialogitem  'BUTTON'      , '', IDB_MATH_RUN        , 284, 234,  38,  13, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_MATH_DEFAULTS   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_MATH_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 4 = operating system info -------------------------------------; 
+
 dialog      tabOs         , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_OS              ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_OS_UP           ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -272,7 +283,9 @@ dialogitem  'EDIT'        , '', IDE_OS_TEXT         ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_OS_REPORT       , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_OS_CANCEL       , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 5 = native os info, useable if run ncrb32 under win64 ---------;
+
 dialog      tabNativeOs   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_NATIVE_OS       ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_UP    ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -280,7 +293,9 @@ dialogitem  'EDIT'        , '', IDE_NATIVE_OS_TEXT  ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_REPORT   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_CANCEL   , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 6 = processor info --------------------------------------------; 
+
 dialog      tabProcessor  , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_PROCESSOR       ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_PROC_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -288,7 +303,9 @@ dialogitem  'EDIT'        , '', IDE_PROC_TEXT       ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_PROC_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_PROC_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 7 = platform topology info by winapi --------------------------; 
+
 dialog      tabTopology   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY        ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_1      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -298,7 +315,9 @@ dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_2    ,   3, 179, 400,  49, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_TOPOL_REPORT    , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_CANCEL    , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 8 = platform topology info by winapi (ex, extended) -----------; 
+
 dialog      tabTopologyEx , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY_EX     ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_1     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -308,7 +327,9 @@ dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_2   ,   3, 179, 400,  49, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 9 = platform NUMA domains list- -------------------------------; 
+
 dialog      tabNuma       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_NUMA            ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NUMA_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -316,7 +337,9 @@ dialogitem  'EDIT'        , '', IDE_NUMA_TEXT       ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_NUMA_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_NUMA_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 10 = platform processor groups list ---------------------------; 
+
 dialog      tabPgroups    , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_P_GROUPS        ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_UP     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -324,7 +347,9 @@ dialogitem  'EDIT'        , '', IDE_P_GROUPS_TEXT   ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 11 = ACPI tables list -----------------------------------------; 
+
 dialog      tabAcpi       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_ACPI            ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_ACPI_UP_1       ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -334,7 +359,9 @@ dialogitem  'EDIT'        , '', IDE_ACPI_TEXT_2     ,   3, 139, 400,  89, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_ACPI_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_ACPI_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 12 = affinized CPUID dump, per each logical CPU ---------------; 
+
 dialog      tabAffCpuid   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_AFF_CPUID       ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_A_CPUID_UP      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -342,7 +369,9 @@ dialogitem  'EDIT'        , '', IDE_A_CPUID_TEXT    ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Tab 13 = kernel mode driver information and probe results ---------; 
+
 dialog      tabKmd        , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_KMD             ,   0,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_KMD_UP_1        ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -352,7 +381,9 @@ dialogitem  'EDIT'        , '', IDE_KMD_TEXT_2      ,   3, 139, 400,  89, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_KMD_REPORT      , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_KMD_CANCEL      , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
 ;---------- Application main menu and service items ---------------------------; 
+
 resource menus, IDR_MENU, LANG_ENGLISH + SUBLANG_DEFAULT, mainMenu
 menu mainMenu
 menuitem '&File'        , 0 , MFR_POPUP
@@ -364,9 +395,11 @@ menuseparator
 menuitem 'E&xit'        , IDM_EXIT, MFR_END
 menuitem '&Help'        , 0 , MFR_POPUP + MFR_END
 menuitem '&About...'    , IDM_ABOUT, MFR_END
+
 ;---------- Raw resources strings and binder scripts --------------------------;
 ; Note. Strings represented as raw resources (not as string resources) for
 ; compact encoding: 1 byte per char.  
+
 resource raws, \
 IDS_STRINGS_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , stringsPool       , \
 IDS_BINDERS_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , bindersPool       , \ 
@@ -379,8 +412,11 @@ IDS_IMPORT_POOL     , LANG_ENGLISH + SUBLANG_DEFAULT , importList        , \
 IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList 
 
 ;---------- Raw resource for strings pool -------------------------------------;
+
 resdata stringsPool
+
 ;---------- Brief names for application sheets --------------------------------; 
+
 DB  'sysinfo'           , 0
 DB  'memory'            , 0
 DB  'math'              , 0
@@ -394,7 +430,9 @@ DB  'processor groups'  , 0
 DB  'acpi'              , 0
 DB  'affinized cpuid'   , 0
 DB  'kernel mode'       , 0
+
 ;---------- Full names for application sheets --------------------------------;
+
 DB  'System summary.'                                                                          , 0
 DB  'Memory and cache benchmarks, bandwidth (megabytes per second) and latency (nanoseconds).' , 0
 DB  'Processor mathematics and load-store operations benchmarks.'                              , 0
@@ -408,7 +446,9 @@ DB  'Processor groups list by WinAPI GetActiveProcessorGroupCount() and other.' 
 DB  'ACPI tables list by WinAPI EnumSystemFirmwareTables() and other.'                         , 0
 DB  'CPUID per each thread affinized by WinAPI SetThreadAffinityMask().'                       , 0
 DB  'Kernel mode driver load status and privileged resources info.'                            , 0
+
 ;---------- CPUID names for system information --------------------------------;
+
 DB  'CPUID'     , 0
 DB  'MMX'       , 0
 DB  'SSE'       , 0
@@ -424,7 +464,9 @@ DB  'RDRAND'    , 0
 DB  'VMX'       , 0
 DB  'SVM'       , 0
 DB  'x86-64'    , 0
+
 ;---------- CPUID names for system information, AVX512 sub-sets ---------------;
+
 DB  'AVX512CD'             , 0
 DB  'AVX512PF'             , 0
 DB  'AVX512ER'             , 0
@@ -445,7 +487,9 @@ DB  'AVX512_VP2INTERSECT'  , 0
 DB  'AVX512_FP16'          , 0
 DB  'AVX512_4FMAPS'        , 0
 DB  'AVX512_4VNNIW'        , 0
+
 ;---------- XCR0 and XGETBV context components names --------------------------;
+
 DB  'XCR0'                 , 0
 DB  'XMM[0-15]'            , 0
 DB  'YMM[0-15]'            , 0
@@ -454,28 +498,38 @@ DB  'ZMM[16-31]'           , 0
 DB  'K[0-7]'               , 0
 DB  'BNDREG'               , 0
 DB  'BNDCSR'               , 0
+
 ;---------- ACPI objects visualized at system information screen --------------;
+
 DB  'ACPI'                 , 0
 DB  'MADT'                 , 0
 DB  'SRAT'                 , 0
+
 ;---------- Cache memory ------------------------------------------------------;
+
 DB  'L1 Code'              , 0
 DB  'L1 Data'              , 0
 DB  'L2 Unified'           , 0
 DB  'L3 Unified'           , 0
 DB  'L4 Unified'           , 0
+
 ;---------- Platform topology by WinAPI ---------------------------------------;
+
 DB  'Threads'              , 0
 DB  'Cores'                , 0
 DB  'Sockets'              , 0
 DB  'OS processors'        , 0
 DB  'OS NUMA nodes'        , 0
 DB  'OS processor groups'  , 0
+
 ;---------- Memory information by WinAPI --------------------------------------;
+
 DB  'OS physical memory'   , 0
 DB  'Available'            , 0
 DB  'Minimum large page'   , 0
+
 ;--- Assembler instructions and modes names for memory and cache benchmarks ---;
+
 DB  'Read x86 (MOV)'                      , 0
 DB  'Write x86 (MOV)'                     , 0
 DB  'Copy x86 (MOV)'                      , 0
@@ -510,7 +564,9 @@ DB  'Latency (LCM)'                       , 0
 DB  'Latency (RDRAND)'                    , 0
 DB  'Nontemporal'                         , 0
 DB  'Force 32x2'                          , 0
+
 ;---------- Target objects names for memory and cache benchmark ---------------;  
+
 DB  'L1 cache'                 , 0
 DB  'L2 cache'                 , 0
 DB  'L3 cache'                 , 0
@@ -520,13 +576,17 @@ DB  'Custom block size'        , 0
 DB  'Memory mapped file size'  , 0 
 DB  'GPU memory block size'    , 0
 DB  'Physical map start-stop'  , 0
+
 ;---------- Memory status names -----------------------------------------------;
+
 DB  'Write back'               , 0
 DB  'Write through'            , 0
 DB  'Write combining'          , 0
 DB  'Write protected'          , 0
 DB  'Uncacheable'              , 0
+
 ;---------- Memory access and platform topology options names -----------------;
+
 DB  'Parallel threads'         , 0
 DB  'Hyper-threading'          , 0
 DB  'Processor groups'         , 0
@@ -539,14 +599,18 @@ DB  'One per 64 bytes'         , 0
 DB  'One per 4K'               , 0
 DB  'One per custom'           , 0
 DB  'Large pages'              , 0
+
 ;---------- Memory prefetch options names -------------------------------------;
+
 DB  'No soft prefetch'         , 0
 DB  'Default distance'         , 0
 DB  'Medium'                   , 0
 DB  'Long'                     , 0
 DB  'Block prefetch'           , 0
 DB  'Custom distance'          , 0
+
 ;---------- Measurement options names -----------------------------------------;
+
 DB  'Measure brief'                        , 0
 DB  'Measure carefull'                     , 0
 DB  'Brief adaptive'                       , 0
@@ -555,13 +619,17 @@ DB  'All pixels'                           , 0
 DB  'X / 16'                               , 0
 DB  'X / 32'                               , 0
 DB  'Draw 3D chart by repeat measurements' , 0
+
 ;---------- Buttons names -----------------------------------------------------;
+
 DB  'Draw'     , 0
 DB  'Run'      , 0
 DB  'Defaults' , 0
 DB  'Report'   , 0
 DB  'Exit'     , 0
+
 ;---------- Memory size and speed units, additional information ---------------;
+
 DB  'Bytes'        , 0
 DB  'KB'           , 0
 DB  'MB'           , 0
@@ -585,7 +653,9 @@ DB  'True clock'   , 0
 DB  'TFMS='        , 0
 DB  'TSC='         , 0
 DB  'h'            , 0
+
 ;---------- Up strings for GUI tables -----------------------------------------; 
+
 DB  ' Parameter                     | Value                      | Hex'   , 0
 DB  ' Parameter                     | Value'                              , 0
 DB  ' Topology unit  | Logical CPU affinity | Comments'                   , 0
@@ -596,7 +666,9 @@ DB  ' Sign | OEM ID | OEM Table ID | Creator ID | OEM Rev   | Creator Rev | Rev'
 DB  ' Summary'                                                            , 0
 DB  ' Thread   | Function   | EAX      | EBX      | ECX      | EDX'       , 0
 DB  ' APIC ID  | TSC(MHz)   | APERF(MHz) | MPERF(MHz) | APIC(MHz)  | CR0      | CR4' , 0 
+
 ;---------- Strings for operating system information text ---------------------;
+
 DB  'Memory load'                  , 0
 DB  'Total physical memory'        , 0
 DB  'Available physical memory'    , 0
@@ -620,7 +692,9 @@ DB  'Normal page size'             , 0
 DB  'Minimum large page size'      , 0
 DB  ' ( DISABLED )'                , 0
 DB  ' ( ENABLED )'                 , 0
+
 ;---------- Strings for topology information text -----------------------------;
+
 DB  'CPU core'     , 0
 DB  'NUMA node'    , 0
 DB  'L'            , 0
@@ -638,18 +712,38 @@ DB  'ways='        , 0
 DB  'line='        , 0
 DB  'size='        , 0
 DB  'x '           , 0
+
 ;---------- Strings for extended topology information text --------------------;
+
 DB  'Processor group' , 0
 DB  'efficiency='     , 0
 DB  'smt='            , 0
+
 ;---------- Strings for ACPI information text ---------------------------------;
+
 DB  'UNKNOWN table signature' , 0
+
+;---------- Strings for non-fatal warning messages ----------------------------;
+
+DB  'WARNING: system is not fully NCRB-compatible,' , 0Dh, 0Ah
+DB  'missing OS API functions list:'                , 0Dh, 0Ah, 0Dh, 0Ah, 0
+DB  'WARNING: NCRB32 runs under Win64,'             , 0Dh, 0Ah
+DB  'NCRB64 is optimal for this platform.'          , 0
+
+;---------- Strings for Kernel Mode Driver and Service Control Program --------;
+
+DB  'KMD32.SYS'  , 0
+DB  'KMD64.SYS'  , 0
+DB  'ICR0'       , 0
+DB  '\\.\ICR0'   , 0
 endres
 
 ;---------- Raw resource for binders pool -------------------------------------;
+
 resdata bindersPool
 
 ;---------- GUI binder script for system information screen -------------------;
+
 BIND_STRING  STR_FULL_SYSINFO     , IDC_SYSINFO   
 BIND_STRING  STR_CPUID            , IDC_SYSINFO_CPUID  
 BIND_STRING  STR_MMX              , IDC_SYSINFO_MMX 
@@ -716,7 +810,9 @@ BIND_BIG     BUFFER_CPU_VENDOR    , IDC_SYSINFO_VENDOR
 BIND_INFO    BUFFER_CPU_TFMS      , IDC_SYSINFO_TFMS
 BIND_BIG     BUFFER_CPU_NAME      , IDC_SYSINFO_NAME
 BIND_INFO    BUFFER_CPU_TSC       , IDC_SYSINFO_TSC      
+
 ;---------- CPU common features bitmap ----------------------------------------; 
+
 BIND_BOOL    BUFFER_CPU_BITMAP + 7 , 7 , IDC_SYSINFO_CPUID
 BIND_BOOL    BUFFER_CPU_BITMAP + 0 , 0 , IDC_SYSINFO_MMX
 BIND_BOOL    BUFFER_CPU_BITMAP + 0 , 1 , IDC_SYSINFO_SSE
@@ -731,7 +827,9 @@ BIND_BOOL    BUFFER_CPU_BITMAP + 1 , 1 , IDC_SYSINFO_AVX512F
 BIND_BOOL    BUFFER_CPU_BITMAP + 1 , 2 , IDC_SYSINFO_RDRAND
 BIND_BOOL    BUFFER_CPU_BITMAP + 1 , 3 , IDC_SYSINFO_VMX_SVM
 BIND_BOOL    BUFFER_CPU_BITMAP + 1 , 5 , IDC_SYSINFO_X8664
+
 ;---------- CPU AVX512 features bitmap ----------------------------------------;
+
 BIND_BOOL    BUFFER_AVX512_BITMAP + 0 , 0 , IDC_SYSINFO_A0
 BIND_BOOL    BUFFER_AVX512_BITMAP + 0 , 1 , IDC_SYSINFO_A1
 BIND_BOOL    BUFFER_AVX512_BITMAP + 0 , 2 , IDC_SYSINFO_A2
@@ -752,7 +850,9 @@ BIND_BOOL    BUFFER_AVX512_BITMAP + 2 , 0 , IDC_SYSINFO_D0
 BIND_BOOL    BUFFER_AVX512_BITMAP + 2 , 1 , IDC_SYSINFO_D1
 BIND_BOOL    BUFFER_AVX512_BITMAP + 2 , 2 , IDC_SYSINFO_D2
 BIND_BOOL    BUFFER_AVX512_BITMAP + 2 , 3 , IDC_SYSINFO_D3
+
 ;---------- OS context management features bitmap -----------------------------;
+
 BIND_BOOL    BUFFER_OS_BITMAP + 7 , 7 , IDC_SYSINFO_XCR0 
 BIND_BOOL    BUFFER_OS_BITMAP + 0 , 0 , IDC_SYSINFO_XMM015
 BIND_BOOL    BUFFER_OS_BITMAP + 0 , 1 , IDC_SYSINFO_YMM015
@@ -764,6 +864,7 @@ BIND_BOOL    BUFFER_OS_BITMAP + 0 , 6 , IDC_SYSINFO_BNDCSR
 BIND_STOP
 
 ;---------- GUI binder script for memory and cache screen ( both ia32, x64 ) --;
+
 BIND_STRING  STR_FULL_MEMORY      , IDC_MEMORY
 BIND_STRING  STR_AM_06            , IDB_MEMORY_ASM_A6
 BIND_STRING  STR_AM_07            , IDB_MEMORY_ASM_A7
@@ -835,6 +936,7 @@ BIND_STRING  STR_EXIT             , IDB_MEMORY_CANCEL
 BIND_STOP        
 
 ;---------- GUI binder script for memory and cache screen ( ia32 only ) -------;
+
 BIND_STRING  STR_AM_IA32_00       , IDB_MEMORY_ASM_A0
 BIND_STRING  STR_AM_IA32_01       , IDB_MEMORY_ASM_A1
 BIND_STRING  STR_AM_IA32_02       , IDB_MEMORY_ASM_A2
@@ -844,6 +946,7 @@ BIND_STRING  STR_AM_IA32_05       , IDB_MEMORY_ASM_A5
 BIND_STOP        
 
 ;---------- GUI binder script for memory and cache screen ( x64 only ) --------;
+
 BIND_STRING  STR_AM_X64_00        , IDB_MEMORY_ASM_A0
 BIND_STRING  STR_AM_X64_01        , IDB_MEMORY_ASM_A1
 BIND_STRING  STR_AM_X64_02        , IDB_MEMORY_ASM_A2
@@ -853,6 +956,7 @@ BIND_STRING  STR_AM_X64_05        , IDB_MEMORY_ASM_A5
 BIND_STOP        
 
 ;---------- GUI binder script for CPU mathematics screen ----------------------;
+
 BIND_STRING  STR_FULL_MATH        , IDC_MATH
 BIND_STRING  STR_DRAW             , IDB_MATH_DRAW  
 BIND_STRING  STR_RUN              , IDB_MATH_RUN
@@ -861,6 +965,7 @@ BIND_STRING  STR_EXIT             , IDB_MATH_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script operating system for screen ---------------------;
+
 BIND_STRING  STR_FULL_OS          , IDC_OS
 BIND_FONT    ID_FONT_2            , IDE_OS_UP
 BIND_FONT    ID_FONT_2            , IDE_OS_TEXT
@@ -871,6 +976,7 @@ BIND_STRING  STR_EXIT             , IDB_OS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for native operating system screen --------------;
+
 BIND_STRING  STR_FULL_NATIVE_OS   , IDC_NATIVE_OS
 BIND_FONT    ID_FONT_2            , IDE_NATIVE_OS_UP
 BIND_FONT    ID_FONT_2            , IDE_NATIVE_OS_TEXT
@@ -881,6 +987,7 @@ BIND_STRING  STR_EXIT             , IDB_NAT_OS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for processor information screen ----------------;
+
 BIND_STRING  STR_FULL_PROCESSOR   , IDC_PROCESSOR
 BIND_FONT    ID_FONT_2            , IDE_PROC_UP
 BIND_FONT    ID_FONT_2            , IDE_PROC_TEXT
@@ -890,6 +997,7 @@ BIND_STRING  STR_EXIT             , IDB_PROC_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for topology screen -----------------------------;
+
 BIND_STRING  STR_FULL_TOPOLOGY    , IDC_TOPOLOGY
 BIND_FONT    ID_FONT_2            , IDE_TOPOL_UP_1 
 BIND_FONT    ID_FONT_2            , IDE_TOPOL_TEXT_1
@@ -904,6 +1012,7 @@ BIND_STRING  STR_EXIT             , IDB_TOPOL_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for extended topology screen --------------------;
+
 BIND_STRING  STR_FULL_TOPOLOGY_EX , IDC_TOPOLOGY_EX
 BIND_FONT    ID_FONT_2            , IDE_TOP_EX_UP_1 
 BIND_FONT    ID_FONT_2            , IDE_TOP_EX_TEXT_1
@@ -918,6 +1027,7 @@ BIND_STRING  STR_EXIT             , IDB_TOPOL_EX_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for NUMA nodes list screen ----------------------;
+
 BIND_STRING  STR_FULL_NUMA        , IDC_NUMA
 BIND_FONT    ID_FONT_2            , IDE_NUMA_UP 
 BIND_FONT    ID_FONT_2            , IDE_NUMA_TEXT
@@ -928,6 +1038,7 @@ BIND_STRING  STR_EXIT             , IDB_NUMA_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for processor groups list screen ----------------;
+
 BIND_STRING  STR_FULL_P_GROUPS    , IDC_P_GROUPS
 BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_UP 
 BIND_FONT    ID_FONT_2            , IDE_P_GROUPS_TEXT
@@ -938,6 +1049,7 @@ BIND_STRING  STR_EXIT             , IDB_P_GROUPS_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for ACPI information screen ---------------------;
+
 BIND_STRING  STR_FULL_ACPI        , IDC_ACPI
 BIND_FONT    ID_FONT_2            , IDE_ACPI_UP_1 
 BIND_FONT    ID_FONT_2            , IDE_ACPI_TEXT_1
@@ -952,15 +1064,18 @@ BIND_STRING  STR_EXIT             , IDB_ACPI_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for affinized CPUID dump screen -----------------;
+
 BIND_STRING  STR_FULL_AFF_CPUID   , IDC_AFF_CPUID
 BIND_FONT    ID_FONT_2            , IDE_A_CPUID_UP 
 BIND_FONT    ID_FONT_2            , IDE_A_CPUID_TEXT
 BIND_STRING  STR_AFF_CPUID        , IDE_A_CPUID_UP
+BIND_BIG     BUFFER_VIEWER_A_CPU  , IDE_A_CPUID_TEXT 
 BIND_STRING  STR_REPORT           , IDB_A_CPUID_REPORT
 BIND_STRING  STR_EXIT             , IDB_A_CPUID_CANCEL
 BIND_STOP
 
 ;---------- GUI binder script for kernel mode driver operations screen --------;
+
 BIND_STRING  STR_FULL_KMD         , IDC_KMD
 BIND_FONT    ID_FONT_2            , IDE_KMD_UP_1 
 BIND_FONT    ID_FONT_2            , IDE_KMD_TEXT_1
@@ -974,6 +1089,7 @@ BIND_STOP
 endres
 
 ;---------- CPU common features bitmap builder script -------------------------;
+
 resdata cpuCommonFeatures
 ENTRY_CPUID    00000001h             , R_EDX , 23   ; MMX
 ENTRY_CPUID    00000001h             , R_EDX , 25   ; SSE  
@@ -993,6 +1109,7 @@ ENTRY_STOP
 endres  
 
 ;---------- CPU AVX512 features bitmap builder script -------------------------;
+
 resdata cpuAvx512Features
 ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 28   ; AVX512CD
 ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 26   ; AVX512PF
@@ -1018,6 +1135,7 @@ ENTRY_STOP
 endres  
 
 ;---------- OS context features bitmap builder script -------------------------;
+
 resdata osContextFeatures
 ENTRY_XCR0     01   ; XMM[0-15]  
 ENTRY_XCR0     02   ; YMM[0-15] 
@@ -1030,13 +1148,16 @@ ENTRY_STOP
 endres  
 
 ;---------- CPU instruction-based methods bitmap builder script ---------------;
+
 resdata cpuMethodFeatures
 ; TODO.
 endres  
 
 ;---------- Raw resource for dynamical imported functions list ----------------;
+
 resdata importList
-DB  'GlobalMemoryStatusEx'         , 0      ; This functions from KERNEL32.DLL          
+DB  'IsWow64Process'               , 0      ; This functions from KERNEL32.DLL
+DB  'GlobalMemoryStatusEx'         , 0          
 DB  'GetNativeSystemInfo'          , 0
 DB  'GetLogicalProcessorInformation'   , 0
 DB  'GetLogicalProcessorInformationEx' , 0
@@ -1048,16 +1169,22 @@ DB  'GetNumaNodeProcessorMask'     , 0
 DB  'GetNumaAvailableMemoryNode'   , 0
 DB  'GetNumaNodeProcessorMaskEx'   , 0
 DB  'GetNumaAvailableMemoryNodeEx' , 0
-DB  'EnumSystemFirmwareTables'     , 0      
-DB  'GetSystemFirmwareTable'       , 0 , 0  ; Two zeroes means end of sub-list        
+DB  'EnumSystemFirmwareTables'     , 0
+DB  'GetSystemFirmwareTable'       , 0      
+DB  'SetThreadAffinityMask'        , 0 , 0  ; Two zeroes means end of sub-list        
 DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              
-DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list                  
+DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list
+DB  0                                       ; Third zero means end of list                  
 endres
 
 ;---------- Raw resource for dynamical created fonts list ---------------------;
+
 resdata fontList
+
+; parameters sequence:
 ; cHeight, cWidth, cWeight, iCharset, iOutPrecision,
 ; iClipPrecision, iQuality, iPitchAndFamily  
+
 DW  17 , 10 , FW_DONTCARE , DEFAULT_CHARSET
 DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
 DB  'Verdana' , 0
@@ -1068,6 +1195,7 @@ DW  0
 endres
 
 ;---------- ACPI tables data base ---------------------------------------------; 
+
 resdata acpiData
 DB  'AEST' , 'Arm Error Source'                                 , 0
 DB  'APIC' , 'Multiple APIC Description'                        , 0
@@ -1140,6 +1268,7 @@ DB  0
 endres  
 
 ;---------- Directory of icon resources ---------------------------------------; 
+
 resource icons, \
 IDI_SYSINFO     , LANG_NEUTRAL , iSysinfo    , \
 IDI_MEMORY      , LANG_NEUTRAL , iMemory     , \
@@ -1154,7 +1283,9 @@ IDI_P_GROUPS    , LANG_NEUTRAL , iPgroups    , \
 IDI_ACPI        , LANG_NEUTRAL , iAcpi       , \
 IDI_AFF_CPUID   , LANG_NEUTRAL , iAffCpuid   , \
 IDI_KMD         , LANG_NEUTRAL , iKmd
+
 ;---------- Directory of group icon resources ---------------------------------;
+
 resource gicons, \
 IDG_SYSINFO     , LANG_NEUTRAL , gSysinfo    , \
 IDG_MEMORY      , LANG_NEUTRAL , gMemory     , \
@@ -1169,7 +1300,9 @@ IDG_P_GROUPS    , LANG_NEUTRAL , gPgroups    , \
 IDG_ACPI        , LANG_NEUTRAL , gAcpi       , \
 IDG_AFF_CPUID   , LANG_NEUTRAL , gAffCpuid   , \
 IDG_KMD         , LANG_NEUTRAL , gKmd
+
 ;---------- Icon resources ----------------------------------------------------;
+
 icon iSysinfo    , gSysinfo    , 'images\sysinfo.ico'
 icon iMath       , gMath       , 'images\math.ico'
 icon iMemory     , gMemory     , 'images\memory.ico'

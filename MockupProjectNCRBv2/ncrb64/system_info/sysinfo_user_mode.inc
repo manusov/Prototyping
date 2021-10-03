@@ -1,4 +1,4 @@
-;==============================================================================;
+;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;        Scan system configuration and store results t system registry.        ;
 ;             This procedure for user mode resources, x64 version.             ;
@@ -10,7 +10,7 @@
 ; OUTPUT:  Application registry information                                    ; 
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft x64 calling convention.         ;
-;==============================================================================;
+;------------------------------------------------------------------------------;
 
 SysinfoUserMode:
 push rbx rsi rdi rbp r12 r13 r14 r15
@@ -20,6 +20,69 @@ and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment by Microsoft x64 calling conventi
 sub rsp,32                   ; Parameter shadow by Microsoft x64 calling convention 
 cld
 mov r15,[Registry]           ; R15 = Registry base address
+
+;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+
+lea rdi,[r15 + REGISTRY64.cpuData.vendorString]  ; RDI = Destination pointer
+call HelperCheckCpuid
+jc .error
+cmp eax,1
+jb .error
+
+;---------- Get 48-chars CPU model string -------------------------------------;
+
+call HelperGetCpuName
+
+;---------- Get CPU signature: type, family, model, stepping ------------------;
+
+mov eax,1
+cpuid
+stosd
+
+;------- Build CPU common features bitmap, for system information screen ------; 
+
+xor eax,eax
+mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuCommon]
+test rsi,rsi
+jz @f
+call HelperBuildBitmap
+@@:
+bts rax,63
+stosq
+
+;------- Build CPU AVX512 features bitmap, for system information screen ------;
+
+xor eax,eax
+mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuAvx512]
+test rsi,rsi
+jz @f
+call HelperBuildBitmap
+@@:
+stosq
+
+;------- Build OS context features bitmap, for system information screen ------;
+
+xor eax,eax
+mov rsi,[r15 + REGISTRY64.appData.lockedDataOsContext]
+test rsi,rsi
+jz @f
+call HelperBuildBitmap
+@@:
+test rax,rax
+jz @f
+bts rax,63
+@@:
+stosq
+
+;------- Build CPU methods features bitmap, for system information screen -----;
+
+xor eax,eax    ; *** DEBUG ***
+stosq          ; *** DEBUG ***
+
+;---------- Measure TSC frequency ---------------------------------------------;
+
+call HelperMeasureTsc
+; TODO. Check for errors, CF=1
 
 ;---------- Initializing dynamical import WinAPI list -------------------------; 
 
@@ -395,6 +458,57 @@ mov [r15 + REGISTRY64.listAcpi.objectStart],rbp
 mov [r15 + REGISTRY64.listAcpi.objectStop],r14
 mov rbp,r14
 .skipAcpiList:
+
+;---------- Get affinized CPUID dump ------------------------------------------;
+
+push rdi r13
+sub rsp,32
+mov rdi,rbp
+
+cmp [rsi + DYNAIMPORT._SetThreadAffinityMask],0
+je .skipAffCpuid
+call [GetCurrentThread]
+test rax,rax
+jz .skipAffCpuid 
+mov r13,rax              ; R13 = Current thread handle
+mov r14d,[r15 + REGISTRY64.osData.systemInfo.dwNumberOfProcessors]
+test r14d,r14d
+jz .skipAffCpuid
+cmp r14d,16              ; Yet limited for maximum 16 logical processors
+jbe @f
+mov r14d,16      
+@@:                      ; R14D = Logical processors count
+xor r12d,r12d            ; R12 = Storage for original affinity mask
+mov ebx,1                ; RBX = Variable affinity mask for dump
+.affinizedDump:
+mov rdx,rbx              ; RDX = Parm#2 = Affinity mask
+mov rcx,r13              ; RCX = Parm#1 = Current thread handle 
+call [rsi + DYNAIMPORT._SetThreadAffinityMask]
+test r12,r12
+jnz @f
+xchg r12,rax
+@@:
+call GetCPUID
+mov eax,[rdi]
+shl eax,5
+lea rdi,[rdi + rax + 32]
+rol rbx,1
+bsf rax,rbx
+cmp rax,r14
+jb .affinizedDump 
+test r12,r12
+jz @f
+mov rdx,r12              ; RDX = Parm#2 = Affinity mask
+mov rcx,r13              ; RCX = Parm#1 = Current thread handle 
+call [rsi + DYNAIMPORT._SetThreadAffinityMask]
+@@:
+mov [r15 + REGISTRY64.listAffCpuid.objectStart],rbp
+mov [r15 + REGISTRY64.listAffCpuid.objectStop],rdi
+mov rbp,rdi
+.skipAffCpuid:
+
+add rsp,32
+pop r13 rdi
 
 ;---------- Build text block for operating system information screen ----------; 
 ; Start text blocks build operations.
@@ -963,75 +1077,70 @@ mov rbp,rdi
 mov [r15 + REGISTRY64.textAcpi2.objectStop],rbp
 .noAcpiData:
 
-;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+;---------- Build text block for affinized CPUID dump -------------------------;
 
-lea rdi,[r15 + REGISTRY64.cpuData.vendorString]  ; RDI = Destination pointer
-mov r14,rdi                                      ; R14 = Destination base
-call HelperCheckCpuid
-jc .error
-cmp eax,1
-jb .error
-
-;---------- Get 48-chars CPU model string -------------------------------------;
-
-call HelperGetCpuName
-
-;---------- Get CPU signature: type, family, model, stepping ------------------;
-
-mov eax,1
-cpuid
-stosd
-
-;------- Build CPU common features bitmap, for system information screen ------; 
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuCommon]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
+mov rsi,[r15 + REGISTRY64.listAffCpuid.objectStart]
+mov rcx,[r15 + REGISTRY64.listAffCpuid.objectStop]
+test rcx,rcx
+jz .noAffCpuidData
+mov [r15 + REGISTRY64.textAffCpuid.objectStart],rbp
+xor r14,r14
+.scanBlocks:
+push rcx
+mov r12d,[rsi]
+bts r12,63
+add rsi,32
+.scanLines:
+mov rdi,rbp
+mov ecx,80
+mov al,' '
+rep stosb
+mov ax,0A0Dh
+stosw
+btr r12,63
+jnc @f
+lea rdi,[rbp + 2]
+mov bl,0
+mov eax,r14d
+call DecimalPrint32
 @@:
-bts rax,63
-stosq
-
-;------- Build CPU AVX512 features bitmap, for system information screen ------;
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuAvx512]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
-@@:
-stosq
-
-;------- Build OS context features bitmap, for system information screen ------;
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataOsContext]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
-@@:
-test rax,rax
-jz @f
-bts rax,63
-@@:
-stosq
-
-;------- Build CPU methods features bitmap, for system information screen -----;
-
-xor eax,eax    ; *** DEBUG ***
-stosq          ; *** DEBUG ***
-
-;---------- Measure TSC frequency ---------------------------------------------;
-
-call HelperMeasureTsc
-; TODO. Check for errors, CF=1
+mov rbx,rsi
+mov ax,0C04h
+call HelperHexStringNh
+mov ax,1910h
+call HelperHexStringNh
+mov ax,2414h
+call HelperHexStringNh
+mov ax,2F18h
+call HelperHexStringNh
+mov ax,3A1Ch
+call HelperHexStringNh
+add rsi,32
+add rbp,82
+dec r12d
+jnz .scanLines
+mov rdi,rbp
+mov ax,0A0Dh
+stosw
+mov rbp,rdi
+inc r14d
+pop rcx
+cmp rsi,rcx
+jb .scanBlocks
+.affCpuidDataDone:
+mov al,0
+stosb
+mov rbp,rdi
+mov [r15 + REGISTRY64.textAffCpuid.objectStop],rbp
+.noAffCpuidData:
 
 ;---------- Build bind buffer -------------------------------------------------;
 ; Start operations with bind buffer part of application registry,
 ; RDI = Pointer for bind buffer addressing.
+; R14 = Pointer for CPU data addressing in the application registry 
 
 mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea r14,[r15 + REGISTRY64.cpuData.vendorString]
 
 ;---------- CPU vendor string, 12 chars ---------------------------------------; 
 
@@ -1108,6 +1217,8 @@ mov rax,[r15 + REGISTRY64.textAcpi1.objectStart]
 stosq       ; ACPI tables, text block 1 = tables list
 mov rax,[r15 + REGISTRY64.textAcpi2.objectStart]
 stosq       ; ACPI tables, text block 2 = tables detection by data base
+mov rax,[r15 + REGISTRY64.textAffCpuid.objectStart]
+stosq       ; Affinized CPUID dump
 
 ; ...
 
@@ -2079,12 +2190,13 @@ ret
 ;          String at [RBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
 HelperHexString:
+call HelperHexStringNh
+mov al,'h'
+stosb 
+ret
+HelperHexStringNh:  ; This entry point for write without "h"
 movzx ecx,ah
 lea rdi,[rbp + rcx]
 movzx ecx,al
 mov eax,[rbx + rcx]
-call HexPrint32
-mov al,'h'
-stosb 
-ret
-
+jmp HexPrint32

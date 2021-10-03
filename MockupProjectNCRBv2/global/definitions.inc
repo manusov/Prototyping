@@ -1,11 +1,12 @@
-;==============================================================================;
+;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;               Global definitions for all components of project.              ;
 ;                         Both for ia32 and x64 code.                          ;
 ;                                                                              ;
-;==============================================================================;
+;------------------------------------------------------------------------------;
 
 ;---------- Identifiers for application main window and tabs ------------------; 
+
 IDD_MAIN                = 100
 IDD_SYSINFO             = 101
 IDD_MEMORY              = 102
@@ -20,16 +21,20 @@ IDD_PGROUPS             = 110
 IDD_ACPI                = 111
 IDD_AFF_CPUID           = 112
 IDD_KMD                 = 113
+
 ;---------- Identifiers for application main menu and menu items --------------; 
+
 IDR_MENU                = 114
 IDM_SAVE_REPORT         = 115 
 IDM_LOAD_REPORT         = 116
 IDM_SAVE_IMAGE          = 117
 IDM_ABOUT               = 118
 IDM_EXIT                = 119
+
 ;---------- Identifiers for raw resources: strings and binder scripts ---------;
 ; Note. Strings represented as raw resources (not as string resources) for
 ; compact encoding: 1 byte per char.  
+
 IDS_STRINGS_POOL        = 120
 IDS_BINDERS_POOL        = 121
 IDS_CPU_COMMON_POOL     = 122
@@ -39,7 +44,9 @@ IDS_CPU_METHOD_POOL     = 125
 IDS_ACPI_DATA_POOL      = 126
 IDS_IMPORT_POOL         = 127
 IDS_FONTS_POOL          = 128
+
 ;---------- Identifiers for icons ---------------------------------------------;
+
 IDI_SYSINFO             = 130
 IDI_MEMORY              = 131
 IDI_MATH                = 132
@@ -53,7 +60,9 @@ IDI_P_GROUPS            = 139
 IDI_ACPI                = 140
 IDI_AFF_CPUID           = 141
 IDI_KMD                 = 142
+
 ;---------- Identifiers for group icons ---------------------------------------;
+
 IDG_SYSINFO             = 150
 IDG_MEMORY              = 151
 IDG_MATH                = 152
@@ -67,15 +76,20 @@ IDG_P_GROUPS            = 159
 IDG_ACPI                = 160
 IDG_AFF_CPUID           = 161
 IDG_KMD                 = 162
+
 ;---------- Initial values and counters for build GUI objects -----------------; 
+
 ICON_FIRST              = IDG_SYSINFO
 IDD_FIRST               = IDD_SYSINFO
 ITEM_COUNT              = 13
 ICON_COUNT              = ITEM_COUNT
 
 ;---------- Identifier for tabbed sheet component -----------------------------;
+
 IDC_TAB                 = 200
+
 ;---------- Identifiers for tab #1 = System information sheet -----------------;
+
 IDC_SYSINFO             = 300 
 IDC_SYSINFO_VENDOR      = 301
 IDC_SYSINFO_TFMS        = 302
@@ -169,7 +183,9 @@ IDC_SYSINFO_LRPG_V      = 389
 IDC_SYSINFO_LRPG_E      = 390
 IDB_SYSINFO_REPORT      = 391 
 IDB_SYSINFO_CANCEL      = 392
+
 ;---------- Identifiers for tab #2 = Memory and cache benchmarks sheet --------;
+
 IDC_MEMORY              = 500
 IDC_MEMORY_FRAME_1      = 501
 IDC_MEMORY_FRAME_2      = 502
@@ -259,31 +275,41 @@ IDB_MEMORY_DRAW         = 585
 IDB_MEMORY_RUN          = 586
 IDB_MEMORY_DEFAULTS     = 587
 IDB_MEMORY_CANCEL       = 588
+
 ;---------- Identifiers for tab #3 = Processor mathematics benchmarks sheet ---;
+
 IDC_MATH                = 700
 IDB_MATH_DRAW           = 701
 IDB_MATH_RUN            = 702
 IDB_MATH_DEFAULTS       = 703
 IDB_MATH_CANCEL         = 704
+
 ;---------- Identifiers for tab #4 = Operating system sheet -------------------; 
+
 IDC_OS                  = 900
 IDE_OS_UP               = 901
 IDE_OS_TEXT             = 902
 IDB_OS_REPORT           = 903
 IDB_OS_CANCEL           = 904
+
 ;---------- Identifiers for tab #5 = Native os ( for WoW64 ) sheet ------------;
+
 IDC_NATIVE_OS           = 1100
 IDE_NATIVE_OS_UP        = 1101
 IDE_NATIVE_OS_TEXT      = 1102
 IDB_NAT_OS_REPORT       = 1103
 IDB_NAT_OS_CANCEL       = 1104
+
 ;---------- Identifiers for tab #6 = Processor information sheet --------------; 
+
 IDC_PROCESSOR           = 1300
 IDE_PROC_UP             = 1301
 IDE_PROC_TEXT           = 1302
 IDB_PROC_REPORT         = 1303
 IDB_PROC_CANCEL         = 1304
+
 ;---------- Identifiers for tab #7 = Topology information sheet ---------------; 
+
 IDC_TOPOLOGY            = 1500
 IDE_TOPOL_UP_1          = 1501
 IDE_TOPOL_TEXT_1        = 1502
@@ -291,7 +317,9 @@ IDE_TOPOL_UP_2          = 1503
 IDE_TOPOL_TEXT_2        = 1504
 IDB_TOPOL_REPORT        = 1505
 IDB_TOPOL_CANCEL        = 1506
+
 ;---------- Identifiers for tab #8 = Extended topology information sheet ------;
+
 IDC_TOPOLOGY_EX         = 1700
 IDE_TOP_EX_UP_1         = 1701
 IDE_TOP_EX_TEXT_1       = 1702
@@ -299,19 +327,25 @@ IDE_TOP_EX_UP_2         = 1703
 IDE_TOP_EX_TEXT_2       = 1704
 IDB_TOPOL_EX_REPORT     = 1705
 IDB_TOPOL_EX_CANCEL     = 1706
+
 ;---------- Identifiers for tab #9 = NUMA domains sheet -----------------------; 
+
 IDC_NUMA                = 1900
 IDE_NUMA_UP             = 1901
 IDE_NUMA_TEXT           = 1902
 IDB_NUMA_REPORT         = 1903
 IDB_NUMA_CANCEL         = 1904
+
 ;---------- Identifiers for tab #10 = Processor groups sheet ------------------;
+
 IDC_P_GROUPS            = 2100
 IDE_P_GROUPS_UP         = 2101
 IDE_P_GROUPS_TEXT       = 2102
 IDB_P_GROUPS_REPORT     = 2103
 IDB_P_GROUPS_CANCEL     = 2104
+
 ;---------- Identifiers for tab #11 = ACPI information sheet ------------------;  
+
 IDC_ACPI                = 2300
 IDE_ACPI_UP_1           = 2301
 IDE_ACPI_TEXT_1         = 2302
@@ -319,13 +353,17 @@ IDE_ACPI_UP_2           = 2303
 IDE_ACPI_TEXT_2         = 2304
 IDB_ACPI_REPORT         = 2305
 IDB_ACPI_CANCEL         = 2306
+
 ;---------- Identifiers for tab #12 = Affinized CPUID dump sheet --------------; 
+
 IDC_AFF_CPUID           = 2500
 IDE_A_CPUID_UP          = 2501
 IDE_A_CPUID_TEXT        = 2502
 IDB_A_CPUID_REPORT      = 2503
 IDB_A_CPUID_CANCEL      = 2504
+
 ;---------- Identifiers for tab #13 = Kernel Mode Driver information sheet ----;
+
 IDC_KMD                 = 2700
 IDE_KMD_UP_1            = 2701
 IDE_KMD_TEXT_1          = 2702
@@ -336,7 +374,9 @@ IDB_KMD_CANCEL          = 2706
 
 ;---------- Strings numbers in the raw strings pool ---------------------------;
 ; Note. Strings enumerated by zero-terminations.
+
 ;---------- Strings numbers for application sheets brief names ----------------;
+
 STR_BRIEF_SYSINFO      = 0   
 STR_BRIEF_MEMORY       = 1
 STR_BRIEF_MATH         = 2
@@ -350,7 +390,9 @@ STR_BRIEF_P_GROUPS     = 9
 STR_BRIEF_ACPI         = 10
 STR_BRIEF_AFF_CPUID    = 11
 STR_BRIEF_KMD          = 12
+
 ;---------- Strings numbers for application sheets full names -----------------;
+
 STR_FULL_SYSINFO       = 13   
 STR_FULL_MEMORY        = 14
 STR_FULL_MATH          = 15
@@ -364,7 +406,9 @@ STR_FULL_P_GROUPS      = 22
 STR_FULL_ACPI          = 23
 STR_FULL_AFF_CPUID     = 24
 STR_FULL_KMD           = 25
+
 ;---------- CPUID names for system information --------------------------------;
+
 STR_CPUID              = STR_FULL_KMD + 1
 STR_MMX                = STR_CPUID + 1
 STR_SSE                = STR_CPUID + 2
@@ -380,7 +424,9 @@ STR_RDRAND             = STR_CPUID + 11
 STR_VMX                = STR_CPUID + 12
 STR_SVM                = STR_CPUID + 13
 STR_X8664              = STR_CPUID + 14
+
 ;---------- CPUID names for system information, AVX512 sub-sets ---------------;
+
 STR_AVX512CD           = STR_X8664 + 1 
 STR_AVX512PF           = STR_AVX512CD + 1
 STR_AVX512ER           = STR_AVX512CD + 2
@@ -401,7 +447,9 @@ STR_AVX512_VP2INTERS   = STR_AVX512CD + 16
 STR_AVX512_FP16        = STR_AVX512CD + 17 
 STR_AVX512_4FMAPS      = STR_AVX512CD + 18
 STR_AVX512_4VNNIW      = STR_AVX512CD + 19
+
 ;---------- XCR0 and XGETBV context components names --------------------------;
+
 STR_XCR0               = STR_AVX512_4VNNIW + 1 
 STR_XMM_0_15           = STR_XCR0 + 1 
 STR_YMM_0_15           = STR_XCR0 + 2
@@ -410,28 +458,38 @@ STR_ZMM_16_31          = STR_XCR0 + 4
 STR_K_0_7              = STR_XCR0 + 5
 STR_BNDREG             = STR_XCR0 + 6
 STR_BNDCSR             = STR_XCR0 + 7
+
 ;---------- ACPI objects visualized at system information screen --------------;
+
 STR_ACPI               = STR_BNDCSR + 1
 STR_MADT               = STR_ACPI + 1
 STR_SRAT               = STR_ACPI + 2
+
 ;---------- Cache memory ------------------------------------------------------;
+
 STR_L1_CODE            = STR_SRAT + 1
 STR_L1_DATA            = STR_L1_CODE + 1
 STR_L2_UNIFIED         = STR_L1_CODE + 2
 STR_L3_UNIFIED         = STR_L1_CODE + 3
 STR_L4_UNIFIED         = STR_L1_CODE + 4
+
 ;---------- Platform topology by WinAPI ---------------------------------------;
+
 STR_THREADS            = STR_L4_UNIFIED + 1
 STR_CORES              = STR_THREADS + 1
 STR_SOCKETS            = STR_THREADS + 2
 STR_OS_PROCESSORS      = STR_THREADS + 3
 STR_OS_NUMA_NODES      = STR_THREADS + 4
 STR_OS_GROUPS          = STR_THREADS + 5
+
 ;---------- Memory information by WinAPI --------------------------------------;
+
 STR_OS_PHYSICAL        = STR_OS_GROUPS + 1
 STR_OS_AVAILABLE       = STR_OS_PHYSICAL + 1
 STR_OS_MIN_LARGE       = STR_OS_PHYSICAL + 2
+
 ;--- Assembler instructions and modes names for memory and cache benchmarks ---;
+
 STR_AM_IA32_00         = STR_OS_MIN_LARGE + 1  
 STR_AM_IA32_01         = STR_AM_IA32_00 + 1   
 STR_AM_IA32_02         = STR_AM_IA32_00 + 2 
@@ -466,7 +524,9 @@ STR_AM_LCM             = STR_AM_IA32_00 + 30
 STR_AM_RDRAND          = STR_AM_IA32_00 + 31
 STR_NON_TEMPORAL       = STR_AM_IA32_00 + 32
 STR_32X2               = STR_AM_IA32_00 + 33
+
 ;---------- Target objects names for memory and cache benchmark ---------------;
+
 STR_MEMORY_L1          = STR_32X2 + 1
 STR_MEMORY_L2          = STR_MEMORY_L1 + 1 
 STR_MEMORY_L3          = STR_MEMORY_L1 + 2
@@ -476,13 +536,17 @@ STR_MEMORY_CUSTOM      = STR_MEMORY_L1 + 5
 STR_MEMORY_FILE        = STR_MEMORY_L1 + 6
 STR_MEMORY_GPU         = STR_MEMORY_L1 + 7
 STR_MEMORY_PHYSICAL    = STR_MEMORY_L1 + 8
+
 ;---------- Memory status names -----------------------------------------------;
+
 STR_MEMORY_MTRR_WB     = STR_MEMORY_PHYSICAL + 1
 STR_MEMORY_MTRR_WT     = STR_MEMORY_MTRR_WB + 1 
 STR_MEMORY_MTRR_WC     = STR_MEMORY_MTRR_WB + 2 
 STR_MEMORY_MTRR_WP     = STR_MEMORY_MTRR_WB + 3 
 STR_MEMORY_MTRR_UC     = STR_MEMORY_MTRR_WB + 4 
+
 ;---------- Memory access and platform topology options names -----------------;
+
 STR_PARALLEL_THREADS   = STR_MEMORY_MTRR_UC + 1 
 STR_HYPER_THREADING    = STR_PARALLEL_THREADS + 1 
 STR_PROCESSOR_GROUPS   = STR_PARALLEL_THREADS + 2
@@ -495,14 +559,18 @@ STR_ACCESS_64B         = STR_PARALLEL_THREADS + 8
 STR_ACCESS_4096B       = STR_PARALLEL_THREADS + 9 
 STR_ACCES_CUSTOM       = STR_PARALLEL_THREADS + 10 
 STR_LARGE_PAGES        = STR_PARALLEL_THREADS + 11
+
 ;---------- Memory prefetch options names -------------------------------------;
+
 STR_NO_PREFETCH        = STR_LARGE_PAGES + 1
 STR_DEFAULT_DISTANCE   = STR_NO_PREFETCH + 1
 STR_MEDIUM_DISTANCE    = STR_NO_PREFETCH + 2
 STR_LONG_DISTANCE      = STR_NO_PREFETCH + 3
 STR_BLOCK_PREFETCH     = STR_NO_PREFETCH + 4
 STR_CUSTOM_DISTANCE    = STR_NO_PREFETCH + 5
+
 ;---------- Measurement options names -----------------------------------------;
+
 STR_MEASURE_BRIEF      = STR_CUSTOM_DISTANCE + 1  
 STR_MEASURE_CAREF      = STR_MEASURE_BRIEF + 1 
 STR_BRIEFF_ADAPTIVE    = STR_MEASURE_BRIEF + 2
@@ -511,13 +579,17 @@ STR_ALL_POINTS         = STR_MEASURE_BRIEF + 4
 STR_X_16_POINTS        = STR_MEASURE_BRIEF + 5
 STR_X_32_POINTS        = STR_MEASURE_BRIEF + 6
 STR_3D_DRAW            = STR_MEASURE_BRIEF + 7 
+
 ;---------- Actions buttons names ---------------------------------------------;
+
 STR_DRAW               = STR_3D_DRAW + 1 
 STR_RUN                = STR_DRAW + 1
 STR_DEFAULTS           = STR_DRAW + 2
 STR_REPORT             = STR_DRAW + 3
 STR_EXIT               = STR_DRAW + 4
+
 ;---------- Memory size and speed units, additional information ---------------;
+
 STR_UNITS_BYTES        = STR_EXIT + 1   
 STR_UNITS_KB           = STR_UNITS_BYTES + 1 
 STR_UNITS_MB           = STR_UNITS_BYTES + 2
@@ -541,7 +613,9 @@ STR_TRUE_CLOCK         = STR_UNITS_BYTES + 19
 STR_TFMS               = STR_UNITS_BYTES + 20
 STR_TSC                = STR_UNITS_BYTES + 21
 STR_H                  = STR_UNITS_BYTES + 22
+
 ;---------- Up strings for GUI tables -----------------------------------------;
+
 STR_PARM_VALUE_HEX     = STR_H + 1
 STR_PARM_VALUE         = STR_PARM_VALUE_HEX + 1
 STR_TOPOLOGY           = STR_PARM_VALUE_HEX + 2
@@ -552,7 +626,9 @@ STR_ACPI_LIST          = STR_PARM_VALUE_HEX + 6
 STR_ACPI_SUMMARY       = STR_PARM_VALUE_HEX + 7
 STR_AFF_CPUID          = STR_PARM_VALUE_HEX + 8 
 STR_KMD                = STR_PARM_VALUE_HEX + 9
+
 ;---------- Strings for operating system information text ---------------------;
+
 STR_OS_MEMORY_LOAD     = STR_KMD + 1
 STR_OS_TOTAL_PHYSICAL  = STR_OS_MEMORY_LOAD + 1
 STR_OS_AVAIL_PHYSICAL  = STR_OS_MEMORY_LOAD + 2 
@@ -576,7 +652,9 @@ STR_OS_NORMAL_PAGE     = STR_OS_MEMORY_LOAD + 19
 STR_OS_LARGE_PAGE      = STR_OS_MEMORY_LOAD + 20
 STR_OS_DISABLED        = STR_OS_MEMORY_LOAD + 21
 STR_OS_ENABLED         = STR_OS_MEMORY_LOAD + 22
+
 ;---------- Strings for topology information text -----------------------------;
+
 STR_TP_CPU_CORE        = STR_OS_ENABLED + 1
 STR_TP_NUMA_NODE       = STR_TP_CPU_CORE + 1
 STR_TP_L               = STR_TP_CPU_CORE + 2
@@ -594,14 +672,31 @@ STR_TP_CACHE_WAYS      = STR_TP_CPU_CORE + 13
 STR_TP_CACHE_LINE      = STR_TP_CPU_CORE + 14
 STR_TP_CACHE_SIZE      = STR_TP_CPU_CORE + 15
 STR_TP_X               = STR_TP_CPU_CORE + 16
+
 ;---------- Strings for extended topology information text --------------------;
+
 STR_ET_GROUP           = STR_TP_X + 1 
 STR_ET_EFFICIENCY      = STR_ET_GROUP + 1
 STR_ET_SMT             = STR_ET_GROUP + 2
+
 ;---------- Strings for ACPI information text ---------------------------------;
+
 STR_ACPI_UNKNOWN       = STR_ET_SMT + 1 
 
+;---------- Strings for non-fatal warning messages ----------------------------;
+
+STR_WARNING_API        = STR_ACPI_UNKNOWN + 1
+STR_WARNING_WOW        = STR_WARNING_API + 1
+
+;---------- Strings for Kernel Mode Driver and Service Control Program --------;
+
+STR_NAME_KMD32         = STR_WARNING_WOW + 1
+STR_NAME_KMD64         = STR_NAME_KMD32 + 1
+STR_DRV_NAME           = STR_NAME_KMD32 + 2
+STR_DRV_DEVICE         = STR_NAME_KMD32 + 3
+
 ;---------- Binders numbers for GUI scripts -----------------------------------;
+
 BINDER_SYSINFO         = 0   
 BINDER_MEMORY          = 1
 BINDER_MEMORY_IA32     = 2 
@@ -619,6 +714,7 @@ BINDER_AFF_CPUID       = 13
 BINDER_KMD             = 14
 
 ;---------- Offsets definitions for bind buffer -------------------------------;
+
 BUFFER_CPU_VENDOR      = 0
 BUFFER_CPU_TFMS        = BUFFER_CPU_VENDOR    + 8
 BUFFER_CPU_NAME        = BUFFER_CPU_TFMS      + 15
@@ -637,8 +733,10 @@ BUFFER_VIEWER_NUMA     = BUFFER_VIEWER_ET_SUM + 8
 BUFFER_VIEWER_GROUP    = BUFFER_VIEWER_NUMA   + 8 
 BUFFER_VIEWER_ACPI     = BUFFER_VIEWER_GROUP  + 8
 BUFFER_VIEWER_ACPI_S   = BUFFER_VIEWER_ACPI   + 8  
+BUFFER_VIEWER_A_CPU    = BUFFER_VIEWER_ACPI_S + 8 
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
+
 macro BIND_STOP
 { DB  0 }
 MACRO BIND_STRING srcid, dstid
@@ -660,6 +758,7 @@ MACRO BIND_FONT srcid, dstid
 { DD 06h + (srcid) SHL 6 + (dstid) SHL 19 }
 
 ;---------- Macro definitions for CPU/OS features bitmaps builders scripts ----;
+
 R_EAX = 0
 R_EBX = 1
 R_ECX = 2
@@ -696,10 +795,12 @@ MACRO PREFIX_XCR0 bit
 { DB  06h , bit }
 
 ;---------- Operating system definitions --------------------------------------;
+
 ERROR_BUFFER_LIMIT  = 07Ah
 VALUE_BUFFER_LIMIT  = 128 * 1024 
 
 ;---------- GUI definitions ---------------------------------------------------; 
+
 CLEARTYPE_QUALITY   = 5
 ID_FONT_1           = 0
 ID_FONT_2           = 1
