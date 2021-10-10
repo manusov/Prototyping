@@ -6,10 +6,23 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+;---------- Get pointer to performance pattern subroutine by ID ---------------;
+;                                                                              ;
+; INPUT:   AL  = Subroutine ID                                                 ;
+;                                                                              ;
+; OUTPUT:  RBX = Subroutine entry point                                        ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+
+GetMathPattern:
+movzx eax,al                           ; This clears bits RAX[63-8]
+movzx eax,word [TableMath + rax*2]     ; Read 16-bit compact offset
+lea rbx,[RoutinesMath + rax]           ; Calculate 64-bit absolute address
+ret
 
 ;---------- Start offset for compact offsets encoding -------------------------;
 
-MathBandwidthBase:
+RoutinesMath:
 
 ;---------- Math performance bandwidth measurement ----------------------------;
 ; Routines for mathematics instructions bandwidth benchmarks,

@@ -1,38 +1,41 @@
-;=====================================================================================;
-;                                                                                     ;
-; Project NCRB ( NUMA CPU&RAM Benchmarks v2.xx.xx ).                                  ;
-; (C)2021 Ilya Manusov.                                                               ;
-; manusov1969@gmail.com                                                               ;
-; Previous version v1.xx.xx                                                           ; 
-; https://github.com/manusov/NumaCpuAndRamBenchmarks                                  ;
-; This version v2.xx.xx ( UNDER CONSTRUCTION )                                        ;
-; https://github.com/manusov/Prototyping                                              ; 
-;                                                                                     ;
-; DATA.ASM = source file for FASM                                                     ; 
-; DATA.DLL = translation result, universal resource library for Win32 and Win64       ;
-; Note. Resource-only DLLs is universal,                                              ; 
-; it can be loaded both by ia32 and x64 applications.                                 ;
-; See also other components:                                                          ;
-; NCRB32.ASM, NCRB64.ASM, KMD32.ASM, KMD64.ASM.                                       ;
-;                                                                                     ;
-; Translation by Flat Assembler version 1.73.27 ( Jan 27, 2021 ).                     ;
-; http://flatassembler.net/                                                           ;
-;                                                                                     ;
-; Edit by FASM Editor 2.0.                                                            ; 
-; Use this editor for correct source file tabulations and format. (!)                 ;
-; https://fasmworld.ru/instrumenty/fasm-editor-2-0/                                   ;
-;                                                                                     ;
-; User mode debug by OllyDbg ( 32-bit, actual for module NCRB32.EXE )                 ;
-; http://www.ollydbg.de/version2.html                                                 ;
-;                                                                                     ;
-; User mode debug by FDBG ( 64-bit, actual for module NCRB64.EXE )                    ;
-; https://board.flatassembler.net/topic.php?t=9689&postdays=0&postorder=asc&start=180 ;
-; ( Search for archive fdbg0025.zip )                                                 ;
-;                                                                                     ;
-; Icons from open icon library                                                        ;
-; https://sourceforge.net/projects/openiconlibrary/                                   ;
-;                                                                                     ;
-;=====================================================================================;
+;=========================================================================================================;
+;                                                                                                         ;
+; Project NCRB ( NUMA CPU&RAM Benchmarks v2.xx.xx ).                                                      ;
+; (C)2021 Ilya Manusov.                                                                                   ;
+; manusov1969@gmail.com                                                                                   ;
+; Previous version v1.xx.xx                                                                               ; 
+; https://github.com/manusov/NumaCpuAndRamBenchmarks                                                      ;
+; This version v2.xx.xx ( UNDER CONSTRUCTION )                                                            ;
+; https://github.com/manusov/Prototyping                                                                  ; 
+;                                                                                                         ;
+; DATA.ASM = source file for FASM                                                                         ; 
+; DATA.DLL = translation result, universal resource library for Win32 and Win64                           ;
+; Note. Resource-only DLLs is universal,                                                                  ; 
+; it can be loaded both by ia32 and x64 applications.                                                     ;
+; See also other components:                                                                              ;
+; NCRB32.ASM, NCRB64.ASM, KMD32.ASM, KMD64.ASM.                                                           ;
+;                                                                                                         ;
+; Translation by Flat Assembler version 1.73.27 ( Jan 27, 2021 ).                                         ;
+; http://flatassembler.net/                                                                               ;
+;                                                                                                         ;
+; Edit by FASM Editor 2.0.                                                                                ; 
+; Use this editor for correct source file tabulations and format. (!)                                     ;
+; https://fasmworld.ru/instrumenty/fasm-editor-2-0/                                                       ;
+;                                                                                                         ;
+; User mode debug by OllyDbg ( 32-bit, actual for module NCRB32.EXE )                                     ;
+; http://www.ollydbg.de/version2.html                                                                     ;
+;                                                                                                         ;
+; User mode debug by FDBG ( 64-bit, actual for module NCRB64.EXE )                                        ;
+; https://board.flatassembler.net/topic.php?t=9689&postdays=0&postorder=asc&start=180                     ;
+; ( Search for archive fdbg0025.zip )                                                                     ;
+;                                                                                                         ;
+; Intel Software Development Emulator ( SDE ) used for debug                                              ;
+; https://software.intel.com/content/www/us/en/develop/articles/intel-software-development-emulator.html  ;
+;                                                                                                         ;
+; Icons from open icon library                                                                            ;
+; https://sourceforge.net/projects/openiconlibrary/                                                       ;
+;                                                                                                         ;
+;=========================================================================================================;
 
 format PE GUI 4.0 DLL
 include 'win32a.inc'
@@ -51,22 +54,28 @@ RT_GROUP_ICON , gicons
 ;---------- Resources directory for application main window and tabs ----------;
 
 resource dialogs,\
-IDD_MAIN        , LANG_ENGLISH + SUBLANG_DEFAULT, mainDialog    , \
-IDD_SYSINFO     , LANG_ENGLISH + SUBLANG_DEFAULT, tabSysinfo    , \
-IDD_MEMORY      , LANG_ENGLISH + SUBLANG_DEFAULT, tabMemory     , \
-IDD_MATH        , LANG_ENGLISH + SUBLANG_DEFAULT, tabMath       , \
-IDD_OS          , LANG_ENGLISH + SUBLANG_DEFAULT, tabOs         , \
-IDD_NATIVE_OS   , LANG_ENGLISH + SUBLANG_DEFAULT, tabNativeOs   , \
-IDD_PROCESSOR   , LANG_ENGLISH + SUBLANG_DEFAULT, tabProcessor  , \
-IDD_TOPOLOGY    , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopology   , \
-IDD_TOPOLOGY_EX , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopologyEx , \
-IDD_NUMA        , LANG_ENGLISH + SUBLANG_DEFAULT, tabNuma       , \
-IDD_PGROUPS     , LANG_ENGLISH + SUBLANG_DEFAULT, tabPgroups    , \
-IDD_ACPI        , LANG_ENGLISH + SUBLANG_DEFAULT, tabAcpi       , \
-IDD_AFF_CPUID   , LANG_ENGLISH + SUBLANG_DEFAULT, tabAffCpuid   , \
-IDD_KMD         , LANG_ENGLISH + SUBLANG_DEFAULT, tabKmd
+IDD_MAIN               , LANG_ENGLISH + SUBLANG_DEFAULT, mainDialog       , \
+IDD_SYSINFO            , LANG_ENGLISH + SUBLANG_DEFAULT, tabSysinfo       , \
+IDD_MEMORY             , LANG_ENGLISH + SUBLANG_DEFAULT, tabMemory        , \
+IDD_MATH               , LANG_ENGLISH + SUBLANG_DEFAULT, tabMath          , \
+IDD_OS                 , LANG_ENGLISH + SUBLANG_DEFAULT, tabOs            , \
+IDD_NATIVE_OS          , LANG_ENGLISH + SUBLANG_DEFAULT, tabNativeOs      , \
+IDD_PROCESSOR          , LANG_ENGLISH + SUBLANG_DEFAULT, tabProcessor     , \
+IDD_TOPOLOGY           , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopology      , \
+IDD_TOPOLOGY_EX        , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopologyEx    , \
+IDD_NUMA               , LANG_ENGLISH + SUBLANG_DEFAULT, tabNuma          , \
+IDD_PGROUPS            , LANG_ENGLISH + SUBLANG_DEFAULT, tabPgroups       , \
+IDD_ACPI               , LANG_ENGLISH + SUBLANG_DEFAULT, tabAcpi          , \
+IDD_AFF_CPUID          , LANG_ENGLISH + SUBLANG_DEFAULT, tabAffCpuid      , \
+IDD_KMD                , LANG_ENGLISH + SUBLANG_DEFAULT, tabKmd           , \
+IDD_CHILD_MEMORY_RUN   , LANG_ENGLISH + SUBLANG_DEFAULT, childMemoryRun   , \
+IDD_CHILD_MEMORY_DRAW  , LANG_ENGLISH + SUBLANG_DEFAULT, childMemoryDraw  , \
+IDD_CHILD_MATH_RUN     , LANG_ENGLISH + SUBLANG_DEFAULT, childMathRun     , \
+IDD_CHILD_MATH_DRAW    , LANG_ENGLISH + SUBLANG_DEFAULT, childMathDraw    , \
+IDD_CHILD_VECTOR_BRIEF , LANG_ENGLISH + SUBLANG_DEFAULT, childVectorBrief 
 
-;---------- Tabbed sheet ------------------------------------------------------;
+
+;---------- Application main window as tabbed sheet ---------------------------;
 
 dialog      mainDialog,        '',                      0,   0, 410, 282, DS_CENTER + WS_CAPTION + WS_SYSMENU, 0, IDR_MENU, 'Verdana', 10
 dialogitem  'SysTabControl32', '', IDC_TAB          ,   1,   1, 408,  29, WS_VISIBLE + TCS_MULTILINE
@@ -75,7 +84,7 @@ enddialog
 ;---------- Tab 1 = system information ----------------------------------------;
 
 dialog      tabSysinfo    , '',                         2, 30, 403,  253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_SYSINFO         ,   0,  3, 380,   10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_SYSINFO         ,   2,  3, 380,   10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_VENDOR  ,   1,  17,  55,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_TFMS    ,  58,  17,  70,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_NAME    , 130,  17, 196,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
@@ -173,7 +182,7 @@ enddialog
 ;---------- Tab 2 = memory and cache benchmark --------------------------------; 
 
 dialog      tabMemory     , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_MEMORY          ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MEMORY          ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_MEMORY_FRAME_1  ,   1,  17, 400,  90, WS_VISIBLE + SS_ETCHEDFRAME
 dialogitem  'STATIC'      , '', IDC_MEMORY_FRAME_2  ,   1, 109, 400,  55, WS_VISIBLE + SS_ETCHEDFRAME
 dialogitem  'STATIC'      , '', IDC_MEMORY_FRAME_3  ,   1, 166,  75,  82, WS_VISIBLE + SS_ETCHEDFRAME
@@ -267,7 +276,16 @@ enddialog
 ;---------- Tab 3 = processor mathematics benchmarks --------------------------; 
 
 dialog      tabMath       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_MATH            ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MATH            ,   2,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MATH_FRAME_1    , 244, 166, 157,  65, WS_VISIBLE + SS_ETCHEDFRAME
+dialogitem  'BUTTON'      , '', IDB_MATH_BRF        , 248, 169,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP + WS_GROUP  
+dialogitem  'BUTTON'      , '', IDB_MATH_CRF        , 248, 178,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
+dialogitem  'BUTTON'      , '', IDB_MATH_BRF_A      , 248, 187,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
+dialogitem  'BUTTON'      , '', IDB_MATH_CRF_A      , 248, 196,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
+dialogitem  'BUTTON'      , '', IDB_MATH_ALL_P      , 327, 169,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP + WS_GROUP
+dialogitem  'BUTTON'      , '', IDB_MATH_X_16       , 327, 178,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
+dialogitem  'BUTTON'      , '', IDB_MATH_X_32       , 327, 187,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
+dialogitem  'BUTTON'      , '', IDB_MATH_3D_DRAW    , 248, 214,  150,  9, WS_VISIBLE + WS_CHILD + BS_AUTOCHECKBOX + WS_TABSTOP
 dialogitem  'BUTTON'      , '', IDB_MATH_DRAW       , 245, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_MATH_RUN        , 284, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_MATH_DEFAULTS   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -277,7 +295,7 @@ enddialog
 ;---------- Tab 4 = operating system info -------------------------------------; 
 
 dialog      tabOs         , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_OS              ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_OS              ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_OS_UP           ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_OS_TEXT         ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_OS_REPORT       , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -287,7 +305,7 @@ enddialog
 ;---------- Tab 5 = native os info, useable if run ncrb32 under win64 ---------;
 
 dialog      tabNativeOs   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_NATIVE_OS       ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_NATIVE_OS       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_UP    ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_TEXT  ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_REPORT   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -297,7 +315,7 @@ enddialog
 ;---------- Tab 6 = processor info --------------------------------------------; 
 
 dialog      tabProcessor  , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_PROCESSOR       ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_PROCESSOR       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_PROC_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_PROC_TEXT       ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_PROC_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -307,7 +325,7 @@ enddialog
 ;---------- Tab 7 = platform topology info by winapi --------------------------; 
 
 dialog      tabTopology   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_TOPOLOGY        ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_TOPOLOGY        ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_1      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_1    ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_2      ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -319,7 +337,7 @@ enddialog
 ;---------- Tab 8 = platform topology info by winapi (ex, extended) -----------; 
 
 dialog      tabTopologyEx , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_TOPOLOGY_EX     ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_TOPOLOGY_EX     ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_1     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_1   ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_2     ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -331,7 +349,7 @@ enddialog
 ;---------- Tab 9 = platform NUMA domains list- -------------------------------; 
 
 dialog      tabNuma       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_NUMA            ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_NUMA            ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NUMA_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_NUMA_TEXT       ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_NUMA_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -341,7 +359,7 @@ enddialog
 ;---------- Tab 10 = platform processor groups list ---------------------------; 
 
 dialog      tabPgroups    , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_P_GROUPS        ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_P_GROUPS        ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_UP     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_TEXT   ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -351,7 +369,7 @@ enddialog
 ;---------- Tab 11 = ACPI tables list -----------------------------------------; 
 
 dialog      tabAcpi       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_ACPI            ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_ACPI            ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_ACPI_UP_1       ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_ACPI_TEXT_1     ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_ACPI_UP_2       ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -363,7 +381,7 @@ enddialog
 ;---------- Tab 12 = affinized CPUID dump, per each logical CPU ---------------; 
 
 dialog      tabAffCpuid   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_AFF_CPUID       ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_AFF_CPUID       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_A_CPUID_UP      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_A_CPUID_TEXT    ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
@@ -373,7 +391,7 @@ enddialog
 ;---------- Tab 13 = kernel mode driver information and probe results ---------; 
 
 dialog      tabKmd        , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_KMD             ,   0,   3, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_KMD             ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_KMD_UP_1        ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_KMD_TEXT_1      ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_KMD_UP_2        ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -381,6 +399,105 @@ dialogitem  'EDIT'        , '', IDE_KMD_TEXT_2      ,   3, 139, 400,  89, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_KMD_REPORT      , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_KMD_CANCEL      , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
+
+;---------- Child window = memory and cache benchmark run, text results -------; 
+
+dialog      childMemoryRun,    '',                     20,  20, 240, 295, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+dialogitem  'STATIC'      , '', IDC_MR_FIRST        ,   7,  10, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_APPLICATION  ,   7,  23, 380,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_METHOD       ,   7,  32, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_WIDTH        ,   7,  41, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_THREADS      ,   7,  50, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR    ,   7,  59, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAGES  ,   7,  68, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_NUMA         ,   7,  77, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS     ,   7,  86, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ   ,   7,  95, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST    ,   7, 104, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL   ,   7, 113, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_THR ,   7, 122, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_PROF ,   7, 131, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_REP  ,   7, 140, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEMORY_ALLOC ,   7, 153, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1      ,   7, 166, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2      ,   7, 175, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_ALL  ,   7, 184, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_THR  ,   7, 193, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEAS_RESULTS ,   7, 206, 380,  10, WS_VISIBLE  
+dialogitem  'STATIC'      , '', IDC_MR_DT_MS        ,   7, 219, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_MHZ ,   7, 228, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_CLK ,   7, 237, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LAST         ,   7, 254, 380,  10, WS_VISIBLE 
+dialogitem  'BUTTON'      , '', IDB_MR_OK           , 195, 275,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+enddialog
+
+;---------- Child window = memory and cache benchmark run, draw chart ---------;
+
+dialog      childMemoryDraw,   '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+enddialog
+
+;---------- Child window = math benchmark run, text results -------------------;
+
+dialog      childMathRun,      '',                     40,  40, 220, 250, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+enddialog
+
+;---------- Child window = math benchmark run, draw chart ---------------------;
+
+dialog      childMathDraw,     '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+enddialog
+
+;---------- Child window = math benchmark, vector brief -----------------------;
+
+dialog      childVectorBrief,  '',                     20,  20, 405, 270, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+dialogitem  'STATIC'      , '', IDC_VB_CPU_NAME     ,   7,  10, 170,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_TSC_CLK      ,   7,  19, 170,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_CPU_FEATURES ,   7,  32, 170,  10, WS_VISIBLE   
+dialogitem  'STATIC'      , '', IDC_VB_AVX_256      ,   7,  45, 170,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX2_256     ,   7,  54, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX3_512     ,   7,  63, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512CD     ,   7,  72, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512PF     ,   7,  81, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512ER     ,   7,  90, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512VL     ,   7,  99, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512BW     ,   7, 108, 170,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512DQ     ,   7, 117, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_IFMA  ,   7, 126, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VBMI  ,   7, 135, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VBMI2 ,   7, 144, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_BF16  ,   7, 153, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VAES  ,   7, 162, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_GFNI  ,   7, 171, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VNNI  ,   7, 180, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_BTALG ,   7, 189, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VPOP  ,   7, 198, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VPCL  ,   7, 207, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_VP2IN ,   7, 216, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_FP16  ,   7, 225, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_4FMAP ,   7, 234, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_4VNNI ,   7, 243, 170,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_OS_CONTEXT   , 185,  32, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_XMM   , 185,  45, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_YMM   , 185,  54, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_ZMM_L , 185,  63, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_ZMM_H , 185,  72, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_K     , 185,  81, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_TIMINGS      , 185, 108, 210,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_READ  , 185, 126, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_WRITE , 185, 135, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_COPY  , 185, 144, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_READ  , 185, 153, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_WRITE , 185, 162, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_COPY  , 185, 171, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_READ  , 185, 180, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_WRITE , 185, 189, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_COPY  , 185, 198, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SQRTPD_XMM   , 185, 207, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_YMM  , 185, 216, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_ZMM  , 185, 225, 190,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_FCOS         , 185, 234, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_FSINCOS      , 185, 243, 190,  10, WS_VISIBLE             
+dialogitem  'BUTTON'      , '', IDB_VB_OK           , 360, 250,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+enddialog
 
 ;---------- Application main menu and service items ---------------------------; 
 
@@ -446,6 +563,14 @@ DB  'Processor groups list by WinAPI GetActiveProcessorGroupCount() and other.' 
 DB  'ACPI tables list by WinAPI EnumSystemFirmwareTables() and other.'                         , 0
 DB  'CPUID per each thread affinized by WinAPI SetThreadAffinityMask().'                       , 0
 DB  'Kernel mode driver load status and privileged resources info.'                            , 0
+
+;---------- Title names for child windows -------------------------------------;
+
+DB  'Memory operations performance report'              , 0
+DB  'Memory operations performance = f( block size )'   , 0
+DB  'Math and load-store performance report'            , 0
+DB  'Math and load-store performance = f( block size )' , 0
+DB  'Vector brief performance report'                   , 0
 
 ;---------- CPUID names for system information --------------------------------;
 
@@ -627,32 +752,35 @@ DB  'Run'      , 0
 DB  'Defaults' , 0
 DB  'Report'   , 0
 DB  'Exit'     , 0
+DB  'OK'       , 0
 
 ;---------- Memory size and speed units, additional information ---------------;
 
-DB  'Bytes'        , 0
-DB  'KB'           , 0
-DB  'MB'           , 0
-DB  'GB'           , 0
-DB  'TB'           , 0
-DB  'MBPS'         , 0
-DB  'nanoseconds'  , 0
-DB  'none'         , 0
-DB  'mask = '      , 0
-DB  'Enabled'      , 0
-DB  'Disabled'     , 0
-DB  '-'            , 0
-DB  'TSC clks'     , 0
-DB  'CPU clks'     , 0
-DB  'data move'    , 0
-DB  'calculation'  , 0
-DB  'ns'           , 0
-DB  'MHz'          , 0
-DB  'Kernel mode'  , 0
-DB  'True clock'   , 0
-DB  'TFMS='        , 0
-DB  'TSC='         , 0
-DB  'h'            , 0
+DB  'Bytes'         , 0
+DB  'KB'            , 0
+DB  'MB'            , 0
+DB  'GB'            , 0
+DB  'TB'            , 0
+DB  'MBPS'          , 0
+DB  'nanoseconds'   , 0
+DB  'none'          , 0
+DB  'mask = '       , 0
+DB  'Enabled'       , 0
+DB  'Disabled'      , 0
+DB  '-'             , 0
+DB  'TSC clks'      , 0
+DB  'CPU clks'      , 0
+DB  'data move'     , 0
+DB  'calculation'   , 0
+DB  'ns'            , 0
+DB  'MHz'           , 0
+DB  'Kernel mode'   , 0
+DB  'True clock'    , 0
+DB  'TFMS='         , 0
+DB  'TSC='          , 0
+DB  'h'             , 0
+DB  'supported'     , 0
+DB  'not supported' , 0
 
 ;---------- Up strings for GUI tables -----------------------------------------; 
 
@@ -723,6 +851,95 @@ DB  'smt='            , 0
 
 DB  'UNKNOWN table signature' , 0
 
+;---------- Strings for child screen = Memory and cache performance report ----;
+
+DB  'Simple block benchmark, conditions and options settings:', 0 
+DB  'application'          , 0
+DB  'method'               , 0
+DB  'operand width (bits)' , 0
+DB  'threads'              , 0
+DB  'hyper-threading'      , 0
+DB  'large pages'          , 0
+DB  'NUMA optimization'    , 0
+DB  'processor groups'     , 0
+DB  'target object'        , 0
+DB  'prefetch distance'    , 0
+DB  'data size total'      , 0
+DB  'size per thread'      , 0
+DB  'measurement profile'  , 0
+DB  'measurement repeats'  , 0
+DB  'memory allocation:'          , 0
+DB  'block #1 base'               , 0
+DB  'block #2 base'               , 0
+DB  'memory allocated total'      , 0
+DB  'memory allocated per thread' , 0
+DB  'measurements results:'       , 0
+DB  'dT (ms)'                     , 0
+DB  'dTSC/Sec (MHz)'              , 0
+DB  'dTSC/Instruction per thread (clks)' , 0
+DB  'Speed (MBPS)' , 0
+DB  'Latency (ns)' , 0
+
+;---------- Strings for child screen = Memory and cache performance draw ------;
+
+
+
+;---------- Strings for child screen = Math performance report ----------------;
+
+
+
+;---------- Strings for child screen = Math performance draw ------------------;
+
+
+
+;---------- Strings for child screen = Vector brief performance report --------;
+
+DB  'Processor features, detect by CPUID:'            , 0
+DB  'AVX 256-bit'                                     , 0
+DB  'AVX2 256-bit'                                    , 0
+DB  'AVX3 512-bit, AVX512F (Foundation)'              , 0
+DB  'AVX512CD (Conflict Detection)'                   , 0
+DB  'AVX512PF (Prefetch)'                             , 0
+DB  'AVX512ER (Exponential and Reciprocal)'           , 0
+DB  'AVX512VL (Vector Length)'                        , 0
+DB  'AVX512BW (Byte and Word)'                        , 0
+DB  'AVX512DQ (Doubleword and Quadword)'              , 0
+DB  'AVX512_IFMA (Integer Fused Multiply and Add)'    , 0
+DB  'AVX512_VBMI (Vector Byte Manipulation)'          , 0
+DB  'AVX512_VBMI2 (Vector Byte Manipulation 2)'       , 0
+DB  'AVX512_BF16 (VNNI BFLOAT16 format)'              , 0
+DB  'AVX512+VAES (AES encryption + AVX512)'           , 0
+DB  'AVX512+GFNI (Galois fields + AVX512)'            , 0
+DB  'AVX512_VNNI (Vector neural network)'             , 0
+DB  'AVX512_BITALG (Bit algorithms)'                  , 0
+DB  'AVX512_VPOPCNTDQ (Count number of set bits)'     , 0
+DB  'AVX512+VPCLMULQDQ (Carry less multiplication)'   , 0
+DB  'AVX512_VP2INTERSECT (Compute intersection)'      , 0
+DB  'AVX512_FP16 (Floating point 16-bit format)'      , 0
+DB  'AVX512_4FMAPS (4 iteration FMA)'                 , 0
+DB  'AVX512_4VNNIW (4 iteration VNNI)'                , 0
+DB  'OS context management features, detect by XCR0:' , 0
+DB  'SSE128 registers XMM[0-15] bits [0-127]'         , 0
+DB  'AVX256 registers YMM[0-15] bits [128-255]'       , 0
+DB  'AVX512 registers ZMM[0-15] bits[256-511]'        , 0
+DB  'AVX512 registers ZMM[16-31] bits[0-511]'         , 0
+DB  'AVX512 predicate registers K[0-7]'               , 0
+DB  'Instruction timings per 1 core (TSC clocks and nanoseconds):' , 0
+DB  'SSE128 read'    , 0             
+DB  'SSE128 write'   , 0             
+DB  'SSE128 copy'    , 0             
+DB  'AVX256 read'    , 0             
+DB  'AVX256 write'   , 0
+DB  'AVX256 copy'    , 0             
+DB  'AVX512 read'    , 0
+DB  'AVX512 write'   , 0             
+DB  'AVX512 copy'    , 0             
+DB  'SQRTPD xmm'     , 0             
+DB  'VSQRTPD ymm'    , 0             
+DB  'VSQRTPD zmm'    , 0
+DB  'FCOS'           , 0             
+DB  'FSINCOS'        , 0             
+
 ;---------- Strings for non-fatal warning messages ----------------------------;
 
 DB  'WARNING: system is not fully NCRB-compatible,' , 0Dh, 0Ah
@@ -736,6 +953,7 @@ DB  'KMD32.SYS'  , 0
 DB  'KMD64.SYS'  , 0
 DB  'ICR0'       , 0
 DB  '\\.\ICR0'   , 0
+
 endres
 
 ;---------- Raw resource for binders pool -------------------------------------;
@@ -958,13 +1176,21 @@ BIND_STOP
 ;---------- GUI binder script for CPU mathematics screen ----------------------;
 
 BIND_STRING  STR_FULL_MATH        , IDC_MATH
+BIND_STRING  STR_MEASURE_BRIEF    , IDB_MATH_BRF  
+BIND_STRING  STR_MEASURE_CAREF    , IDB_MATH_CRF 
+BIND_STRING  STR_BRIEFF_ADAPTIVE  , IDB_MATH_BRF_A
+BIND_STRING  STR_CAREF_ADAPTIVE   , IDB_MATH_CRF_A
+BIND_STRING  STR_ALL_POINTS       , IDB_MATH_ALL_P
+BIND_STRING  STR_X_16_POINTS      , IDB_MATH_X_16
+BIND_STRING  STR_X_32_POINTS      , IDB_MATH_X_32
+BIND_STRING  STR_3D_DRAW          , IDB_MATH_3D_DRAW 
 BIND_STRING  STR_DRAW             , IDB_MATH_DRAW  
 BIND_STRING  STR_RUN              , IDB_MATH_RUN
 BIND_STRING  STR_DEFAULTS         , IDB_MATH_DEFAULTS
 BIND_STRING  STR_EXIT             , IDB_MATH_CANCEL
 BIND_STOP
 
-;---------- GUI binder script operating system for screen ---------------------;
+;---------- GUI binder script for operating system screen ---------------------;
 
 BIND_STRING  STR_FULL_OS          , IDC_OS
 BIND_FONT    ID_FONT_2            , IDE_OS_UP
@@ -1086,6 +1312,108 @@ BIND_STRING  STR_KMD              , IDE_KMD_UP_2
 BIND_STRING  STR_REPORT           , IDB_KMD_REPORT
 BIND_STRING  STR_EXIT             , IDB_KMD_CANCEL
 BIND_STOP
+
+;--- GUI binder script for child screen = Memory and cache perf. report -------;
+
+BIND_STRING  STR_MR_FIRST         , IDC_MR_FIRST
+BIND_STRING  STR_MR_APPLICATION   , IDC_MR_APPLICATION
+BIND_STRING  STR_MR_METHOD        , IDC_MR_METHOD 
+BIND_STRING  STR_MR_WIDTH         , IDC_MR_WIDTH 
+BIND_STRING  STR_MR_THREADS       , IDC_MR_THREADS 
+BIND_STRING  STR_MR_HYPER_THR     , IDC_MR_HYPER_THR 
+BIND_STRING  STR_MR_LARGE_PAGES   , IDC_MR_LARGE_PAGES 
+BIND_STRING  STR_MR_NUMA          , IDC_MR_NUMA 
+BIND_STRING  STR_MR_P_GROUPS      , IDC_MR_P_GROUPS 
+BIND_STRING  STR_MR_TARGET_OBJ    , IDC_MR_TARGET_OBJ 
+BIND_STRING  STR_MR_PREF_DIST     , IDC_MR_PREF_DIST 
+BIND_STRING  STR_MR_SIZE_TOTAL    , IDC_MR_SIZE_TOTAL 
+BIND_STRING  STR_MR_SIZE_PER_THR  , IDC_MR_SIZE_PER_THR 
+BIND_STRING  STR_MR_MEASURE_PROF  , IDC_MR_MEASURE_PROF 
+BIND_STRING  STR_MR_MEASURE_REP   , IDC_MR_MEASURE_REP 
+BIND_STRING  STR_MR_MEMORY_ALLOC  , IDC_MR_MEMORY_ALLOC 
+BIND_STRING  STR_MR_BLOCK_1       , IDC_MR_BLOCK_1 
+BIND_STRING  STR_MR_BLOCK_2       , IDC_MR_BLOCK_2 
+BIND_STRING  STR_MR_MEM_ALC_ALL   , IDC_MR_MEM_ALC_ALL 
+BIND_STRING  STR_MR_MEM_ALC_THR   , IDC_MR_MEM_ALC_THR 
+BIND_STRING  STR_MR_MEAS_RESULTS  , IDC_MR_MEAS_RESULTS 
+BIND_STRING  STR_MR_DT_MS         , IDC_MR_DT_MS 
+BIND_STRING  STR_MR_DTSC_SEC_MHZ  , IDC_MR_DTSC_SEC_MHZ 
+BIND_STRING  STR_MR_DTSC_INS_CLK  , IDC_MR_DTSC_INS_CLK
+BIND_STRING  STR_OK               , IDB_MR_OK 
+BIND_STOP 
+
+;---------- Result string for bandwidth measurement mode ----------------------;
+
+BIND_STRING  STR_MR_SPEED_MBPS    , IDC_MR_LAST 
+BIND_STOP
+
+;---------- Result string for latency measurement mode ------------------------;
+
+BIND_STRING  STR_MR_LATENCY_NS    , IDC_MR_LAST 
+BIND_STOP
+
+;--- GUI binder script for child screen = Memory and cache performance draw ---;
+
+BIND_STOP
+
+;--- GUI binder script for child screen = Math performance report -------------;
+
+BIND_STOP
+
+;--- GUI binder script for child screen = Math performance draw ---------------;
+
+BIND_STOP
+
+;--- GUI binder script for child screen = Vector brief performance report -----;
+
+BIND_STRING  STR_VB_CPU_FEATURES , IDC_VB_CPU_FEATURES   
+BIND_STRING  STR_VB_AVX_256      , IDC_VB_AVX_256 
+BIND_STRING  STR_VB_AVX2_256     , IDC_VB_AVX2_256
+BIND_STRING  STR_VB_AVX3_512     , IDC_VB_AVX3_512
+BIND_STRING  STR_VB_AVX512CD     , IDC_VB_AVX512CD
+BIND_STRING  STR_VB_AVX512PF     , IDC_VB_AVX512PF
+BIND_STRING  STR_VB_AVX512ER     , IDC_VB_AVX512ER
+BIND_STRING  STR_VB_AVX512VL     , IDC_VB_AVX512VL
+BIND_STRING  STR_VB_AVX512BW     , IDC_VB_AVX512BW
+BIND_STRING  STR_VB_AVX512DQ     , IDC_VB_AVX512DQ
+BIND_STRING  STR_VB_AVX512_IFMA  , IDC_VB_AVX512_IFMA
+BIND_STRING  STR_VB_AVX512_VBMI  , IDC_VB_AVX512_VBMI
+BIND_STRING  STR_VB_AVX512_VBMI2 , IDC_VB_AVX512_VBMI2
+BIND_STRING  STR_VB_AVX512_BF16  , IDC_VB_AVX512_BF16
+BIND_STRING  STR_VB_AVX512_VAES  , IDC_VB_AVX512_VAES
+BIND_STRING  STR_VB_AVX512_GFNI  , IDC_VB_AVX512_GFNI
+BIND_STRING  STR_VB_AVX512_VNNI  , IDC_VB_AVX512_VNNI
+BIND_STRING  STR_VB_AVX512_BTALG , IDC_VB_AVX512_BTALG
+BIND_STRING  STR_VB_AVX512_VPOP  , IDC_VB_AVX512_VPOP
+BIND_STRING  STR_VB_AVX512_VPCL  , IDC_VB_AVX512_VPCL
+BIND_STRING  STR_VB_AVX512_VP2IN , IDC_VB_AVX512_VP2IN
+BIND_STRING  STR_VB_AVX512_FP16  , IDC_VB_AVX512_FP16
+BIND_STRING  STR_VB_AVX512_4FMAP , IDC_VB_AVX512_4FMAP
+BIND_STRING  STR_VB_AVX512_4VNNI , IDC_VB_AVX512_4VNNI
+BIND_STRING  STR_VB_OS_CONTEXT   , IDC_VB_OS_CONTEXT
+BIND_STRING  STR_VB_SSE128_XMM   , IDC_VB_SSE128_XMM
+BIND_STRING  STR_VB_AVX256_YMM   , IDC_VB_AVX256_YMM
+BIND_STRING  STR_VB_AVX512_ZMM_L , IDC_VB_AVX512_ZMM_L
+BIND_STRING  STR_VB_AVX512_ZMM_H , IDC_VB_AVX512_ZMM_H
+BIND_STRING  STR_VB_AVX512_K     , IDC_VB_AVX512_K
+BIND_STRING  STR_VB_TIMINGS      , IDC_VB_TIMINGS
+BIND_STRING  STR_VB_SSE128_READ  , IDC_VB_SSE128_READ             
+BIND_STRING  STR_VB_SSE128_WRITE , IDC_VB_SSE128_WRITE             
+BIND_STRING  STR_VB_SSE128_COPY  , IDC_VB_SSE128_COPY             
+BIND_STRING  STR_VB_AVX256_READ  , IDC_VB_AVX256_READ             
+BIND_STRING  STR_VB_AVX256_WRITE , IDC_VB_AVX256_WRITE
+BIND_STRING  STR_VB_AVX256_COPY  , IDC_VB_AVX256_COPY             
+BIND_STRING  STR_VB_AVX512_READ  , IDC_VB_AVX512_READ
+BIND_STRING  STR_VB_AVX512_WRITE , IDC_VB_AVX512_WRITE             
+BIND_STRING  STR_VB_AVX512_COPY  , IDC_VB_AVX512_COPY             
+BIND_STRING  STR_VB_SQRTPD_XMM   , IDC_VB_SQRTPD_XMM             
+BIND_STRING  STR_VB_VSQRTPD_YMM  , IDC_VB_VSQRTPD_YMM             
+BIND_STRING  STR_VB_VSQRTPD_ZMM  , IDC_VB_VSQRTPD_ZMM
+BIND_STRING  STR_VB_FCOS         , IDC_VB_FCOS             
+BIND_STRING  STR_VB_FSINCOS      , IDC_VB_FSINCOS
+BIND_STRING  STR_OK              , IDB_VB_OK             
+BIND_STOP
+
 endres
 
 ;---------- CPU common features bitmap builder script -------------------------;
@@ -1120,7 +1448,7 @@ ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 17   ; AVX512DQ
 ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 21   ; AVX512_IFMA
 ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 01   ; AVX512_VBMI
 ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 06   ; AVX512_VBMI2
-ENTRY_CPUID_S  00000007h , 00000000h , R_EAX , 05   ; AVX512_BF16
+ENTRY_CPUID_S  00000007h , 00000001h , R_EAX , 05   ; AVX512_BF16
 ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 09   ; AVX512+VAES
 ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 08   ; AVX512+GFNI
 ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 11   ; AVX512_VNNI
@@ -1171,7 +1499,9 @@ DB  'GetNumaNodeProcessorMaskEx'   , 0
 DB  'GetNumaAvailableMemoryNodeEx' , 0
 DB  'EnumSystemFirmwareTables'     , 0
 DB  'GetSystemFirmwareTable'       , 0      
-DB  'SetThreadAffinityMask'        , 0 , 0  ; Two zeroes means end of sub-list        
+DB  'SetThreadAffinityMask'        , 0
+DB  'SetThreadGroupAffinity'       , 0
+DB  'VirtualAllocExNuma'           , 0 , 0  ; Two zeroes means end of sub-list
 DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              
 DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list
 DB  0                                       ; Third zero means end of list                  

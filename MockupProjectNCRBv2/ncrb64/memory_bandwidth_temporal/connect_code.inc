@@ -7,6 +7,45 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+;---------- Get pointer to performance pattern subroutine by ID ---------------;
+;                                                                              ;
+; INPUT:   AL  = Subroutine ID                                                 ;
+;                                                                              ;
+; OUTPUT:  RBX = Subroutine entry point                                        ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+
+GetBandwidthTemporalPattern:
+movzx eax,al                                      ; This clears bits RAX[63-8]
+imul eax,eax,6                                    ; 6 = sizeof.BANDWIDTH_TEMPORAL
+movzx eax,word [TableBandwidthTemporal + rax]     ; Read 16-bit compact offset
+lea rbx,[RoutinesBandwidthTemporal + rax]         ; Calculate 64-bit absolute address      
+ret
+
+;---------- Get pointer to performance pattern cycle body for dump by ID ------;
+;    Also returns used instruction operand width, bits                         ;
+;                                                                              ;
+; INPUT:   AL  = Subroutine ID                                                 ;
+;                                                                              ;
+; OUTPUT:  RAX = Dump fragment base address                                    ;
+;          EDX = Dump fragment length, bytes                                   ;
+;          ECX = Used instruction operand width, bits                          ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+
+GetBandwidthTemporalDump:
+movzx eax,al
+imul eax,eax,6   ; 6 = sizeof.BANDWIDTH_TEMPORAL
+movzx ecx,byte [TableBandwidthTemporal + rax + 5]
+movzx edx,byte [TableBandwidthTemporal + rax + 4]
+movzx eax,word [TableBandwidthTemporal + rax + 2]
+add rax,RoutinesBandwidthTemporal
+ret
+
+;---------- Pointer for compact 16-bit relative offsets -----------------------;
+
+RoutinesBandwidthTemporal:
+
 ;---------- Include files connect for performance patterns --------------------;
 ; Temporal ( cacheable read and write ) mode, 
 ; temporal is default cacheable memory access

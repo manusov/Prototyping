@@ -7,6 +7,50 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+;---------- Get pointer to performance pattern subroutine by ID ---------------;
+;                                                                              ;
+; INPUT:   AL  = Subroutine ID                                                 ;
+;                                                                              ;
+; OUTPUT:  EBX = Subroutine entry point                                        ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+
+GetBandwidthNonTemporalPattern:
+movzx eax,al                                      ; This clears bits EAX[31-8]
+imul eax,eax,6                                    ; 6 = sizeof.BANDWIDTH_NON_TEMPORAL
+movzx eax,word [TableBandwidthNonTemporal + eax]  ; Read 16-bit compact offset
+lea ebx,[RoutinesBandwidthNonTemporal + eax]      ; Calculate 32-bit absolute address      
+ret
+
+;---------- Get pointer to performance pattern cycle body for dump by ID ------;
+;    Also returns used instruction operand width, bits                         ;
+;                                                                              ;
+; INPUT:   AL  = Subroutine ID                                                 ;
+;                                                                              ;
+; OUTPUT:  EAX = Dump fragment base address                                    ;
+;          EDX = Dump fragment length, bytes                                   ;
+;          ECX = Used instruction operand width, bits                          ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+
+GetBandwidthNonTemporalDump:
+movzx eax,al
+imul eax,eax,6   ; 6 = sizeof.BANDWIDTH_NON_TEMPORAL
+movzx ecx,byte [TableBandwidthNonTemporal + eax + 5]
+movzx edx,byte [TableBandwidthNonTemporal + eax + 4]
+movzx eax,word [TableBandwidthNonTemporal + eax + 2]
+add eax,RoutinesBandwidthNonTemporal
+ret
+
+;---------- Pointer for compact 16-bit relative offsets -----------------------;
+
+RoutinesBandwidthNonTemporal:
+
+
+;---------- Include files connect for performance patterns --------------------;
+; Non temporal ( read and write with caching rejection ) mode, 
+; non temporal is memory access with caching rejection by non temporal hints
+
 ; Non-temporal (non-cacheable write) mode
 include 'ntwrite_sse128.inc'   ; Write by MOVNTPS (128 bit)
 include 'ntcopy_sse128.inc'    ; Copy by PREFETCHNTA + MOVAPS + MOVNTPS (128 bit)

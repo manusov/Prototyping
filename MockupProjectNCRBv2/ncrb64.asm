@@ -1,50 +1,45 @@
-;=====================================================================================;
-;                                                                                     ;
-; Project NCRB ( NUMA CPU&RAM Benchmarks v2.xx.xx ).                                  ;
-; (C)2021 Ilya Manusov.                                                               ;
-; manusov1969@gmail.com                                                               ;
-; Previous version v1.xx.xx                                                           ; 
-; https://github.com/manusov/NumaCpuAndRamBenchmarks                                  ;
-; This version v2.xx.xx ( UNDER CONSTRUCTION )                                        ;
-; https://github.com/manusov/Prototyping                                              ; 
-;                                                                                     ;
-; NCRB64.ASM = source file for FASM                                                   ; 
-; NCRB64.EXE = translation result, application NCRB64.EXE main module                 ;
-; See also other components:                                                          ;
-; NCRB32.ASM, DATA.ASM, KMD32.ASM, KMD64.ASM.                                         ;
-;                                                                                     ;
-; Translation by Flat Assembler version 1.73.27 ( Jan 27, 2021 ).                     ;
-; http://flatassembler.net/                                                           ;
-;                                                                                     ;
-; Edit by FASM Editor 2.0.                                                            ; 
-; Use this editor for correct source file tabulations and format. (!)                 ;
-; https://fasmworld.ru/instrumenty/fasm-editor-2-0/                                   ;
-;                                                                                     ;
-; User mode debug by OllyDbg ( 32-bit, actual for other module NCRB32.EXE )           ;
-; http://www.ollydbg.de/version2.html                                                 ;
-;                                                                                     ;
-; User mode debug by FDBG ( 64-bit, actual for this module NCRB64.EXE )               ;
-; https://board.flatassembler.net/topic.php?t=9689&postdays=0&postorder=asc&start=180 ;
-; ( Search for archive fdbg0025.zip )                                                 ;
-;                                                                                     ;
-; Icons from open icon library                                                        ;
-; https://sourceforge.net/projects/openiconlibrary/                                   ;
-;                                                                                     ;
-;=====================================================================================;
+;=========================================================================================================;
+;                                                                                                         ;
+; Project NCRB ( NUMA CPU&RAM Benchmarks v2.xx.xx ).                                                      ;
+; (C)2021 Ilya Manusov.                                                                                   ;
+; manusov1969@gmail.com                                                                                   ;
+; Previous version v1.xx.xx                                                                               ; 
+; https://github.com/manusov/NumaCpuAndRamBenchmarks                                                      ;
+; This version v2.xx.xx ( UNDER CONSTRUCTION )                                                            ;
+; https://github.com/manusov/Prototyping                                                                  ; 
+;                                                                                                         ;
+; NCRB64.ASM = source file for FASM                                                                       ; 
+; NCRB64.EXE = translation result, application NCRB64.EXE main module                                     ;
+; See also other components:                                                                              ;
+; NCRB32.ASM, DATA.ASM, KMD32.ASM, KMD64.ASM.                                                             ;
+;                                                                                                         ;
+; Translation by Flat Assembler version 1.73.27 ( Jan 27, 2021 ).                                         ;
+; http://flatassembler.net/                                                                               ;
+;                                                                                                         ;
+; Edit by FASM Editor 2.0.                                                                                ; 
+; Use this editor for correct source file tabulations and format. (!)                                     ;
+; https://fasmworld.ru/instrumenty/fasm-editor-2-0/                                                       ;
+;                                                                                                         ;
+; User mode debug by OllyDbg ( 32-bit, actual for other module NCRB32.EXE )                               ;
+; http://www.ollydbg.de/version2.html                                                                     ;
+;                                                                                                         ;
+; User mode debug by FDBG ( 64-bit, actual for this module NCRB64.EXE )                                   ;
+; https://board.flatassembler.net/topic.php?t=9689&postdays=0&postorder=asc&start=180                     ;
+; ( Search for archive fdbg0025.zip )                                                                     ;
+;                                                                                                         ;
+; Intel Software Development Emulator ( SDE ) used for debug                                              ;
+; https://software.intel.com/content/www/us/en/develop/articles/intel-software-development-emulator.html  ;
+;                                                                                                         ;
+; Icons from open icon library                                                                            ;
+; https://sourceforge.net/projects/openiconlibrary/                                                       ;
+;                                                                                                         ;
+;=========================================================================================================;
 
-;---------- Include FASM definitions and modules definitions ------------------;
+;---------- Include FASM and NCRB definitions ---------------------------------;
 
 include 'win64a.inc'               ; FASM definitions
 include 'global\definitions.inc'   ; NCRB project global definitions
 include 'global\registry64.inc'    ; Registry for dynamically created variables
-include 'ncrb64\system_info\connect_equ.inc'
-include 'ncrb64\threads_manager\connect_equ.inc'
-include 'ncrb64\memory_bandwidth_temporal\connect_equ.inc'
-include 'ncrb64\memory_bandwidth_non_temporal\connect_equ.inc'
-include 'ncrb64\memory_bandwidth_partial\connect_equ.inc'
-include 'ncrb64\memory_latency\connect_equ.inc'
-include 'ncrb64\math_bandwidth\connect_equ.inc'
-include 'ncrb64\math_latency\connect_equ.inc'
 
 ;---------- Global definitions ------------------------------------------------;
 
@@ -254,6 +249,10 @@ call SysinfoUserMode
 ;---------- Load kernel mode driver kmd64.sys ---------------------------------;
 ; TODO.
 
+; INT3
+; call LoadKernelModeDriver
+; call TryKernelModeDriver
+; call UnloadKernelModeDriver
 
 ;---------- Get system information, kernel mode routines ----------------------;
 ; TODO.
@@ -415,410 +414,10 @@ call [MessageBox]
 mov r13d,1
 jmp .exitResources
 
-;---------- Callback dialogue procedure for main window -----------------------;
-; INPUT:   RCX = Parm#1 = HWND = Dialog box handle                             ; 
-;          RDX = Parm#2 = UINT = Message                                       ; 
-;          R8  = Parm#3 = WPARAM, message-specific                             ;
-;          R9  = Parm#4 = LPARAM, message-specific                             ;
-; OUTPUT:  RAX = status, TRUE = message recognized and processed               ;
-;                        FALSE = not recognized, must be processed by OS,      ;
-;                        see MSDN for status exceptions and details            ;  
-;------------------------------------------------------------------------------;
 
-PARM_HWNDDLG  EQU  qword [rbp + 40 + 08 + 00]  
-PARM_MSG      EQU  qword [rbp + 40 + 08 + 08]
-PARM_WPARAM   EQU  qword [rbp + 40 + 08 + 16]
-PARM_LPARAM   EQU  qword [rbp + 40 + 08 + 24]
-LOW_WPARAM    EQU  dword [rbp + 40 + 08 + 16]
 
-;---------- Entry -------------------------------------------------------------;
 
-DialogProcMain:
-cld
-push rbp rbx rsi rdi r15
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h           ; Stack alignment
-sub rsp,32                           ; Make parameters shadow for next calls
-mov PARM_HWNDDLG,rcx                 ; Save input parameters to shadow 
-mov PARM_MSG,rdx
-mov PARM_WPARAM,r8
-mov PARM_LPARAM,r9
-mov r15,[Registry]                   ; R15 = Pointer to global registry
-add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData 
-lea rbx,[r15 + APPDATA.tabCtrlItem]  ; RBX = Pointer to tab item structure
-lea rsi,[r15 + APPDATA.hTabDlg]      ; RSI = Pointer to sheets handles array
 
-;---------- Detect message type -----------------------------------------------;
-
-cmp rdx,0000FFFFh
-jae .skip
-xchg eax,edx                   ; Use EAX for compact CMP
-cmp eax,WM_INITDIALOG
-je .wminitdialog               ; Go if dialogue initialization message 
-cmp eax,WM_COMMAND
-je .wmcommand                  ; Go if command message
-cmp eax,WM_CLOSE
-je .wmclose                    ; Go if window close message
-cmp eax,WM_NOTIFY
-je .tabproc                    ; Go if notification message from child window
-.skip:
-xor eax,eax
-jmp .finish                    ; Go exit if unknown event
-
-;---------- WM_INITDIALOG handler: create main window -------------------------; 
-
-.wminitdialog: 
-mov rax,PARM_HWNDDLG
-mov [r15 + APPDATA.hMain],rax
-mov edx,IDC_TAB                ; RDX = Parm#2 = Item identifier 
-mov rcx,PARM_HWNDDLG           ; RCX = Parm#1 = Handle to dialog box
-call [GetDlgItem]              ; Get handle
-mov [r15 + APPDATA.hTab],rax   ; Store window handle = sheets container handle
-
-;---------- Initializing sheet structure --------------------------------------;
-
-xor eax,eax
-mov [rbx + TC_ITEM.mask],TCIF_TEXT + TCIF_IMAGE
-mov [rbx + TC_ITEM.lpReserved1],eax
-mov [rbx + TC_ITEM.lpReserved2],eax
-mov [rbx + TC_ITEM.lParam],eax
-mov [rbx + TC_ITEM.cchTextMax],64  ; Maximum text size
-
-;---------- Create image list for icons ---------------------------------------;
-
-push 0 0                         ; Alignment + Parm#5 = cGrow = not used
-mov r9d,ICON_COUNT               ; R9  = Parm#4 = Images count
-mov r8d,ILC_COLOR32 + ILC_MASK   ; R8  = Parm#3 = Images flags
-mov edx,16                       ; RDX = Parm#2 = Y size
-mov ecx,16                       ; RCX = Parm#1 = X size
-sub rsp,32
-call [ImageList_Create]
-add rsp,32 + 16
-mov [r15 + APPDATA.hImageList],rax   ; Store image list handle 
-
-;---------- Initialize cycle for create icons from resource -------------------;
-
-push rsi rdi
-mov edi,ICON_COUNT
-lea rsi,[r15 + APPDATA.lockedIcons]
-
-;---------- Cycle for create icons from resource ------------------------------;
-
-.createIcons:
-lodsq
-push 0                           ; This for stack alignment
-push LR_DEFAULTCOLOR             ; Parm#7 = Flags
-push 16                          ; Parm#6 = cyDesired
-push 16                          ; Parm#5 = cxDesired
-mov r9d,30000h                   ; R9  = Parm#4 = Version of icon format
-mov r8d,TRUE                     ; R8  = Parm#3 = Icon/Cursor, True means Icon
-mov edx,468h                     ; RDX = Parm#2 = dwResSize, bytes 
-xchg rcx,rax                     ; RCX = Parm#1 = Pointer to resource bits 
-sub rsp,32
-call [CreateIconFromResourceEx]     ; Create icon, return handle
-add rsp,32 + 32
-xchg rdx,rax                        ; RDX = Parm#2 = Handle to icon
-mov rcx,[r15 + APPDATA.hImageList]  ; RCX = Parm#1 = Handle to image list 
-sub rsp,32
-call [ImageList_AddIcon] 
-add rsp,32
-dec edi
-jnz .createIcons
-pop rdi rsi
-mov r9,[r15 + APPDATA.hImageList]   ; R9  = Parm#4 = LPARAM = image list handle     
-xor r8d,r8d                         ; R8  = Parm#3 = WPARAM = not used = 0                 
-mov edx,TCM_SETIMAGELIST            ; RDX = Parm#2 = Message
-mov rcx,[r15 + APPDATA.hTab]        ; RCX = Parm#1 = Container window handle 
-call [SendMessage]                  ; Link image list with control
-
-;---------- Initialize cycle for insert items with strings and icons ----------;
-
-push rsi
-sub rsp,32 + 8                      ; Stack alignment and parameters shadow
-mov rsi,[r15 + APPDATA.lockedStrings]
-xor edi,edi
-
-;---------- Cycle for insert items to tabbed panel ----------------------------;
-
-.insertSheets:
-mov rax,rsi
-mov [rbx + TC_ITEM.pszText],rax
-mov [rbx + TC_ITEM.iImage],edi
-mov r9,rbx                       ; R9  = Parm#4 = LPARAM = pointer to TCITEM
-mov r8d,ITEM_COUNT - 1           ; R8  = Parm#3 = WPARAM = index for new tab 
-mov edx,TCM_INSERTITEM           ; RDX = Parm#2 = Message
-mov rcx,[r15 + APPDATA.hTab]     ; RCX = Parm#1 = Container window handle
-call [SendMessage]               ; Add this sheet to tabbed panel
-.skipString:
-lodsb
-cmp al,0
-jne .skipString                  ; Cycle for skip string
-inc edi
-cmp edi,ITEM_COUNT
-jb .insertSheets                 ; Cycle for insert all sheets
-add rsp,32 + 8
-pop rsi
-
-;---------- Set item size for container ---------------------------------------;
-
-mov r9d,( 27 shl 16 + 97 )       ; R9  = Parm#4 = LPARAM = [Ysize][Xsize]
-xor r8d,r8d                      ; R8  = Parm#3 = WPARAM = not used = 0
-mov edx,TCM_SETITEMSIZE          ; RDX = Parm#2 = Message
-mov rcx,[r15 + APPDATA.hTab]     ; RCX = Parm#1 = Container window handle
-call [SendMessage]               ; Set sheets size 
-
-;---------- Initializing cycle for create dialogues per sheets ----------------; 
-
-push rsi rsi                     ; Second push for stack alignment
-mov rdi,rsi
-mov esi,IDD_FIRST
-lea rbx,[ProcDialogs]
-mov ecx,ITEM_COUNT
-
-;---------- Cycle for create dialogues per sheets -----------------------------;
-
-.createDialogues:
-push rcx                         ; RCX saved and stack alignment
-push 0                           ; Parm#5 = Passed parameter = not used = 0
-mov r9,[rbx]                     ; R9  = Parm#4 = Pointer to callback proc.
-mov r8,PARM_HWNDDLG              ; R8  = Parm#3 = Container window handle
-mov edx,esi                      ; RDX = Parm#2 = Dialog box resource id 
-mov rcx,[r15 + APPDATA.hResources]    ; RCX = Parm#1 = Resource module handle
-sub rsp,32
-call [CreateDialogParam]         ; Set dialogue with handler for sheet
-add rsp,32 + 8
-stosq                            ; Store this sheet handle
-inc esi
-pop rcx
-add rbx,8
-loop .createDialogues            ; Create dialogues cycle for all sheets 
-pop rsi rsi                      ; Second pop for stack alignment
-
-;---------- Cycle for find and select active sheet dialogue window ------------;
-
-mov ecx,ITEM_COUNT
-.findActive:
-push rcx
-mov edx,SW_HIDE                      ; This for all sheets exclude first
-cmp ecx,ITEM_COUNT 
-jne .showThis
-mov edx,SW_SHOWDEFAULT               ; This for first sheet, activate it
-.showThis:                           ; RDX = Parm#2 = Window activity mode
-lodsq
-xchg rcx,rax                         ; RCX = Parm#1 = Window handle 
-sub rsp,32 + 8
-call [ShowWindow]
-add rsp,32 + 8
-pop rcx
-loop .findActive
-
-;---------- Select active sheet at container ----------------------------------;  
-
-xor r9d,r9d                          ; R9  = Parm#4 = LPARAM = not used = 0 
-xor r8d,r8d                          ; R8  = Parm#3 = WPARAM = index
-mov [r15 + APPDATA.selectedTab],r8d  ; Active sheet = 0
-mov edx,TCM_SETCURSEL                ; RDX = Parm#2 = Message
-mov rcx,[r15 + APPDATA.hTab]         ; RCX = Parm#1 = Container window handle 
-call [SendMessage]                   ; Set current selected sheet
-
-;---------- Main window icon and text title -----------------------------------; 
-
-mov r9,[r15 + APPDATA.hIcon]         ; R9  = Parm#4 = LPARAM = Icon handle 
-mov r8d,ICON_SMALL                   ; R8  = Parm#3 = WPARAM = Icon type 
-mov edx,WM_SETICON                   ; RDX = Parm#2 = Message 
-mov rcx,PARM_HWNDDLG                 ; RCX = Parm#1 = Window handle
-call [SendMessage]                   ; Set main window icon
-lea rdx,[ProgName]                   ; RDX = Parm#2 = Pointer to text string
-mov rcx,PARM_HWNDDLG                 ; RCX = Parm#1 = Window handle
-call [SetWindowText]                 ; Set main window text title
-jmp .processed
-
-;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-
-.wmcommand:                       ; User input: cancel button or close window
-
-;---------- Detect click "About" item in the main menu ------------------------;
-
-mov eax,LOW_WPARAM
-cmp ax,IDM_ABOUT
-jne .noabout
-
-;---------- "About" message box and wait user input ---------------------------;
-
-mov r9d,MB_ICONINFORMATION   ; R9  = Parm#4 = Message box icon type = Info
-lea r8,[AboutCap]            ; R8  = Parm#3 = Pointer to caption
-lea rdx,[AboutText]          ; RDX = Parm#2 = Pointer to "About" string
-mov rcx,PARM_HWNDDLG         ; RCX = Parm#1 = Parent window handle
-call [MessageBoxA]
-jmp .processed
-.noabout:
-
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-
-cmp ax,IDM_EXIT
-je .wmclose
-jmp .processed
-
-;---------- WM_NOTIFY handler: events from child GUI objects ------------------;
-
-.tabproc:                         ; Change sheet selection
-cmp LOW_WPARAM,IDC_TAB
-jne .skip
-mov rax,PARM_LPARAM
-cmp [rax + NMHDR.code],TCN_SELCHANGE
-jne .skip                         ; Skip if other event, no sheet change
-mov eax,[r15 + APPDATA.selectedTab]
-mov edx,SW_HIDE                   ; RDX = Parm#2 = Window activity mode  
-mov rcx,[rsi + rax*8]             ; RCX = Parm#1 = Window handle 
-call [ShowWindow]                 ; Hide current sheet
-xor r9d,r9d                       ; R9  = Parm#4 = LPARAM = not used = 0
-xor r8d,r8d                       ; R8  = Parm#3 = WPARAM = not used = 0
-mov edx,TCM_GETCURSEL             ; RDX = Parm#2 = Message
-mov rcx,[r15 + APPDATA.hTab]      ; RCX = Parm#1 = Container window handle
-call [SendMessage]                ; Get current selected sheet number 
-mov [r15 + APPDATA.selectedTab],eax     ; Update current selected sheet number 
-mov edx,SW_SHOWDEFAULT            ; RDX = Parm#2 = Window activity mode
-mov rcx,[rsi + rax*8]             ; RCX = Parm#1 = Window handle
-call [ShowWindow]                 ; Show current selected sheet
-jmp .processed
-
-;---------- WM_CLOSE handler: close window ------------------------------------;
-
-.wmclose:
-mov edx,1  ; xor edx,edx          ; RDX = Parm#2 = Result for return
-mov rcx,PARM_HWNDDLG              ; RCX = Parm#1 = Window handle
-call [EndDialog]
-
-;---------- Exit points -------------------------------------------------------;
-
-.processed:
-mov eax,1
-.finish:
-mov rsp,rbp
-pop r15 rdi rsi rbx rbp
-ret
-
-;---------- Callback dialogue procedures for tab sheets child windows ---------;
-; INPUT:   RCX = Parm#1 = HWND = Dialog box handle                             ; 
-;          RDX = Parm#2 = UINT = Message                                       ; 
-;          R8  = Parm#3 = WPARAM, message-specific                             ;
-;          R9  = Parm#4 = LPARAM, message-specific                             ;
-; OUTPUT:  RAX = status, TRUE = message recognized and processed               ;
-;                        FALSE = not recognized, must be processed by OS,      ;
-;                        see MSDN for status exceptions and details            ;  
-;------------------------------------------------------------------------------;
-
-DialogProcSysinfo:
-mov al,BINDER_SYSINFO
-jmp DialogProcEntry
-DialogProcMemory:
-mov al,BINDER_MEMORY
-jmp DialogProcEntry
-DialogProcMath:
-mov al,BINDER_MATH
-jmp DialogProcEntry
-DialogProcOs:
-mov al,BINDER_OS
-jmp DialogProcEntry
-DialogProcNativeOs:
-mov al,BINDER_NATIVE_OS
-jmp DialogProcEntry
-DialogProcProcessor:
-mov al,BINDER_PROCESSOR
-jmp DialogProcEntry
-DialogProcTopology:
-mov al,BINDER_TOPOLOGY
-jmp DialogProcEntry
-DialogProcTopologyEx:
-mov al,BINDER_TOPOLOGY_EX
-jmp DialogProcEntry
-DialogProcNuma:
-mov al,BINDER_NUMA
-jmp DialogProcEntry
-DialogProcGroups:
-mov al,BINDER_P_GROUPS
-jmp DialogProcEntry
-DialogProcAcpi:
-mov al,BINDER_ACPI
-jmp DialogProcEntry
-DialogProcAffCpuid:
-mov al,BINDER_AFF_CPUID
-jmp DialogProcEntry
-DialogProcKmd:
-mov al,BINDER_KMD
-
-;---------- Entry point with AL = Binder ID for required child window ---------;
-
-DialogProcEntry:
-cld
-push rbp rbx rsi rdi r15
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov PARM_HWNDDLG,rcx           ; Save input parameters to shadow 
-mov PARM_MSG,rdx
-mov PARM_WPARAM,r8
-mov PARM_LPARAM,r9
-mov r15,[Registry]             ; R15 = Pointer to global registry
-add r15,REGISTRY64.appData     ; R15 = Pointer to registry.appData
-movzx esi,al                   ; ESI = Binder ID for this child window
-
-;---------- Detect message type -----------------------------------------------;
-
-cmp rdx,0000FFFFh
-jae .skip
-xchg eax,edx                   ; Use EAX for compact CMP
-cmp eax,WM_INITDIALOG
-je .wminitdialog               ; Go if dialogue initialization message 
-cmp eax,WM_COMMAND
-je .wmcommand                  ; Go if command message
-cmp eax,WM_CLOSE
-je .wmclose                    ; Go if window close message
-.skip:
-xor eax,eax
-jmp .finish                    ; Go exit if unknown event
-
-;---------- WM_INITDIALOG handler: create sheet window ------------------------;
-
-.wminitdialog:
-mov rbx,rcx
-mov eax,esi
-call Binder
-xchg eax,esi
-cmp al,BINDER_MEMORY
-jne @f
-inc eax
-inc eax
-call Binder
-@@:
-jmp .processed
-
-;---------- WM_COMMAND handler: interpreting user input -----------------------;
-
-.wmcommand:
-mov eax,r8d
-cmp ax,IDB_SYSINFO_CANCEL    ; Detect click "Exit" button in the child window
-je .wmclose
-jmp .processed
-
-;---------- WM_CLOSE handler: close window ------------------------------------;
-
-.wmclose:
-mov rcx,[r15 + APPDATA.hMain]
-jrcxz .processed
-xor r9d,r9d
-xor r8d,r8d
-mov edx,WM_CLOSE
-call [SendMessage]
-
-;---------- Exit points -------------------------------------------------------;
-
-.processed:
-mov eax,1
-.finish:
-mov rsp,rbp
-pop r15 rdi rsi rbx rbp
-ret
 
 ;---------- Copy text string terminated by 00h --------------------------------;
 ; Note last byte 00h not copied.                                               ;
@@ -1391,6 +990,7 @@ ret
 
 ;---------- Include subroutines from modules ----------------------------------;
 
+include 'ncrb64\dialogs\connect_code.inc'
 include 'ncrb64\system_info\connect_code.inc'
 include 'ncrb64\threads_manager\connect_code.inc'
 include 'ncrb64\memory_bandwidth_temporal\connect_code.inc'
@@ -1410,22 +1010,6 @@ section '.data' data readable writeable
 
 Registry      DQ  0                        ; Must be 0 for conditional release
 AppCtrl       INITCOMMONCONTROLSEX  8, 0   ; Structure for initialization
-
-;---------- Pointers to dialogues callbacks procedures, per each tab sheet ----;
-
-ProcDialogs   DQ  DialogProcSysinfo
-              DQ  DialogProcMemory
-              DQ  DialogProcMath
-              DQ  DialogProcOs
-              DQ  DialogProcNativeOs
-              DQ  DialogProcProcessor
-              DQ  DialogProcTopology
-              DQ  DialogProcTopologyEx
-              DQ  DialogProcNuma
-              DQ  DialogProcGroups
-              DQ  DialogProcAcpi
-              DQ  DialogProcAffCpuid
-              DQ  DialogProcKmd
 
 ;---------- Pointers to procedures of GUI bind scripts interpreter ------------;
 
@@ -1465,7 +1049,8 @@ NameResDll    DB  'DATA.DLL'     , 0
 ProgName      DB  'NUMA CPU&RAM Benchmarks for Win64',0
 AboutCap      DB  'Program info',0
 AboutText     DB  'NUMA CPU&RAM Benchmark'   , 0Dh,0Ah
-              DB  'v2.00.00 for Windows x64' , 0Dh,0Ah
+            ; DB  'v2.00.00 for Windows x64' , 0Dh,0Ah
+              DB  0Dh,0Ah, 'ENGINEERING SAMPLE #0000 for Windows x64' , 0Dh,0Ah, 0Dh,0Ah
               DB  '(C)2021 Ilya Manusov'     , 0Dh,0Ah,0
 
 ;---------- Errors messages strings -------------------------------------------;
@@ -1482,25 +1067,15 @@ MsgErrors     DB  'Memory allocation error.'                 , 0
 
 ;---------- Include constants and pre-defined variables from modules ----------;
 
-include 'ncrb64\system_info\connect_const.inc'
-include 'ncrb64\threads_manager\connect_const.inc'
-include 'ncrb64\memory_bandwidth_temporal\connect_const.inc'
-include 'ncrb64\memory_bandwidth_non_temporal\connect_const.inc'
-include 'ncrb64\memory_bandwidth_partial\connect_const.inc'
-include 'ncrb64\memory_latency\connect_const.inc'
-include 'ncrb64\math_bandwidth\connect_const.inc'
-include 'ncrb64\math_latency\connect_const.inc'
-
-;---------- Include non pre-defined variables from modules --------------------;
-
-include 'ncrb64\system_info\connect_var.inc'
-include 'ncrb64\threads_manager\connect_var.inc'
-include 'ncrb64\memory_bandwidth_temporal\connect_var.inc'
-include 'ncrb64\memory_bandwidth_non_temporal\connect_var.inc'
-include 'ncrb64\memory_bandwidth_partial\connect_var.inc'
-include 'ncrb64\memory_latency\connect_var.inc'
-include 'ncrb64\math_bandwidth\connect_var.inc'
-include 'ncrb64\math_latency\connect_var.inc'
+include 'ncrb64\dialogs\connect_data.inc'
+include 'ncrb64\system_info\connect_data.inc'
+include 'ncrb64\threads_manager\connect_data.inc'
+include 'ncrb64\memory_bandwidth_temporal\connect_data.inc'
+include 'ncrb64\memory_bandwidth_non_temporal\connect_data.inc'
+include 'ncrb64\memory_bandwidth_partial\connect_data.inc'
+include 'ncrb64\memory_latency\connect_data.inc'
+include 'ncrb64\math_bandwidth\connect_data.inc'
+include 'ncrb64\math_latency\connect_data.inc'
 
 ;------------------------------------------------------------------------------;
 ;                              Import section.                                 ;        

@@ -1338,6 +1338,7 @@ ret
 ; INPUT:   EBP = Pointer                                                       ;
 ; OUTPUT:  EBP = Aligned pointer, updated if required                          ;
 ;------------------------------------------------------------------------------;
+
 HelperAlignment:
 test bp,00001111b
 jz @f
@@ -1345,6 +1346,7 @@ and ebp,0FFFFFFF0h
 add ebp,010h
 @@: 
 ret
+
 ;---------- Detect CPUID support and execute CPUID function #0 ----------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -1361,8 +1363,11 @@ ret
 ;           bytes [00-11] = CPU vendor string                                  ;
 ;           byte  [12-12] = 00h, string terminator                             ;
 ;------------------------------------------------------------------------------;
+
 HelperCheckCpuid:
+
 ;---------- Check for ID bit writeable for "1" --------------------------------;
+
 mov ebx,21
 pushf                     ; In the 32-bit mode, push EFLAGS
 pop eax
@@ -1373,14 +1378,18 @@ pushf                     ; Store EFLAGS
 pop eax                   ; Load EFLAGS to EAX
 btr eax,ebx               ; Check EAX.21=1, Set EAX.21=0
 jnc .absent               ; Go error branch if cannot set EFLAGS.21=1
+
 ;---------- Check for ID bit writeable for "0" --------------------------------;
+
 push eax
 popf                      ; Load EFLAGS with EFLAGS.21=0
 pushf                     ; Store EFLAGS
 pop eax                   ; Load EFLAGS to EAX
 btr eax,ebx               ; Check EAX.21=0
 jc .absent                ; Go if cannot set EFLAGS.21=0
+
 ;---------- Execute CPUID function 0, store results ---------------------------;
+
 xor eax,eax               ; EAX = Function number for CPUID instruction
 cpuid                     ; Execute CPUID function 0
 xchg eax,ebx              ; XCHG instead MOV, short code
@@ -1392,11 +1401,14 @@ stosd                     ; Store Vendor String [08-11]
 mov al,0
 stosb                     ; Zero terminator byte
 xchg eax,ebx              ; Restore EAX = Largest standard function supported
+
 ;---------- Exit points -------------------------------------------------------;
+
 ret                       ; Return, at this point CF=0(NC) after XOR EAX,EAX
 .absent:
 stc                       ; CF=1(C) means error
 ret 
+
 ;---------- Get CPU name string, execute CPUID functions 80000002h-80000004h --;
 ; Call this subroutine only if CPUID instruction supported.                    ;
 ;                                                                              ;
@@ -1410,16 +1422,21 @@ ret
 ;          If feature not supported, string contain "None",                    ;
 ;          but errors not reported, NCRB can work without this feature         ;
 ;------------------------------------------------------------------------------;
+
 HelperGetCpuName:
 cld                          ; Clear direction, because STOSB/STOSD used
 push ebx esi
+
 ;---------- Blank and prepare for not support mode ----------------------------;
+
 mov ecx,48                   ; RCX = String length, also clear bits RCX[63-32]
 mov al,' '                   ; AL = Space
 rep stosb                    ; Blank string
 mov dword [edi - 48],'None'  ; Default string, if feature not supported
 mov byte [edi],0             ; Zero terminator byte 
+
 ;---------- Check functions supported -----------------------------------------;
+
 mov esi,80000000h            ; ESI = First extended function = 80000000h
 mov eax,esi                  ; EAX = Function for verify support = 80000000h
 cpuid                        ; Execute CPUID function 80000000h
@@ -1427,7 +1444,9 @@ lea ebx,[esi + 4]            ; EBX = Maximum function 80000004h
 cmp eax,ebx
 jb .exit                     ; Go exit if required functions not supported
 sub edi,48                   ; Must be +48 if go exit when not supported
+
 ;---------- Get and store CPU name string -------------------------------------;
+
 push edi
 .storeCpuName:
 lea eax,[esi + 2]          ; EAX = Function number, start from 80000002h
@@ -1443,7 +1462,9 @@ inc esi
 cmp si,4-2                 ; This give function number EAX=80000004h
 jbe .storeCpuName
 pop edi
+
 ;---------- Formatting CPU name string, delete left spaces and byte 00h -------;
+
 mov esi,edi
 mov ecx,48                 ; ECX = String size limit
 mov ebx,ecx                ; EBX = Used space count = 48 - Unused space count
@@ -1458,7 +1479,9 @@ mov cl,48
 je .endCpuName            ; Go blank if only spaces in the string, here RCX=48
 inc ebx
 dec esi
+
 ;---------- Copy used portion of name -----------------------------------------;
+
 .copyCpuName:             ; This cycle for copy name before terminator = 00h
 lodsb
 cmp al,0
@@ -1467,15 +1490,20 @@ stosb
 dec ecx
 dec ebx
 jnz .copyCpuName
+
 ;---------- Blank unused portion of name --------------------------------------;
+
 .endCpuName:              ; Start blank tail with space = 20h
 mov al,' '
 rep stosb
+
 ;---------- Exit point --------------------------------------------------------;
+
 .exit:
 inc edi                   ; Skip terminator byte
 pop esi ebx
 ret
+
 ;---------- Measure CPU TSC (Time Stamp Counter) clock frequency --------------;
 ; Store results F = Frequency=[Hz].                                            ;
 ; Call this subroutine only if CPUID and RDTSC both supported.                 ;
@@ -1488,11 +1516,14 @@ ret
 ;          Destination memory at [input EDI] = Results                         ;
 ;           Qword [00-07] = TSC frequency, Hz = delta TSC per 1 second         ;
 ;------------------------------------------------------------------------------;
+
 HelperMeasureTsc:
 cld                        ; Clear direction, because STOSQ used
 push ebx esi ebp eax eax   ; Last 2 pushes = reserve space for local variables
 mov ebp,esp                ; EBP = pointer to local variables
+
 ;---------- Start measure frequency, get current change -----------------------;
+
 push ebp                          ; Parm#1 = pointer to output 64-bit variable
 call [GetSystemTimeAsFileTime]    ; Get current count
 mov esi,[ebp]
@@ -1524,11 +1555,15 @@ jb .error       ; Go error if frequency < 0
 mov ecx,eax
 or ecx,edx
 jz .error       ; Go error if frequency = 0
+
 ;-------- Store Frequency, as 64-bit integer value, Hz, delta-TSC per second --;
+
 stosd                   ; Store EAX = Frequency, low dword
 xchg eax,edx
 stosd                   ; Store EAX = Frequency, high dword
+
 ;---------- Restore RSP, pop extra registers, exit ----------------------------;
+
 clc             ; CF=0 (NC) means CPU clock measured OK
 .exit:
 pop eax eax ebp esi ebx
@@ -1536,11 +1571,13 @@ ret
 .error:
 stc             ; CF=1 (CY) means CPU clock measured ERROR
 jmp .exit
+
 ;---------- Interpreting list of entries ENTRY_CPUID, ENTRY_XCR0 --------------;
 ; INPUT:   RSI = Pointer to builder script                                     ;
 ; OUTPUT:  EAX = Bitmap, result of builder script                              ;
 ;          RAX.[63-31] = 0                                                     ;  
 ;------------------------------------------------------------------------------;
+
 HelperBuildBitmap:
 push esi edi ebp ebx
 cld
@@ -1597,6 +1634,7 @@ call HelperEntryXcr0
 jmp .next
 .prefixXcr0:
 jmp .build
+
 ;---------- Interpreting one ENTRY_CPUID object at build bitmap list ----------;
 ; Check CPUID instruction support before this subroutine call.                 ;
 ;                                                                              ;
@@ -1611,6 +1649,7 @@ jmp .build
 ;                for low and high 32-bit dwords of 64-bit bitmap,              ;
 ;                note about 64-bit code portability to 32-bit code.            ;
 ;------------------------------------------------------------------------------;
+
 HelperEntryCpuid:
 push esi edi ebp ebx
 mov esi,eax     ; ESI = function
@@ -1654,6 +1693,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;---------- Interpreting one ENTRY_XCR0 object at build bitmap list -----------;
 ; Check CPUID instruction support before this subroutine call,                 ;
 ; XGETBV instruction support verified in this subroutine.                      ;
@@ -1666,6 +1706,7 @@ ret
 ;                for low and high 32-bit dwords of 64-bit bitmap,              ;
 ;                note about 64-bit code portability to 32-bit code.            ;
 ;------------------------------------------------------------------------------;
+
 HelperEntryXcr0:
 push ebp ebx
 xchg ebp,eax
@@ -1696,6 +1737,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          AX  = Index for parameter name for write to string                  ; 
@@ -1703,6 +1745,7 @@ ret
 ;          ECX  = Pointer to parameter hex value position in the string        ;
 ;          EBP = Updated pointer to destination buffer                         ;   
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoString:
 push esi
 mov edi,ebp
@@ -1721,6 +1764,7 @@ lea edi,[ebp - 82 + 33]
 lea ecx,[ebp - 82 + 62]
 pop esi
 ret
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes                           ;
 ;           This variant for memory status structure.                          ;
@@ -1731,6 +1775,7 @@ ret
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSize:
 mov bl,2
 SizeHelperEntry:
@@ -1757,6 +1802,7 @@ call SizePrint64
 .skip:
 pop edi
 jmp HexPrint64
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units auto selected                               ;
 ;           This variant for system information structure.                     ;
@@ -1767,9 +1813,11 @@ jmp HexPrint64
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSizeAuto:
 mov bl,0FFh
 jmp SizeHelperEntry
+
 ;---------- Write memory block size to pre-blanked, hex only ------------------;
 ;           This variant for memory status structure.                          ;
 ;           This variant for 64-bit value.                                     ;
@@ -1778,9 +1826,11 @@ jmp SizeHelperEntry
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoHex:
 mov bl,0
 jmp SizeHelperEntry 
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for system information structure.                     ;
@@ -1791,6 +1841,7 @@ jmp SizeHelperEntry
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
@@ -1808,6 +1859,7 @@ xor edx,edx
 call SizePrint64
 pop eax edi
 jmp HexPrint32
+
 ;---------- Write 32-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
@@ -1815,6 +1867,7 @@ jmp HexPrint32
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoNumber32:
 movzx eax,al
 push ecx
@@ -1834,6 +1887,7 @@ call DecimalPrint32
 pop eax
 mov edi,ecx
 jmp HexPrint32
+
 ;---------- Write 16-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
@@ -1841,6 +1895,7 @@ jmp HexPrint32
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoNumber16:
 movzx eax,al
 push ecx
@@ -1857,12 +1912,14 @@ mov bl,0
 call DecimalPrint32
 pop eax edi
 jmp HexPrint16
+
 ;---------- Write system information strings ----------------------------------;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  EBP = Updated pointer to destination buffer                         ;
 ;          EDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperSystemInfo:
 mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
 call HelperOsInfoString
@@ -1901,11 +1958,13 @@ mov ax,STR_OS_PROC_REVISION                      ; Processor revision
 call HelperOsInfoString
 mov al,SYSTEM_INFO.wProcessorRevision
 jmp HelperOsInfoNumber16
+
 ;--- Write relation name string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          AX  = String ID at application strings pool                         ;
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperRelationName:
 lea edi,[edx + 01]
 RelationNameEntry:
@@ -1913,11 +1972,13 @@ push ecx esi
 call PoolStringWrite
 pop esi ecx
 ret
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinity:
 push ecx edx esi ebp
 lea edi,[edx + 18]   ; EDI = Destination text pointer
@@ -1974,6 +2035,7 @@ mov al,'-'
 stosb
 .modeSingle:
 xchg eax,edx
+mov bl,0
 call DecimalPrint32
 .done:
 pop ebp esi edx ecx
@@ -1988,6 +2050,7 @@ ret
 ;          EAX.[31-16] = Parameter name String ID at application strings pool  ;  
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperParameter8:         ; Entry point for addressed 8-bit parameter
 shld ebx,eax,16
 movzx edi,ah
@@ -2016,6 +2079,7 @@ movzx edi,ah
 movzx eax,al
 mov eax,dword [esi + eax]
 jmp ParameterEntry
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;
@@ -2024,6 +2088,7 @@ jmp ParameterEntry
 ;          AH  = Cache type                                                    ;    
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperCacheSummary:
 push ecx esi 0 0 ebp
 mov ebp,esp
@@ -2082,6 +2147,7 @@ pop edi
 .nodata:
 pop ebp eax eax esi ecx
 ret
+
 ;---------- Get topological information ---------------------------------------;
 ; INPUT:   EBX = WinAPI function address                                       ;
 ;          EBP = Pointer to buffer for topology information                    ;
@@ -2089,6 +2155,7 @@ ret
 ;          AL  = Relation type by WinAPI encoding                              ;
 ; OUTPUT:  EDI = Updated buffer size accumulator                               ;
 ;------------------------------------------------------------------------------;             
+
 HelperTopologyEx:
 push ebx esi eax 0
 mov eax,esp
@@ -2124,12 +2191,14 @@ ret
 .error:
 stc
 jmp .exit
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
 ;          AL  = Field offset in the parsed structure                          ; 
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinityGroup:    ; TODO. Optimize by EntryAffinity
 push esi ebp
 movzx eax,al
@@ -2193,16 +2262,19 @@ mov al,'-'
 stosb
 .modeSingle:
 xchg eax,edx
+mov bl,0
 call DecimalPrint32
 .done:
 pop edx ecx ebp esi
 ret
+
 ;--- Write proc. group string for text generation by topology parsing ---------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
 ;          AL  = Field offset in the parsed structure                          ; 
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinityMask:
 push esi
 movzx eax,al
@@ -2212,6 +2284,7 @@ mov ax,[esi + 08]
 call HexPrint16
 pop esi
 ret
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;
@@ -2220,6 +2293,7 @@ ret
 ;          AH  = Cache type                                                    ;    
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperCacheSummaryEx:
 push ecx esi 0 0 ebp
 mov ebp,esp
@@ -2280,11 +2354,13 @@ pop edi
 .nodata:
 pop ebp eax eax esi ecx
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          EAX = Number write to string                                        ; 
 ; OUTPUT:  EBP = Updated pointer to destination buffer                         ;   
 ;------------------------------------------------------------------------------;
+
 HelperNumberString:
 push ecx eax
 mov edi,ebp
@@ -2301,6 +2377,7 @@ mov bl,0
 call DecimalPrint32
 pop ecx
 ret
+
 ;---------- Copy text string with chars checks --------------------------------;
 ; INPUT:   EBX = Source base                                                   ;
 ;          EBP = Destination base                                              ;
@@ -2310,6 +2387,7 @@ ret
 ; OUTPUT:  EDI = Last used updated pointer                                     ;
 ;          String at [EBP + AH] size EAX.[31-16] updated                       ;   
 ;------------------------------------------------------------------------------;
+
 HelperCopyString:
 movzx ecx,al
 lea esi,[ebx + ecx]
@@ -2334,6 +2412,7 @@ mov al,' '
 stosb
 loop .copy
 ret
+
 ;---------- Write decimal number text string, 8 bit value ---------------------;
 ; INPUT:   EBX = Source base                                                   ;
 ;          EBP = Destination base                                              ;
@@ -2342,6 +2421,7 @@ ret
 ; OUTPUT:  EDI = Last used updated pointer                                     ;
 ;          String at [EBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
+
 HelperDecimalString:
 push ebx
 movzx ecx,ah
@@ -2352,6 +2432,7 @@ mov bl,0
 call DecimalPrint32 
 pop ebx
 ret
+
 ;---------- Write hex number text string, 32 bit value ------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -2360,6 +2441,7 @@ ret
 ; OUTPUT:  EDI = Last used updated pointer                                     ;
 ;          String at [RBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
+
 HelperHexString:
 call HelperHexStringNh
 mov al,'h'

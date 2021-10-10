@@ -1,4 +1,9 @@
+
+
+
 ; UNDER CONSTRUCTION.
+
+
 
 LoadKernelModeDriver:
 push rbx rsi rdi rbp r15
@@ -107,7 +112,7 @@ jz .errorStartService   ; Go if error status returned when start service
 
 .skipStart:
 
-;---------- Create Device file ------------------------------------------------;
+;---------- Create (open) device file -----------------------------------------;
 
 mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
 mov ax,STR_DRV_DEVICE
@@ -144,7 +149,10 @@ pop r15 rbp rdi rsi rbx
 ret
 
 
+
 ; UNDER CONSTRUCTION.
+
+
 
 UnloadKernelModeDriver:
 push rbx rsi rdi rbp r15
@@ -232,4 +240,63 @@ jnz @f                       ; Go skip error log if no errors
 mov rsp,rbp
 pop r15 rbp rdi rsi rbx
 ret
+
+
+
+; UNDER CONSTRUCTION.
+
+
+
+TryKernelModeDriver:
+push rbx rsi rdi rbp
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+mov rbx,[Registry]
+add rbx,REGISTRY64.scpData
+
+;---------- Write to device file, this is requests for driver -----------------;
+
+push 0                         ; Alignment and variable
+push 0                         ; Parm#5 = Pointer to overlapped, 0 = not used
+lea r9,[rbx + SCPDATA.bytes]   ; Parm#4 = R9  = Pointer to byte count variable
+mov r8d,sizeof.SERVICE_QUERY   ; Parm#3 = R8  = Requested byte count
+lea rdx,[rbx + SCPDATA.query]  ; Parm#2 = RDX = Pointer to file buffer=request
+mov rcx,[rbx + SCPDATA.driver] ; Parm#1 = RCX = File=device handle
+mov eax,RZ_REQUEST_CODE
+mov qword [rdx + SERVICE_QUERY.iocode],rax    ; Request code
+lea rax,[rsp + 8]
+mov qword [rdx + SERVICE_QUERY.parm1],rax     ; Parameter = destination pointer
+lea rax,[kmdRoutine]
+mov qword [rdx + SERVICE_QUERY.userproc],rax  ; Callback pointer
+sub rsp,32
+call [WriteFile]
+add rsp,32 + 8
+test rax,rax                   ; RAX = Status
+pop rax                        ; RAX = Output variable
+jz .errorWriteDevice           ; Go if error status returned when send request
+
+; TODO. Errors Handling.
+.errorWriteDevice:
+
+mov rsp,rbp
+pop rbp rdi rsi rbx
+ret
+
+
+;------------------------------------------------------------------------------;
+;       Fragment executed at kernel mode, as callback from KMD handler.        ;
+;               This is debug example: read IA32_APIC_BASE MSR.                ;
+;                                                                              ;
+; INPUT:     RAX = Pointer to data buffer                                      ;
+; OUTPUT:    8 bytes at [RAX] = IA32_APIC_BASE MSR value, 64-bit               ;
+; Destroyed: RAX, RBX, RCX, RDX.                                               ; 
+;------------------------------------------------------------------------------;
+kmdRoutine:
+mov rbx,rax          ; RBX = Pointer for store data after read MSR
+mov ecx,01Bh         ; ECX = address of IA32_APIC_BASE MSR
+rdmsr                ; Read MSR selected by ECX
+mov [rbx + 0],eax    ; Store bits [31-00] of MSR
+mov [rbx + 4],edx    ; Store bits [63-32] of MSR 
+retn
+
 

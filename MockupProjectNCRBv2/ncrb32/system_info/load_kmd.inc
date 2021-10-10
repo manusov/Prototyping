@@ -1,4 +1,9 @@
+
+
+
 ; UNDER CONSTRUCTION.
+
+
 
 LoadKernelModeDriver:
 push ebx esi edi ebp
@@ -7,11 +12,11 @@ mov ebx,[Registry]
 ;---------- Initializing data structure ---------------------------------------;
 
 cld
-mov edi,ebx
+lea edi,[ebx + REGISTRY32.scpData]
 mov ecx,sizeof.SCPDATA
 mov al,0
 rep stosb
-mov eax,[eax + REGISTRY32.allocatorTempBuffer.objectStart]
+mov eax,[ebx + REGISTRY32.allocatorTempBuffer.objectStart]
 mov [ebx + REGISTRY32.scpData.drvPath],eax
 mov [ebx + REGISTRY32.scpData.driver],INVALID_HANDLE_VALUE
 
@@ -19,6 +24,10 @@ mov [ebx + REGISTRY32.scpData.driver],INVALID_HANDLE_VALUE
 
 mov esi,[ebx + REGISTRY32.appData.lockedStrings]
 mov ax,STR_NAME_KMD32
+cmp [ebx + REGISTRY32.osData.isWow64],0
+je @f
+mov ax,STR_NAME_KMD64
+@@:
 call IndexString
 lea eax,[ebx + REGISTRY32.scpData.drvFile] 
 push eax                     ; Parm#4 = Pointer to pointer to updated path 
@@ -104,7 +113,7 @@ jz .errorStartService      ; Go if error status returned when start service
 
 .skipStart:
 
-;---------- Create device file ------------------------------------------------;
+;---------- Create (open) device file -----------------------------------------;
 
 mov esi,[ebx + REGISTRY32.appData.lockedStrings]
 mov ax,STR_DRV_DEVICE
@@ -137,7 +146,10 @@ pop ebp edi esi ebx
 ret
 
 
+
 ; UNDER CONSTRUCTION.
+
+
 
 UnloadKernelModeDriver:
 push ebx esi edi ebp
@@ -214,3 +226,58 @@ jnz @f                      ; Go if no errors
 pop ebp edi esi ebx
 ret
 
+
+
+; UNDER CONSTRUCTION.
+
+
+
+TryKernelModeDriver:
+push ebx esi edi ebp
+mov ebx,[Registry]
+add ebx,REGISTRY32.scpData
+
+;---------- Write to device file, this is requests for driver -----------------;
+
+push 0 0                       ; Variable for output
+push 0                         ; Parm#5 = Pointer to overlapped, 0 = not used
+lea eax,[ebx + SCPDATA.bytes]
+push eax                       ; Parm#4 = Pointer to byte count variable
+push sizeof.SERVICE_QUERY      ; Parm#3 = Requested byte count
+lea edx,[ebx + SCPDATA.query]
+push edx                       ; Parm#2 = Pointer to file buffer=request
+push [ebx + SCPDATA.driver]    ; Parm#1 = File=device handle
+mov eax,RZ_REQUEST_CODE
+mov dword [edx + SERVICE_QUERY.iocode],eax
+lea eax,[esp + 20]
+mov dword [edx + SERVICE_QUERY.parm1],eax
+lea eax,[kmdRoutine]
+mov dword [edx + SERVICE_QUERY.userproc],eax
+mov dword [edx + SERVICE_QUERY.userproc + 4],0   ; Required for WoW 32/64
+call [WriteFile]
+test eax,eax                   ; EAX = Status
+pop eax edx                    ; EDX:EAX = Output variable
+jz .errorWriteDevice           ; Go if error status returned when send request
+
+; TODO. Errors Handling.
+.errorWriteDevice:
+
+pop ebp edi esi ebx
+ret
+
+
+;------------------------------------------------------------------------------;
+;       Fragment executed at kernel mode, as callback from KMD handler.        ;
+;               This is debug example: read IA32_APIC_BASE MSR.                ;
+;                                                                              ;
+; INPUT:     EAX = Pointer to data buffer                                      ;
+; OUTPUT:    8 bytes at [EAX] = IA32_APIC_BASE MSR value, 64-bit               ;
+; Destroyed: EAX, EBX, ECX, EDX.                                               ; 
+;------------------------------------------------------------------------------;
+kmdRoutine:
+mov ebx,eax          ; EBX = Pointer for store data after read MSR
+mov ecx,01Bh         ; ECX = address of IA32_APIC_BASE MSR
+rdmsr                ; Read MSR selected by ECX
+mov [ebx + 0],eax    ; Store bits [31-00] of MSR
+mov [ebx + 4],edx    ; Store bits [63-32] of MSR 
+retn

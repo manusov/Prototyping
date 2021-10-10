@@ -1238,6 +1238,7 @@ ret
 ; INPUT:   RBP = Pointer                                                       ;
 ; OUTPUT:  RBP = Aligned pointer, updated if required                          ;
 ;------------------------------------------------------------------------------;
+
 HelperAlignment:
 test bpl,00001111b
 jz @f
@@ -1245,6 +1246,7 @@ and bpl,0F0h
 add rbp,010h
 @@: 
 ret
+
 ;---------- Detect CPUID support and execute CPUID function #0. ---------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -1261,7 +1263,9 @@ ret
 ;           bytes [00-11] = CPU vendor string                                  ;
 ;           byte  [12-12] = 00h, string terminator                             ;
 ;------------------------------------------------------------------------------;
+
 HelperCheckCpuid:
+
 ;---------- Check for ID bit writeable for "1" --------------------------------;
 mov ebx,21
 pushf                     ; In the 64-bit mode, push RFLAGS
@@ -1273,14 +1277,18 @@ pushf                     ; Store RFLAGS
 pop rax                   ; Load RFLAGS to RAX
 btr eax,ebx               ; Check EAX.21=1, Set EAX.21=0
 jnc .absent               ; Go error branch if cannot set EFLAGS.21=1
+
 ;---------- Check for ID bit writeable for "0" --------------------------------;
+
 push rax
 popf                      ; Load RFLAGS with RFLAGS.21=0
 pushf                     ; Store RFLAGS
 pop rax                   ; Load RFLAGS to RAX
 btr eax,ebx               ; Check EAX.21=0
 jc .absent                ; Go if cannot set EFLAGS.21=0
+
 ;---------- Execute CPUID function 0, store results ---------------------------;
+
 xor eax,eax               ; EAX = Function number for CPUID instruction
 cpuid                     ; Execute CPUID function 0
 xchg eax,ebx              ; XCHG instead MOV, short code
@@ -1292,11 +1300,14 @@ stosd                     ; Store Vendor String [08-11]
 mov al,0
 stosb                     ; Zero terminator byte
 xchg eax,ebx              ; Restore EAX = Largest standard function supported
+
 ;---------- Exit points -------------------------------------------------------;
+
 ret                       ; Return, at this point CF=0(NC) after XOR EAX,EAX
 .absent:
 stc                       ; CF=1(C) means error
 ret 
+
 ;---------- Get CPU name string, execute CPUID functions 80000002h-80000004h --;
 ; Call this subroutine only if CPUID instruction supported.                    ;
 ;                                                                              ;
@@ -1310,16 +1321,21 @@ ret
 ;          If feature not supported, string contain "None",                    ;
 ;          but errors not reported, NCRB can work without this feature         ;
 ;------------------------------------------------------------------------------;
+
 HelperGetCpuName:
 cld                          ; Clear direction, because STOSB/STOSD used
 push rbx rsi
+
 ;---------- Blank and prepare for not support mode ----------------------------;
+
 mov ecx,48                   ; RCX = String length, also clear bits RCX[63-32]
 mov al,' '                   ; AL = Space
 rep stosb                    ; Blank string
 mov dword [rdi - 48],'None'  ; Default string, if feature not supported
 mov byte [rdi],0             ; Zero terminator byte 
+
 ;---------- Check functions supported -----------------------------------------;
+
 mov esi,80000000h            ; ESI = First extended function = 80000000h
 mov eax,esi                  ; EAX = Function for verify support = 80000000h
 cpuid                        ; Execute CPUID function 80000000h
@@ -1327,7 +1343,9 @@ lea ebx,[esi + 4]            ; EBX = Maximum function 80000004h
 cmp eax,ebx
 jb .exit                     ; Go exit if required functions not supported
 sub rdi,48                   ; Must be +48 if go exit when not supported
+
 ;---------- Get and store CPU name string -------------------------------------;
+
 push rdi
 .storeCpuName:
 lea eax,[esi + 2]          ; EAX = Function number, start from 80000002h
@@ -1343,7 +1361,9 @@ inc esi
 cmp si,4-2                 ; This give function number EAX=80000004h
 jbe .storeCpuName
 pop rdi
+
 ;---------- Formatting CPU name string, delete left spaces and byte 00h -------;
+
 mov rsi,rdi
 mov ecx,48                 ; RCX = String size limit
 mov ebx,ecx                ; EBX = Used space count = 48 - Unused space count
@@ -1358,7 +1378,9 @@ mov cl,48
 je .endCpuName            ; Go blank if only spaces in the string, here RCX=48
 inc ebx
 dec esi
+
 ;---------- Copy used portion of name -----------------------------------------;
+
 .copyCpuName:             ; This cycle for copy name before terminator = 00h
 lodsb
 cmp al,0
@@ -1367,15 +1389,20 @@ stosb
 dec ecx
 dec ebx
 jnz .copyCpuName
+
 ;---------- Blank unused portion of name --------------------------------------;
+
 .endCpuName:              ; Start blank tail with space = 20h
 mov al,' '
 rep stosb
+
 ;---------- Exit point --------------------------------------------------------;
+
 .exit:
 inc rdi                   ; Skip terminator byte
 pop rsi rbx
 ret
+
 ;---------- Measure CPU TSC (Time Stamp Counter) clock frequency --------------;
 ; Store results F = Frequency=[Hz].                                            ;
 ; Call this subroutine only if CPUID and RDTSC both supported.                 ;
@@ -1388,13 +1415,16 @@ ret
 ;          Destination memory at [input RDI] = Results                         ;
 ;           Qword [00-07] = TSC frequency, Hz = delta TSC per 1 second         ;
 ;------------------------------------------------------------------------------;
+
 HelperMeasureTsc:
 cld                        ; Clear direction, because STOSQ used
 push rbx rbp rbp           ; Last push for reserve local variable space
 mov rbp,rsp                ; RBP used for restore RSP and addressing variables
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32                 ; Make parameters shadow
+
 ;---------- Start measure frequency -------------------------------------------;
+
 mov rcx,rbp
 call [GetSystemTimeAsFileTime]    ; Get current count
 mov rsi,[rbp]
@@ -1418,9 +1448,13 @@ shl rdx,32
 or rax,rdx                        ; RAX = 64-bit TSC at operation end
 sub rax,rbx                       ; RAX = Delta TSC
 jbe .error
+
 ;---------- Store result ------------------------------------------------------; 
+
 stosq     ; Store Frequency, as 64-bit integer value, Hz, delta-TSC per second
+
 ;---------- Restore RSP, pop extra registers, exit ----------------------------;
+
 clc             ; CF=0 (NC) means CPU clock measured OK
 .exit:
 mov rsp,rbp
@@ -1429,10 +1463,12 @@ ret
 .error:
 stc             ; CF=1 (CY) means CPU clock measured ERROR
 jmp .exit
+
 ;---------- Interpreting list of entries ENTRY_CPUID, ENTRY_XCR0 --------------;
 ; INPUT:   RSI = Pointer to builder script                                     ;
 ; OUTPUT:  RAX = Bitmap, result of builder script                              ;  
 ;------------------------------------------------------------------------------;
+
 HelperBuildBitmap:
 push rsi rdi rbp rbx
 cld
@@ -1489,6 +1525,7 @@ call HelperEntryXcr0
 jmp .next
 .prefixXcr0:
 jmp .build
+
 ;---------- Interpreting one ENTRY_CPUID object at build bitmap list ----------;
 ; Check CPUID instruction support before this subroutine call.                 ;
 ;                                                                              ;
@@ -1503,6 +1540,7 @@ jmp .build
 ;                for low and high 32-bit dwords of 64-bit bitmap,              ;
 ;                note about 64-bit code portability to 32-bit code.            ;
 ;------------------------------------------------------------------------------;
+
 HelperEntryCpuid:
 push rsi rdi rbp rbx
 mov esi,eax     ; ESI = function
@@ -1546,6 +1584,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;---------- Interpreting one ENTRY_XCR0 object at build bitmap list -----------;
 ; Check CPUID instruction support before this subroutine call,                 ;
 ; XGETBV instruction support verified in this subroutine.                      ;
@@ -1558,6 +1597,7 @@ ret
 ;                for low and high 32-bit dwords of 64-bit bitmap,              ;
 ;                note about 64-bit code portability to 32-bit code.            ;
 ;------------------------------------------------------------------------------;
+
 HelperEntryXcr0:
 push rbp rbx
 xchg ebp,eax
@@ -1588,6 +1628,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          AX  = Index for parameter name for write to string                  ; 
@@ -1595,6 +1636,7 @@ ret
 ;          R8  = Pointer to parameter hex value position in the string         ;
 ;          RBP = Updated pointer to destination buffer                         ;   
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoString:
 push rsi
 mov rdi,rbp
@@ -1613,6 +1655,7 @@ lea rdi,[rbp - 82 + 33]
 lea r8,[rbp - 82 + 62]
 pop rsi
 ret
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for memory status structure.                          ;
@@ -1623,6 +1666,7 @@ ret
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSize:
 mov bl,2
 SizeHelperEntry:
@@ -1647,6 +1691,7 @@ call SizePrint64
 .skip:
 mov rdi,r8
 jmp HexPrint64
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units auto selected                               ;
 ;           This variant for system information structure.                     ;
@@ -1657,9 +1702,11 @@ jmp HexPrint64
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSizeAuto:
 mov bl,0FFh
 jmp SizeHelperEntry
+
 ;---------- Write memory block size to pre-blanked, hex only ------------------;
 ;           This variant for memory status structure.                          ;
 ;           This variant for 64-bit value.                                     ;
@@ -1668,9 +1715,11 @@ jmp SizeHelperEntry
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoHex:
 mov bl,0
 jmp SizeHelperEntry 
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for system information structure.                     ;
@@ -1681,6 +1730,7 @@ jmp SizeHelperEntry
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
@@ -1697,6 +1747,7 @@ call SizePrint64
 pop rax
 mov rdi,r8
 jmp HexPrint32
+
 ;---------- Write 32-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
@@ -1704,6 +1755,7 @@ jmp HexPrint32
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoNumber32:
 movzx eax,al
 mov rcx,[Registry]
@@ -1721,6 +1773,7 @@ call DecimalPrint32
 pop rax
 mov rdi,r8
 jmp HexPrint32
+
 ;---------- Write 16-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
@@ -1728,6 +1781,7 @@ jmp HexPrint32
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperOsInfoNumber16:
 movzx eax,al
 mov rcx,[Registry]
@@ -1744,12 +1798,14 @@ call DecimalPrint32
 pop rax
 mov rdi,r8
 jmp HexPrint16
+
 ;---------- Write system information strings ----------------------------------;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;
 ; OUTPUT:  RBP = Updated pointer to destination buffer                         ;
 ;          RDI = Last used and updated destination pointer                     ;
 ;------------------------------------------------------------------------------;
+
 HelperSystemInfo:
 mov ax,STR_OS_MIN_ADDRESS                        ; Application minimum address
 call HelperOsInfoString
@@ -1788,11 +1844,13 @@ mov ax,STR_OS_PROC_REVISION                      ; Processor revision
 call HelperOsInfoString
 mov al,SYSTEM_INFO.wProcessorRevision
 jmp HelperOsInfoNumber16
+
 ;--- Write relation name string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          AX  = String ID at application strings pool                         ;
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperRelationName:
 lea rdi,[rdx + 01]
 RelationNameEntry:
@@ -1800,11 +1858,13 @@ push rcx rsi
 call PoolStringWrite
 pop rsi rcx
 ret
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinity:
 lea rdi,[rdx + 18]   ; RDI = Destination text pointer
 mov rax,[rsi + 00]   ; RAX = Affinity mask
@@ -1862,10 +1922,12 @@ mov al,'-'
 stosb
 .modeSingle:
 xchg eax,edx
+mov bl,0
 call DecimalPrint32
 .done:
 pop rsi rdx rcx
 ret
+
 ;--- Write number value string for text generation by topology parsing --------;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RDX = Destination base address                                      ;
@@ -1875,6 +1937,7 @@ ret
 ;          EAX.[31-16] = Parameter name String ID at application strings pool  ;  
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperParameter8:         ; Entry point for addressed 8-bit parameter
 shld ebx,eax,16
 movzx edi,ah
@@ -1903,6 +1966,7 @@ movzx edi,ah
 movzx eax,al
 mov eax,dword [rsi + rax]
 jmp ParameterEntry
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RSI = Pointer to topology information buffer                        ;
@@ -1911,6 +1975,7 @@ jmp ParameterEntry
 ;          AH  = Cache type                                                    ;    
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperCacheSummary:
 push rcx rsi
 test rcx,rcx
@@ -1966,6 +2031,7 @@ pop rdi
 .nodata:
 pop rsi rcx
 ret
+
 ;---------- Get topological information ---------------------------------------;
 ; INPUT:   RBX = WinAPI function address                                       ;
 ;          RBP = Pointer to buffer for topology information                    ;
@@ -1974,6 +2040,7 @@ ret
 ;          AL  = Relation type by WinAPI encoding                              ;
 ; OUTPUT:  R14 = Updated buffer size accumulator                               ;
 ;------------------------------------------------------------------------------;             
+
 HelperTopologyEx:
 push rsi rdi
 mov rsi,rsp
@@ -2009,12 +2076,14 @@ ret
 .error:
 stc
 jmp .exit
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
 ;          AL  = Field offset in the parsed structure                          ; 
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinityGroup:
 push rsi
 movzx eax,al
@@ -2029,12 +2098,14 @@ mov rax,[rsi + 00]   ; RAX = Affinity mask
 call EntryAffinity
 pop rsi
 ret
+
 ;--- Write proc. group string for text generation by topology parsing ---------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
 ;          AL  = Field offset in the parsed structure                          ; 
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperAffinityMask:
 push rsi
 movzx eax,al
@@ -2044,6 +2115,7 @@ mov ax,[rsi + 08]
 call HexPrint16
 pop rsi
 ret
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RSI = Pointer to topology information buffer                        ;
@@ -2052,6 +2124,7 @@ ret
 ;          AH  = Cache type                                                    ;    
 ; OUTPUT:  None                                                                ;
 ;------------------------------------------------------------------------------;
+
 HelperCacheSummaryEx:
 push rcx rsi
 test ecx,ecx
@@ -2109,11 +2182,13 @@ pop rdi
 .nodata:
 pop rsi rcx
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          EAX = Number write to string                                        ; 
 ; OUTPUT:  RBP = Updated pointer to destination buffer                         ;   
 ;------------------------------------------------------------------------------;
+
 HelperNumberString:
 push rcx rax
 mov rdi,rbp
@@ -2130,6 +2205,7 @@ mov bl,0
 call DecimalPrint32
 pop rcx
 ret
+
 ;---------- Copy text string with chars checks --------------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -2139,6 +2215,7 @@ ret
 ; OUTPUT:  RDI = Last used updated pointer                                     ;
 ;          String at [RBP + AH] size EAX.[31-16] updated                       ;   
 ;------------------------------------------------------------------------------;
+
 HelperCopyString:
 movzx ecx,al
 lea rsi,[rbx + rcx]
@@ -2163,6 +2240,7 @@ mov al,' '
 stosb
 loop .copy
 ret
+
 ;---------- Write decimal number text string, 8 bit value ---------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -2171,6 +2249,7 @@ ret
 ; OUTPUT:  RDI = Last used updated pointer                                     ;
 ;          String at [RBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
+
 HelperDecimalString:
 push rbx
 movzx ecx,ah
@@ -2181,6 +2260,7 @@ mov bl,0
 call DecimalPrint32 
 pop rbx
 ret
+
 ;---------- Write hex number text string, 32 bit value ------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -2189,6 +2269,7 @@ ret
 ; OUTPUT:  RDI = Last used updated pointer                                     ;
 ;          String at [RBP + AH] updated                                        ;   
 ;------------------------------------------------------------------------------;
+
 HelperHexString:
 call HelperHexStringNh
 mov al,'h'

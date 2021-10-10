@@ -1,6 +1,7 @@
 ;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;               Global definitions for all components of project.              ;
+;              declare objects in the resources library DATA.DLL.              ;
 ;                         Both for ia32 and x64 code.                          ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
@@ -22,60 +23,68 @@ IDD_ACPI                = 111
 IDD_AFF_CPUID           = 112
 IDD_KMD                 = 113
 
+;---------- Identifiers for child windows -------------------------------------;
+
+IDD_CHILD_MEMORY_RUN    = 120
+IDD_CHILD_MEMORY_DRAW   = 121
+IDD_CHILD_MATH_RUN      = 122
+IDD_CHILD_MATH_DRAW     = 123
+IDD_CHILD_VECTOR_BRIEF  = 124 
+
 ;---------- Identifiers for application main menu and menu items --------------; 
 
-IDR_MENU                = 114
-IDM_SAVE_REPORT         = 115 
-IDM_LOAD_REPORT         = 116
-IDM_SAVE_IMAGE          = 117
-IDM_ABOUT               = 118
-IDM_EXIT                = 119
+IDR_MENU                = 130
+IDM_SAVE_REPORT         = 131 
+IDM_LOAD_REPORT         = 132
+IDM_SAVE_IMAGE          = 133
+IDM_ABOUT               = 134
+IDM_EXIT                = 135
 
 ;---------- Identifiers for raw resources: strings and binder scripts ---------;
 ; Note. Strings represented as raw resources (not as string resources) for
 ; compact encoding: 1 byte per char.  
 
-IDS_STRINGS_POOL        = 120
-IDS_BINDERS_POOL        = 121
-IDS_CPU_COMMON_POOL     = 122
-IDS_CPU_AVX512_POOL     = 123
-IDS_OS_CONTEXT_POOL     = 124
-IDS_CPU_METHOD_POOL     = 125
-IDS_ACPI_DATA_POOL      = 126
-IDS_IMPORT_POOL         = 127
-IDS_FONTS_POOL          = 128
+IDS_STRINGS_POOL        = 140
+IDS_BINDERS_POOL        = 141
+IDS_CPU_COMMON_POOL     = 142
+IDS_CPU_AVX512_POOL     = 143
+IDS_OS_CONTEXT_POOL     = 144
+IDS_CPU_METHOD_POOL     = 145
+IDS_ACPI_DATA_POOL      = 146
+IDS_IMPORT_POOL         = 147
+IDS_FONTS_POOL          = 148
 
 ;---------- Identifiers for icons ---------------------------------------------;
 
-IDI_SYSINFO             = 130
-IDI_MEMORY              = 131
-IDI_MATH                = 132
-IDI_OS                  = 133
-IDI_NATIVE_OS           = 134
-IDI_PROCESSOR           = 135
-IDI_TOPOLOGY            = 136
-IDI_TOPOLOGY_EX         = 137
-IDI_NUMA                = 138
-IDI_P_GROUPS            = 139
-IDI_ACPI                = 140
-IDI_AFF_CPUID           = 141
-IDI_KMD                 = 142
+IDI_SYSINFO             = 160
+IDI_MEMORY              = 161
+IDI_MATH                = 162
+IDI_OS                  = 163
+IDI_NATIVE_OS           = 164
+IDI_PROCESSOR           = 165
+IDI_TOPOLOGY            = 166
+IDI_TOPOLOGY_EX         = 167
+IDI_NUMA                = 168
+IDI_P_GROUPS            = 169
+IDI_ACPI                = 170
+IDI_AFF_CPUID           = 171
+IDI_KMD                 = 172
 
 ;---------- Identifiers for group icons ---------------------------------------;
 
-IDG_SYSINFO             = 150
-IDG_MEMORY              = 151
-IDG_MATH                = 152
-IDG_OS                  = 153
-IDG_NATIVE_OS           = 154
-IDG_PROCESSOR           = 155
-IDG_TOPOLOGY            = 156
-IDG_TOPOLOGY_EX         = 157
-IDG_NUMA                = 158
-IDG_P_GROUPS            = 159
-IDG_ACPI                = 160
-IDG_AFF_CPUID           = 161
-IDG_KMD                 = 162
+IDG_SYSINFO             = 180
+IDG_MEMORY              = 181
+IDG_MATH                = 182
+IDG_OS                  = 183
+IDG_NATIVE_OS           = 184
+IDG_PROCESSOR           = 185
+IDG_TOPOLOGY            = 186
+IDG_TOPOLOGY_EX         = 187
+IDG_NUMA                = 188
+IDG_P_GROUPS            = 189
+IDG_ACPI                = 190
+IDG_AFF_CPUID           = 191
+IDG_KMD                 = 192
 
 ;---------- Initial values and counters for build GUI objects -----------------; 
 
@@ -83,6 +92,8 @@ ICON_FIRST              = IDG_SYSINFO
 IDD_FIRST               = IDD_SYSINFO
 ITEM_COUNT              = 13
 ICON_COUNT              = ITEM_COUNT
+MEMORY_ICON_NUMBER      = 1
+MATH_ICON_NUMBER        = 2
 
 ;---------- Identifier for tabbed sheet component -----------------------------;
 
@@ -279,10 +290,19 @@ IDB_MEMORY_CANCEL       = 588
 ;---------- Identifiers for tab #3 = Processor mathematics benchmarks sheet ---;
 
 IDC_MATH                = 700
-IDB_MATH_DRAW           = 701
-IDB_MATH_RUN            = 702
-IDB_MATH_DEFAULTS       = 703
-IDB_MATH_CANCEL         = 704
+IDC_MATH_FRAME_1        = 701
+IDB_MATH_BRF            = 702  
+IDB_MATH_CRF            = 703 
+IDB_MATH_BRF_A          = 704 
+IDB_MATH_CRF_A          = 705 
+IDB_MATH_ALL_P          = 706
+IDB_MATH_X_16           = 707 
+IDB_MATH_X_32           = 708 
+IDB_MATH_3D_DRAW        = 709
+IDB_MATH_DRAW           = 710
+IDB_MATH_RUN            = 711
+IDB_MATH_DEFAULTS       = 712
+IDB_MATH_CANCEL         = 713
 
 ;---------- Identifiers for tab #4 = Operating system sheet -------------------; 
 
@@ -372,6 +392,95 @@ IDE_KMD_TEXT_2          = 2704
 IDB_KMD_REPORT          = 2705
 IDB_KMD_CANCEL          = 2706
 
+;--- Identifiers for child screen = Memory and cache performance report -------;
+
+IDC_MR_FIRST            = 2900 
+IDC_MR_APPLICATION      = 2901  
+IDC_MR_METHOD           = 2902 
+IDC_MR_WIDTH            = 2903 
+IDC_MR_THREADS          = 2904 
+IDC_MR_HYPER_THR        = 2905 
+IDC_MR_LARGE_PAGES      = 2906 
+IDC_MR_NUMA             = 2907 
+IDC_MR_P_GROUPS         = 2908 
+IDC_MR_TARGET_OBJ       = 2909 
+IDC_MR_PREF_DIST        = 2910 
+IDC_MR_SIZE_TOTAL       = 2911 
+IDC_MR_SIZE_PER_THR     = 2912 
+IDC_MR_MEASURE_PROF     = 2913 
+IDC_MR_MEASURE_REP      = 2914 
+IDC_MR_MEMORY_ALLOC     = 2915 
+IDC_MR_BLOCK_1          = 2916 
+IDC_MR_BLOCK_2          = 2917 
+IDC_MR_MEM_ALC_ALL      = 2918 
+IDC_MR_MEM_ALC_THR      = 2919 
+IDC_MR_MEAS_RESULTS     = 2920 
+IDC_MR_DT_MS            = 2921 
+IDC_MR_DTSC_SEC_MHZ     = 2922 
+IDC_MR_DTSC_INS_CLK     = 2923 
+IDC_MR_LAST             = 2924
+IDB_MR_OK               = 2925 
+
+;--- Identifiers for child screen = Memory and cache performance draw ---------;
+
+
+;---------- Identifiers for child screen = Math performance report ------------;
+
+
+;---------- Identifiers for child screen = Math performance draw --------------;
+
+
+;--- Identifiers for child screen = Vector brief performance report -----------;
+
+IDC_VB_CPU_NAME         = 3700
+IDC_VB_TSC_CLK          = 3701
+IDC_VB_CPU_FEATURES     = 3702  
+IDC_VB_AVX_256          = 3703 
+IDC_VB_AVX2_256         = 3704 
+IDC_VB_AVX3_512         = 3705 
+IDC_VB_AVX512CD         = 3706 
+IDC_VB_AVX512PF         = 3707 
+IDC_VB_AVX512ER         = 3708 
+IDC_VB_AVX512VL         = 3709 
+IDC_VB_AVX512BW         = 3710
+IDC_VB_AVX512DQ         = 3711 
+IDC_VB_AVX512_IFMA      = 3712 
+IDC_VB_AVX512_VBMI      = 3713 
+IDC_VB_AVX512_VBMI2     = 3714 
+IDC_VB_AVX512_BF16      = 3715 
+IDC_VB_AVX512_VAES      = 3716 
+IDC_VB_AVX512_GFNI      = 3717 
+IDC_VB_AVX512_VNNI      = 3718 
+IDC_VB_AVX512_BTALG     = 3719 
+IDC_VB_AVX512_VPOP      = 3720 
+IDC_VB_AVX512_VPCL      = 3721 
+IDC_VB_AVX512_VP2IN     = 3722 
+IDC_VB_AVX512_FP16      = 3723 
+IDC_VB_AVX512_4FMAP     = 3724 
+IDC_VB_AVX512_4VNNI     = 3725 
+IDC_VB_OS_CONTEXT       = 3726 
+IDC_VB_SSE128_XMM       = 3727 
+IDC_VB_AVX256_YMM       = 3728 
+IDC_VB_AVX512_ZMM_L     = 3729 
+IDC_VB_AVX512_ZMM_H     = 3730 
+IDC_VB_AVX512_K         = 3731 
+IDC_VB_TIMINGS          = 3732 
+IDC_VB_SSE128_READ      = 3733              
+IDC_VB_SSE128_WRITE     = 3734              
+IDC_VB_SSE128_COPY      = 3735              
+IDC_VB_AVX256_READ      = 3736              
+IDC_VB_AVX256_WRITE     = 3737 
+IDC_VB_AVX256_COPY      = 3738              
+IDC_VB_AVX512_READ      = 3739 
+IDC_VB_AVX512_WRITE     = 3740              
+IDC_VB_AVX512_COPY      = 3741              
+IDC_VB_SQRTPD_XMM       = 3742              
+IDC_VB_VSQRTPD_YMM      = 3743              
+IDC_VB_VSQRTPD_ZMM      = 3744 
+IDC_VB_FCOS             = 3745              
+IDC_VB_FSINCOS          = 3746
+IDB_VB_OK               = 3747              
+
 ;---------- Strings numbers in the raw strings pool ---------------------------;
 ; Note. Strings enumerated by zero-terminations.
 
@@ -407,9 +516,17 @@ STR_FULL_ACPI          = 23
 STR_FULL_AFF_CPUID     = 24
 STR_FULL_KMD           = 25
 
+;---------- Title names for child windows -------------------------------------;
+
+STR_CHILD_MEM_REPORT   = 26
+STR_CHILD_MEM_DRAW     = 27
+STR_CHILD_MATH_REPORT  = 28
+STR_CHILD_MATH_DRAW    = 29
+STR_CHILD_VECTOR_BRIEF = 30
+
 ;---------- CPUID names for system information --------------------------------;
 
-STR_CPUID              = STR_FULL_KMD + 1
+STR_CPUID              = STR_CHILD_VECTOR_BRIEF + 1
 STR_MMX                = STR_CPUID + 1
 STR_SSE                = STR_CPUID + 2
 STR_SSE2               = STR_CPUID + 3
@@ -587,10 +704,11 @@ STR_RUN                = STR_DRAW + 1
 STR_DEFAULTS           = STR_DRAW + 2
 STR_REPORT             = STR_DRAW + 3
 STR_EXIT               = STR_DRAW + 4
+STR_OK                 = STR_DRAW + 5
 
 ;---------- Memory size and speed units, additional information ---------------;
 
-STR_UNITS_BYTES        = STR_EXIT + 1   
+STR_UNITS_BYTES        = STR_OK + 1   
 STR_UNITS_KB           = STR_UNITS_BYTES + 1 
 STR_UNITS_MB           = STR_UNITS_BYTES + 2
 STR_UNITS_GB           = STR_UNITS_BYTES + 3
@@ -613,10 +731,12 @@ STR_TRUE_CLOCK         = STR_UNITS_BYTES + 19
 STR_TFMS               = STR_UNITS_BYTES + 20
 STR_TSC                = STR_UNITS_BYTES + 21
 STR_H                  = STR_UNITS_BYTES + 22
+STR_SUPPORTED          = STR_UNITS_BYTES + 23
+STR_NOT_SUPPORTED      = STR_UNITS_BYTES + 24 
 
 ;---------- Up strings for GUI tables -----------------------------------------;
 
-STR_PARM_VALUE_HEX     = STR_H + 1
+STR_PARM_VALUE_HEX     = STR_NOT_SUPPORTED + 1
 STR_PARM_VALUE         = STR_PARM_VALUE_HEX + 1
 STR_TOPOLOGY           = STR_PARM_VALUE_HEX + 2
 STR_TOPOLOGY_SUMMARY   = STR_PARM_VALUE_HEX + 3
@@ -683,9 +803,98 @@ STR_ET_SMT             = STR_ET_GROUP + 2
 
 STR_ACPI_UNKNOWN       = STR_ET_SMT + 1 
 
+;---------- Strings for child screen = Memory and cache performance report ----;
+
+STR_MR_FIRST           = STR_ACPI_UNKNOWN + 1  
+STR_MR_APPLICATION     = STR_MR_FIRST + 1  
+STR_MR_METHOD          = STR_MR_FIRST + 2
+STR_MR_WIDTH           = STR_MR_FIRST + 3
+STR_MR_THREADS         = STR_MR_FIRST + 4
+STR_MR_HYPER_THR       = STR_MR_FIRST + 5
+STR_MR_LARGE_PAGES     = STR_MR_FIRST + 6
+STR_MR_NUMA            = STR_MR_FIRST + 7
+STR_MR_P_GROUPS        = STR_MR_FIRST + 8
+STR_MR_TARGET_OBJ      = STR_MR_FIRST + 9
+STR_MR_PREF_DIST       = STR_MR_FIRST + 10
+STR_MR_SIZE_TOTAL      = STR_MR_FIRST + 11
+STR_MR_SIZE_PER_THR    = STR_MR_FIRST + 12
+STR_MR_MEASURE_PROF    = STR_MR_FIRST + 13
+STR_MR_MEASURE_REP     = STR_MR_FIRST + 14
+STR_MR_MEMORY_ALLOC    = STR_MR_FIRST + 15
+STR_MR_BLOCK_1         = STR_MR_FIRST + 16
+STR_MR_BLOCK_2         = STR_MR_FIRST + 17
+STR_MR_MEM_ALC_ALL     = STR_MR_FIRST + 18
+STR_MR_MEM_ALC_THR     = STR_MR_FIRST + 19
+STR_MR_MEAS_RESULTS    = STR_MR_FIRST + 20
+STR_MR_DT_MS           = STR_MR_FIRST + 21
+STR_MR_DTSC_SEC_MHZ    = STR_MR_FIRST + 22
+STR_MR_DTSC_INS_CLK    = STR_MR_FIRST + 23
+STR_MR_SPEED_MBPS      = STR_MR_FIRST + 24
+STR_MR_LATENCY_NS      = STR_MR_FIRST + 25
+
+;---------- Strings for child screen = Memory and cache performance draw ------;
+
+
+
+;---------- Strings for child screen = Math performance report ----------------;
+
+
+
+;---------- Strings for child screen = Math performance draw ------------------;
+
+
+
+;---------- Strings for child screen = Vector brief performance report --------;
+
+STR_VB_CPU_FEATURES    = STR_MR_LATENCY_NS + 1  
+STR_VB_AVX_256         = STR_VB_CPU_FEATURES + 1
+STR_VB_AVX2_256        = STR_VB_CPU_FEATURES + 2
+STR_VB_AVX3_512        = STR_VB_CPU_FEATURES + 3
+STR_VB_AVX512CD        = STR_VB_CPU_FEATURES + 4
+STR_VB_AVX512PF        = STR_VB_CPU_FEATURES + 5
+STR_VB_AVX512ER        = STR_VB_CPU_FEATURES + 6
+STR_VB_AVX512VL        = STR_VB_CPU_FEATURES + 7
+STR_VB_AVX512BW        = STR_VB_CPU_FEATURES + 8
+STR_VB_AVX512DQ        = STR_VB_CPU_FEATURES + 9
+STR_VB_AVX512_IFMA     = STR_VB_CPU_FEATURES + 10
+STR_VB_AVX512_VBMI     = STR_VB_CPU_FEATURES + 11
+STR_VB_AVX512_VBMI2    = STR_VB_CPU_FEATURES + 12
+STR_VB_AVX512_BF16     = STR_VB_CPU_FEATURES + 13
+STR_VB_AVX512_VAES     = STR_VB_CPU_FEATURES + 14
+STR_VB_AVX512_GFNI     = STR_VB_CPU_FEATURES + 15
+STR_VB_AVX512_VNNI     = STR_VB_CPU_FEATURES + 16
+STR_VB_AVX512_BTALG    = STR_VB_CPU_FEATURES + 17
+STR_VB_AVX512_VPOP     = STR_VB_CPU_FEATURES + 18
+STR_VB_AVX512_VPCL     = STR_VB_CPU_FEATURES + 19
+STR_VB_AVX512_VP2IN    = STR_VB_CPU_FEATURES + 20
+STR_VB_AVX512_FP16     = STR_VB_CPU_FEATURES + 21
+STR_VB_AVX512_4FMAP    = STR_VB_CPU_FEATURES + 22
+STR_VB_AVX512_4VNNI    = STR_VB_CPU_FEATURES + 23
+STR_VB_OS_CONTEXT      = STR_VB_CPU_FEATURES + 24
+STR_VB_SSE128_XMM      = STR_VB_CPU_FEATURES + 25
+STR_VB_AVX256_YMM      = STR_VB_CPU_FEATURES + 26
+STR_VB_AVX512_ZMM_L    = STR_VB_CPU_FEATURES + 27
+STR_VB_AVX512_ZMM_H    = STR_VB_CPU_FEATURES + 28
+STR_VB_AVX512_K        = STR_VB_CPU_FEATURES + 29
+STR_VB_TIMINGS         = STR_VB_CPU_FEATURES + 30
+STR_VB_SSE128_READ     = STR_VB_CPU_FEATURES + 31             
+STR_VB_SSE128_WRITE    = STR_VB_CPU_FEATURES + 32             
+STR_VB_SSE128_COPY     = STR_VB_CPU_FEATURES + 33             
+STR_VB_AVX256_READ     = STR_VB_CPU_FEATURES + 34             
+STR_VB_AVX256_WRITE    = STR_VB_CPU_FEATURES + 35
+STR_VB_AVX256_COPY     = STR_VB_CPU_FEATURES + 36             
+STR_VB_AVX512_READ     = STR_VB_CPU_FEATURES + 37
+STR_VB_AVX512_WRITE    = STR_VB_CPU_FEATURES + 38             
+STR_VB_AVX512_COPY     = STR_VB_CPU_FEATURES + 39             
+STR_VB_SQRTPD_XMM      = STR_VB_CPU_FEATURES + 40             
+STR_VB_VSQRTPD_YMM     = STR_VB_CPU_FEATURES + 41             
+STR_VB_VSQRTPD_ZMM     = STR_VB_CPU_FEATURES + 42
+STR_VB_FCOS            = STR_VB_CPU_FEATURES + 43             
+STR_VB_FSINCOS         = STR_VB_CPU_FEATURES + 44             
+
 ;---------- Strings for non-fatal warning messages ----------------------------;
 
-STR_WARNING_API        = STR_ACPI_UNKNOWN + 1
+STR_WARNING_API        = STR_VB_FSINCOS + 1
 STR_WARNING_WOW        = STR_WARNING_API + 1
 
 ;---------- Strings for Kernel Mode Driver and Service Control Program --------;
@@ -712,6 +921,13 @@ BINDER_P_GROUPS        = 11
 BINDER_ACPI            = 12
 BINDER_AFF_CPUID       = 13
 BINDER_KMD             = 14
+BINDER_MEMORY_RUN      = 15
+BINDER_MEMORY_MBPS     = 16
+BINDER_MEMORY_NS       = 17
+BINDER_MEMORY_DRAW     = 18 
+BINDER_MATH_RUN        = 19 
+BINDER_MATH_DRAW       = 20 
+BINDER_VECTOR_BRIEF    = 21  
 
 ;---------- Offsets definitions for bind buffer -------------------------------;
 
@@ -733,7 +949,8 @@ BUFFER_VIEWER_NUMA     = BUFFER_VIEWER_ET_SUM + 8
 BUFFER_VIEWER_GROUP    = BUFFER_VIEWER_NUMA   + 8 
 BUFFER_VIEWER_ACPI     = BUFFER_VIEWER_GROUP  + 8
 BUFFER_VIEWER_ACPI_S   = BUFFER_VIEWER_ACPI   + 8  
-BUFFER_VIEWER_A_CPU    = BUFFER_VIEWER_ACPI_S + 8 
+BUFFER_VIEWER_A_CPU    = BUFFER_VIEWER_ACPI_S + 8
+BUFFER_CHILD_WINDOW    = BUFFER_VIEWER_A_CPU  + 8  
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
 
