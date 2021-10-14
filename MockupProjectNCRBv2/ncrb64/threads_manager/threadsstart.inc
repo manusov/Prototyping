@@ -17,7 +17,7 @@ ThreadsStart:                  ; This entry point for measure
 ;---------- Clear stop flag ---------------------------------------------------;
 
 mov rax,[Registry]
-mov [rax + REGISTRY64.ipb.threadStop],0
+mov [rax + REGISTRY64.memIpb.threadStop],0
 
 ;---------- Entry procedure ---------------------------------------------------;
 

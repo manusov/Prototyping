@@ -36,7 +36,7 @@ jmp .finish
 ;--- WM_INITDIALOG handler: create child window: vector perf. brief report ----;
 
 .wminitdialog:                   ; Build main window
-mov ax,BINDER_VECTOR_BRIEF
+mov ax,BINDER_BUILD_VECTOR_BRIEF
 call Binder
 push [edi + APPDATA.createdIcons + MATH_ICON_NUMBER * 4]
 push ICON_SMALL

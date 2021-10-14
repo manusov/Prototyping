@@ -892,87 +892,222 @@ STR_VB_VSQRTPD_ZMM     = STR_VB_CPU_FEATURES + 42
 STR_VB_FCOS            = STR_VB_CPU_FEATURES + 43             
 STR_VB_FSINCOS         = STR_VB_CPU_FEATURES + 44             
 
+;---------- Strings for fatal error messages, cannot run NCRB -----------------;
+; This messages can be generated if resource DLL successfully loaded,
+; see also message strings at executeble files NCRB32.ASM, NCRB64.ASM.
+
+STR_ERROR_CPUID        = STR_VB_FSINCOS + 1
+STR_ERROR_CPUID_F1     = STR_ERROR_CPUID + 1    
+STR_ERROR_X87          = STR_ERROR_CPUID + 2
+STR_ERROR_TSC          = STR_ERROR_CPUID + 3
+STR_ERROR_TSC_FREQ     = STR_ERROR_CPUID + 4
+STR_ERROR_MEMORY_API   = STR_ERROR_CPUID + 5
+STR_ERROR_TOPOLOGY_API = STR_ERROR_CPUID + 6
+
 ;---------- Strings for non-fatal warning messages ----------------------------;
 
-STR_WARNING_API        = STR_VB_FSINCOS + 1
+STR_WARNING_API        = STR_ERROR_TOPOLOGY_API + 1
 STR_WARNING_WOW        = STR_WARNING_API + 1
+
+;---------- Strings for runtime errors ----------------------------------------;
+
+STR_RUNTIME_ALLOC      = STR_WARNING_WOW + 1  
+STR_RUNTIME_RELEASE    = STR_RUNTIME_ALLOC + 1
+STR_RUNTIME_TIMINGS    = STR_RUNTIME_ALLOC + 2
+STR_RUNTIME_ADDRESS    = STR_RUNTIME_ALLOC + 3
 
 ;---------- Strings for Kernel Mode Driver and Service Control Program --------;
 
-STR_NAME_KMD32         = STR_WARNING_WOW + 1
+STR_NAME_KMD32         = STR_RUNTIME_ADDRESS + 1
 STR_NAME_KMD64         = STR_NAME_KMD32 + 1
 STR_DRV_NAME           = STR_NAME_KMD32 + 2
 STR_DRV_DEVICE         = STR_NAME_KMD32 + 3
 
 ;---------- Binders numbers for GUI scripts -----------------------------------;
+; This binders for build GUI objects (widgets) by data from buffer (bindlist).
 
-BINDER_SYSINFO         = 0   
-BINDER_MEMORY          = 1
-BINDER_MEMORY_IA32     = 2 
-BINDER_MEMORY_X64      = 3
-BINDER_MATH            = 4
-BINDER_OS              = 5
-BINDER_NATIVE_OS       = 6
-BINDER_PROCESSOR       = 7
-BINDER_TOPOLOGY        = 8
-BINDER_TOPOLOGY_EX     = 9
-BINDER_NUMA            = 10
-BINDER_P_GROUPS        = 11
-BINDER_ACPI            = 12
-BINDER_AFF_CPUID       = 13
-BINDER_KMD             = 14
-BINDER_MEMORY_RUN      = 15
-BINDER_MEMORY_MBPS     = 16
-BINDER_MEMORY_NS       = 17
-BINDER_MEMORY_DRAW     = 18 
-BINDER_MATH_RUN        = 19 
-BINDER_MATH_DRAW       = 20 
-BINDER_VECTOR_BRIEF    = 21  
+BINDER_BUILD_SYSINFO       = 0   
+BINDER_BUILD_MEMORY        = 1
+BINDER_BUILD_MEMORY_IA32   = 2 
+BINDER_BUILD_MEMORY_X64    = 3
+BINDER_BUILD_MATH          = 4
+BINDER_BUILD_OS            = 5
+BINDER_BUILD_NATIVE_OS     = 6
+BINDER_BUILD_PROCESSOR     = 7
+BINDER_BUILD_TOPOLOGY      = 8
+BINDER_BUILD_TOPOLOGY_EX   = 9
+BINDER_BUILD_NUMA          = 10
+BINDER_BUILD_P_GROUPS      = 11
+BINDER_BUILD_ACPI          = 12
+BINDER_BUILD_AFF_CPUID     = 13
+BINDER_BUILD_KMD           = 14
+BINDER_BUILD_MEMORY_RUN    = 15
+BINDER_BUILD_MEMORY_MBPS   = 16
+BINDER_BUILD_MEMORY_NS     = 17
+BINDER_BUILD_MEMORY_DRAW   = 18 
+BINDER_BUILD_MATH_RUN      = 19 
+BINDER_BUILD_MATH_DRAW     = 20 
+BINDER_BUILD_VECTOR_BRIEF  = 21  
 
-;---------- Offsets definitions for bind buffer -------------------------------;
+;---------- Binders numbers for GUI scripts -----------------------------------;
+; This binders for set GUI objects (widgets) state by data from buffer
+; (bindlist), separate from build objects, because required set by
+; system configuration detection results and by "Set defaults" button.
 
-BUFFER_CPU_VENDOR      = 0
-BUFFER_CPU_TFMS        = BUFFER_CPU_VENDOR    + 8
-BUFFER_CPU_NAME        = BUFFER_CPU_TFMS      + 15
-BUFFER_CPU_TSC         = BUFFER_CPU_NAME      + 8
-BUFFER_CPU_BITMAP      = BUFFER_CPU_TSC       + 32
-BUFFER_AVX512_BITMAP   = BUFFER_CPU_BITMAP    + 8
-BUFFER_OS_BITMAP       = BUFFER_AVX512_BITMAP + 8
-BUFFER_METHOD_BITMAP   = BUFFER_OS_BITMAP     + 8
-BUFFER_VIEWER_OS       = BUFFER_METHOD_BITMAP + 8
-BUFFER_VIEWER_NATIVE   = BUFFER_VIEWER_OS     + 8
-BUFFER_VIEWER_TP       = BUFFER_VIEWER_NATIVE + 8
-BUFFER_VIEWER_TP_SUM   = BUFFER_VIEWER_TP     + 8 
-BUFFER_VIEWER_ET       = BUFFER_VIEWER_TP_SUM + 8 
-BUFFER_VIEWER_ET_SUM   = BUFFER_VIEWER_ET     + 8
-BUFFER_VIEWER_NUMA     = BUFFER_VIEWER_ET_SUM + 8   
-BUFFER_VIEWER_GROUP    = BUFFER_VIEWER_NUMA   + 8 
-BUFFER_VIEWER_ACPI     = BUFFER_VIEWER_GROUP  + 8
-BUFFER_VIEWER_ACPI_S   = BUFFER_VIEWER_ACPI   + 8  
-BUFFER_VIEWER_A_CPU    = BUFFER_VIEWER_ACPI_S + 8
-BUFFER_CHILD_WINDOW    = BUFFER_VIEWER_A_CPU  + 8  
+BINDER_SET_MEMORY          = 22
+BINDER_SET_MATH            = 23
+
+;---------- Binders numbers for GUI scripts -----------------------------------;
+; This binders for read data from GUI objects (widgets) to buffer (bindlist).
+
+BINDER_GET_MEMORY          = 24
+BINDER_GET_MATH            = 25
+
+;---------- List of pointers to strings used by GUI binders -------------------;
+; This structures used as template for offsets in the bind buffer.
+; For ia32/x64 unification, pointers always 64-bit, high dword = 0 for ia32. 
+
+struct BINDCPU
+vendor        db  8   dup ?
+tfms          db  15  dup ?
+name          dq  ?    
+tsc           db  32  dup ?
+cpuBitmap     dq  ?
+avx512bitmap  dq  ?
+osBitmap      dq  ?
+ends
+
+struct BINDACPI
+oem       db  6  + 1  dup ?
+manufact  db  8  + 1  dup ?
+oemRev    db  25 + 1  dup ?
+comment   db  50 + 1  dup ?
+ends
+
+struct BINDLIST
+; main system information screen, set widgets from bindlist buffer
+bindCpu       BINDCPU  ?
+acpiEnable    db  ?               ; D0=ACPI, D1=MADT, D2=SRAT
+bindMadt      BINDACPI ?
+bindSrat      BINDACPI ?
+
+; memory and cache benchmarks screen, set widgets from bindlist buffer 
+methodBitmap  dq  ?
+; ...
+; mathematics benchmark screen, set widgets from bindlist buffer
+; UNDER CONSTRUCTION.
+; ... 
+; other screens - text blocks viewers, set widgets from bindlist buffer
+viewOs        dq  ?
+viewNative    dq  ?
+viewTp        dq  ?
+viewTpSum     dq  ?
+viewEt        dq  ?
+viewEtSum     dq  ?
+viewNuma      dq  ?
+viewGroup     dq  ?
+viewAcpi      dq  ?
+viewAcpiSum   dq  ?
+viewAffCpu    dq  ?
+; memory and cache benchmarks screen, get widgets state to bindlist buffer
+; 1 bit per switch: enable or disable
+getMemMethod  dd  ?
+getMemObject  dw  ?
+getMemOption  db  ?
+getMemMtrr    db  ?
+getMemSmp     db  ?
+getMemNuma    db  ?
+getMemAccess  db  ?
+getMemLpages  db  ?
+getMemPref    db  ?
+getMemMeas    db  ?
+getMemPix     db  ?
+getMem3d      db  ?
+getBlkCustom  dq  ?
+getBlkMmf     dq  ?
+getBlkGpu     dq  ?
+getBlkStart   dq  ?
+getBlkStop    dq  ?
+getBlkStep    dd  ?
+getBlkDist    dd  ?
+
+; memory and cache benchmarks screen, set widgets state by system information
+; in the bindlist buffer
+; 2 bits per switch: enable-disable and checked-unchecked
+setMemMethod  dd  ? , ?
+setMemObject  dw  ? , ?
+setMemOption  db  ? , ?
+setMemMtrr    db  ? , ?
+setMemSmp     db  ? , ?
+setMemNuma    db  ? , ?
+setMemAccess  db  ? , ?
+setMemLpages  db  ? , ?
+setMemPref    db  ? , ?
+setMemMeas    db  ? , ?
+setMemPix     db  ? , ?
+setMem3d      db  ? , ?
+setBlkCustom  dq  ?
+setBlkMmf     dq  ?
+setBlkGpu     dq  ?
+setBlkStart   dq  ?
+setBlkStop    dq  ?
+setBlkStep    dd  ?
+setBlkDist    dd  ?
+
+; ...
+; mathematics benchmarks screen, get widgets state to bindlist buffer
+; 1 bit per switch: enable or disable
+; UNDER CONSTRUCTION.
+; ... 
+
+; ...
+; mathematics benchmarks screen, set widgets state by system information
+; in the bindlist buffer
+; 2 bits per switch: enable-disable and checked-unchecked
+; UNDER CONSTRUCTION.
+; ... 
+
+
+
+ends
 
 ;---------- Macro definitions for binders scripts instructions ----------------;
 
 macro BIND_STOP
 { DB  0 }
-MACRO BIND_STRING srcid, dstid
+MACRO SET_STRING srcid, dstid
 { DD 01h + (srcid) SHL 6 + (dstid) SHL 19 }
-MACRO BIND_INFO srcid, dstid
+MACRO SET_INFO srcid, dstid
 { DD 02h + (srcid) SHL 6 + (dstid) SHL 19 }
-MACRO BIND_BIG srcid, dstid
+MACRO SET_PTR srcid, dstid
 { DD 03h + (srcid) SHL 6 + (dstid) SHL 19 }
-MACRO BIND_BOOL srcid, srcbit, dstid
+MACRO SET_BOOL srcid, srcbit, dstid
 { DD 04h + (srcid) SHL 9 + (srcbit) SHL 6 + (dstid) SHL 19 }
+MACRO SET_SWITCH srcid, srcbit, dstid
+{ DD 05h + (srcid) SHL 9 + (srcbit) SHL 6 + (dstid) SHL 19 }
+MACRO SET_DEC32 srcid, dstid
+{ DD 06h + (srcid) SHL 6 + (dstid) SHL 19 }
+MACRO SET_HEX32 srcid, dstid
+{ DD 07h + (srcid) SHL 6 + (dstid) SHL 19 } 
+MACRO SET_HEX64 srcid, dstid
+{ DD 08h + (srcid) SHL 6 + (dstid) SHL 19 } 
 COMBO_STOP_ON  = 0
 COMBO_STOP_OFF = 1
 COMBO_CURRENT  = 2
 COMBO_ADD      = 3
 COMBO_INACTIVE = 4
-MACRO BIND_COMBO srcid, dstid
-{ DD 05h + (srcid) SHL 6 + (dstid) SHL 19 }
-MACRO BIND_FONT srcid, dstid
-{ DD 06h + (srcid) SHL 6 + (dstid) SHL 19 }
+MACRO SET_COMBO srcid, dstid
+{ DD 09h + (srcid) SHL 6 + (dstid) SHL 19 }
+MACRO SET_FONT srcid, dstid
+{ DD 0Ah + (srcid) SHL 6 + (dstid) SHL 19 }
+MACRO GET_SWITCH srcid, dstid, dstbit                             
+{ DD 0Bh + (dstid) SHL 9 + (dstbit) SHL 6 + (srcid) SHL 19 }
+MACRO GET_DEC32 srcid, dstid                             
+{ DD 0Ch + (dstid) SHL 6 + (srcid) SHL 19 } 
+MACRO GET_HEX32 srcid, dstid                             
+{ DD 0Dh + (dstid) SHL 6 + (srcid) SHL 19 } 
+MACRO GET_HEX64 srcid, dstid                             
+{ DD 0Eh + (dstid) SHL 6 + (srcid) SHL 19 } 
 
 ;---------- Macro definitions for CPU/OS features bitmaps builders scripts ----;
 

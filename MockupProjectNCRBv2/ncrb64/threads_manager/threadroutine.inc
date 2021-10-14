@@ -16,7 +16,7 @@ mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 
 mov rdx,[Registry]
-cmp [rdx + REGISTRY64.ipb.sseSupported],0 
+cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
 je @f                         ; Skip this operation if SSE not supported
 sub rsp,10*16                 ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6      ; non-volatile by convention, note ALIGN16
@@ -82,7 +82,7 @@ call [WaitForSingleObject]
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
 mov rax,[Registry]
-cmp [rax + REGISTRY64.ipb.threadStop],0
+cmp [rax + REGISTRY64.memIpb.threadStop],0
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -96,7 +96,7 @@ add rsp,32 + 8
 pop rax
 
 mov rdx,[Registry]
-cmp [rdx + REGISTRY64.ipb.sseSupported],0 
+cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
 jz @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]
@@ -134,7 +134,7 @@ mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 
 mov rdx,[Registry]
-cmp [rdx + REGISTRY64.ipb.sseSupported],0 
+cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
 je @f                         ; Skip this operation if SSE not supported
 sub rsp,10*16                 ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6      ; non-volatile by convention, note ALIGN16
@@ -201,7 +201,7 @@ call [WaitForSingleObject]
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
 mov rax,[Registry]
-cmp [rax + REGISTRY64.ipb.threadStop],0
+cmp [rax + REGISTRY64.memIpb.threadStop],0
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -215,7 +215,7 @@ add rsp,32 + 8
 pop rax
 
 mov rdx,[Registry]
-cmp [rdx + REGISTRY64.ipb.sseSupported],0 
+cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
 je @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]

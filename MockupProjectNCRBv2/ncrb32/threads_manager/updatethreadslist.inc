@@ -17,10 +17,10 @@
 ThreadsUpdateBlockSize:
 push ebx esi edi
 
-mov esi,eax                        ; ESI  = new block size, units = bytes
-mov edi,[edx + IPB.operandWidth]   ; EDI = operand width, bits 
-shr edi,3                          ; EDI = operand width, bytes, means / 8
-jz .error                          ; Go error if width = 0
+mov esi,eax                           ; ESI  = new block size, units = bytes
+mov edi,[edx + MEMIPB.operandWidth]   ; EDI = operand width, bits 
+shr edi,3                             ; EDI = operand width, bytes, means / 8
+jz .error                             ; Go error if width = 0
 xor edx,edx
 div edi                            ; EAX = new block size, units = INSTRUCTIONS 
 
@@ -91,9 +91,9 @@ ret
 ThreadsUpdateAdaptive:
 push ebx esi edx
 
-mov esi,[edx + IPB.startBlockSize]             ; ESI = block size, units = bytes
-mov eax,dword [edx + IPB.adaptiveProduct + 0]  ; EDX:EAX = total constant adaptive count 
-mov edx,dword [edx + IPB.adaptiveProduct + 4]
+mov esi,[edx + MEMIPB.startBlockSize]             ; ESI = block size, units = bytes
+mov eax,dword [edx + MEMIPB.adaptiveProduct + 0]  ; EDX:EAX = total constant adaptive count 
+mov edx,dword [edx + MEMIPB.adaptiveProduct + 4]
 div esi                                        ; EAX = repeats = total constant / block size 
 
 ;---------- Prevent overflow, if repeats count = 0, set repeats count = 1 -----;
@@ -106,8 +106,8 @@ inc eax                          ; correction, if repeats = 0, set repeats = 1
 ;---------- Update IPB, note R11 = IPB base pointer ---------------------------;
 
 pop edx
-mov dword [edx + IPB.measureRepeats + 0],eax  ; Update repeats count, note 64-bit
-mov dword [edx + IPB.measureRepeats + 4],0 
+mov dword [edx + MEMIPB.measureRepeats + 0],eax  ; Update repeats count, note 64-bit
+mov dword [edx + MEMIPB.measureRepeats + 4],0 
 
 ;---------- Cycle for fill threads list ---------------------------------------;
 

@@ -294,21 +294,21 @@ section '.rsrc' resource data readable
 
 ;---------- Equations ---------------------------------------------------------;
 
-RS_Description  EQU  'NCRB Kernel Mode Driver for Win32'
-RS_Version      EQU  '0.0.2.0'
-RS_Company      EQU  '(C) Ilya Manusov'
-RS_Copyright    EQU  '(C) 2021 Ilya Manusov'
+RESOURCE_DESCRIPTION  EQU  'NCRB Kernel Mode Driver for Win32'
+RESOURCE_VERSION      EQU  '0.0.0.1'
+RESOURCE_COMPANY      EQU  'https://github.com/manusov'
+RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
 
 ;---------- Resources ---------------------------------------------------------;
 
-directory      RT_VERSION, r_version_info
-resource       r_version_info, 1, LANG_NEUTRAL, version_info
-versioninfo    version_info, \
-VOS__WINDOWS32, VFT_APP, VFT2_UNKNOWN, LANG_NEUTRAL, 0, \
-'FileDescription' , RS_Description ,\
-'FileVersion'     , RS_Version     ,\
-'CompanyName'     , RS_Company     ,\
-'LegalCopyright'  , RS_Copyright
+directory    RT_VERSION, r_version_info
+resource     r_version_info, 1, LANG_NEUTRAL, version_info
+versioninfo  version_info, \
+             VOS__WINDOWS32, VFT_DRV, VFT2_UNKNOWN, LANG_NEUTRAL, 0, \
+'FileDescription' , RESOURCE_DESCRIPTION ,\
+'FileVersion'     , RESOURCE_VERSION     ,\
+'CompanyName'     , RESOURCE_COMPANY     ,\
+'LegalCopyright'  , RESOURCE_COPYRIGHT
 
 ;------------------------------------------------------------------------------;
 ;                            Relocations section.                              ;

@@ -171,17 +171,6 @@ status                     SERVICE_STATUS ?   ; Driver status structure
 query                      SERVICE_QUERY  ?   ; Driver request structure 
 ends
 
-;---------- List of pointers to strings used by GUI binders -------------------;
-; This structure used as template for offsets in the bind buffer.
-
-; TODO. Make this instead BUFFER_CPU_VENDOR ... BUFFER_VIEWER_A_CPU ?
-; struct BINDLIST
-; pVendorString              dd ?
-; pSignatureString           dd ?
-; pModelString               dd ?
-; pTscString                 dd ?
-; ends
-
 ;---------- Memory Performance Engine (MPE32) definitions ---------------------;
 ; Entry for compact encoding performance method 
 ; Use 16-bit base-relative offsets instead full 64-bit offsets
@@ -341,11 +330,11 @@ cpuCache          CPUCACHE
 osCache           OSCACHE
 ends
 
-;---------- User Parameters Block (UPB) definitions ---------------------------;
+;--- Memory and Cache Benchmark User Parameters Block (UPB) definitions -------;
 ; This variables used for collect data from GUI objects when benchmark runs.
 ; Test USER parameters, loaded from GUI widgets settings.
 
-struct UPB
+struct MEMUPB
 optionAsm         dd  ?    ; Select test ASM method, one of procedures
 optionDistance    dd  ?    ; Prefetch distance for non-temporal read: 0=default, 1=medium, 2=long
 optionTarget      dd  ?    ; Objects { L1, L2, L3, L4, DRAM, CUSTOM }
@@ -363,12 +352,12 @@ customBlockStart  dd  ?    ; Override start block size, or 0=default
 ; customBlockDelta  dd  ?    ; Override delta block size, or 0=default
 ends
 
-;---------- Input Parameters Block (IPB) definitions --------------------------;
+;--- Memory and Cache Benchmark Input Parameters Block (IPB) definitions ------;
 ; This variables used for build input parameters for Memory/Math performance
 ; engines procedures. IPB = f(UPB).
 ; Test INPUT parameters, build IPB = F ( UPB, SYSPARMS ).
 
-struct IPB
+struct MEMIPB
 ; First 8 items of IPB associated with first 8 items of UPB
 updatedAsm        dd  ?    ; Routine selector, set after detect features
 updatedDistance   dd  ?    ; Prefetch distance for non-temporal read: 0=default, 1=medium, 2=long
@@ -410,12 +399,12 @@ sseSupported      dd  ?    ; Separate flag for save/restore SSE registers at chi
 threadStop        dd  ?    ; Flag for stop child threads
 ends
 
-;---------- Output Parameters Block (OPB) definitions -------------------------;
-; This variables used for collect output results of Memory/Math performance
-; engines procedures.
+;--- Memory and Cache Benchmark Output Parameters Block (OPB) definitions -----;
+; This variables used for collect output results of Memory/Math 
+; Performance Engines procedures.
 ; Test OUTPUT parameters, store OPB = F ( Benchmarks and TSC meas. results ).
 
-struct OPB
+struct MEMOPB
 deltaTSC          dq  ?    ; TSC measured clock, Hz, 64-bit long integer
 tscFrequencyHz    dq  ?    ; TSC frequency, Hz, as double precision 
 tscFrequencyMHz   dq  ?    ; TSC frequency, MHz, as double precision
@@ -423,6 +412,32 @@ tscPeriodS        dq  ?    ; TSC period, seconds, as double precision
 tscPeriodNs       dq  ?    ; TSC period, nanoseconds, as double precision 
 osTimerDelta      dq  ?    ; delta time at units = 100 ns, 64-bit long integer 
 tscTimerDelta     dq  ?    ; delta time at units = 1 TSC clk., 64-bit long int. 
+ends
+
+;--- Math Benchmark User Parameters Block (UPB) definitions -------------------;
+; This variables used for collect data from GUI objects when benchmark runs.
+; Test USER parameters, loaded from GUI widgets settings.
+
+struct MATHUPB
+reserved  db  ?
+ends
+
+;--- Math Benchmark Input Parameters Block (IPB) definitions ------------------;
+; This variables used for build input parameters for Memory/Math performance
+; engines procedures. IPB = f(UPB).
+; Test INPUT parameters, build IPB = F ( UPB, SYSPARMS ).
+
+struct MATHIPB
+reserved  db  ?
+ends
+
+;--- Math Benchmark Output Parameters Block (OPB) definitions -----------------;
+; This variables used for collect output results of Memory/Math 
+; Performance Engines procedures.
+; Test OUTPUT parameters, store OPB = F ( Benchmarks and TSC meas. results ).
+
+struct MATHOPB
+reserved  db  ?
 ends
 
 ;---------- Memory Performance Engine (MPE32) data structure ------------------;
@@ -565,6 +580,7 @@ APPROX_X32          =  2
 ;---------- Root structure: NCRB32 application registry -----------------------;  
 
 struct REGISTRY32
+; common system and application information
 allocatorTempBuffer        ALLOCATOR  ?
 allocatorBindBuffer        ALLOCATOR  ?
 appData                    APPDATA    ?
@@ -595,14 +611,25 @@ textKmd1                   ALLOCATOR  ?
 textKmd2                   ALLOCATOR  ?
 align 8
 sysParms                   SYSPARMS   ?
+; memory and cache benchmarks data
 align 8
-upb                        UPB        ?
+memUpb                     MEMUPB     ?
 align 8
-ipb                        IPB        ?
+memIpb                     MEMIPB     ?
+align 8                             
+memOpb                     MEMOPB     ?
+align 64
+; math benchmarks data
 align 8
-opb                        OPB        ?
+mathUpb                    MATHUPB     ?
+align 8
+mathIpb                    MATHIPB     ?
+align 8
+mathOpb                    MATHOPB     ?
+; memory allocation and thread management data for benchmarks
 align 64
 mpe32csb                   MPE32CSB   ?
+; dynamically allocated unformatted part
 align 64
 unformatted                db ?
 ends

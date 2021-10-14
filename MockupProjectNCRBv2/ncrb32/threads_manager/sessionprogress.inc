@@ -33,24 +33,24 @@ push 0 0
 ;---------- Setup pointers ----------------------------------------------------;
 
 mov eax,[Registry]
-lea esi,[eax + REGISTRY32.ipb]   ; ESI = Pointer to IPB, benchmarks scenario
-lea edi,[eax + REGISTRY32.opb]   ; EDI = Pointer to OPB, benchmarks results
+lea esi,[eax + REGISTRY32.memIpb]   ; ESI = Pointer to IPB, benchmarks scenario
+lea edi,[eax + REGISTRY32.memOpb]   ; EDI = Pointer to OPB, benchmarks results
 
 ;---------- Pre-heat phase for result stabilization ---------------------------;
 ; Note this pre-heat for simple only, not use this for drawings
 
 lea ecx,[eax + REGISTRY32.mpe32csb.threadList]
-mov edx,[esi + IPB.updatedThreads]
+mov edx,[esi + MEMIPB.updatedThreads]
 call ThreadsReStart
 
 ;---------- Replace fill pattern to walk pattern for latency mode -------------;
 
 mov eax,[Registry]
 lea ebx,[eax + REGISTRY32.mpe32csb.threadList]
-cmp [esi + IPB.updatedAsm],LATENCY_MODE
+cmp [esi + MEMIPB.updatedAsm],LATENCY_MODE
 jb .skip                ; Go skip this update if not a LATENCY MEASUREMENT mode
-mov ecx,[esi + IPB.updatedThreads]   ; ECX = Threads count
-mov eax,[esi + IPB.walkRoutine]      ; EAX  = Pointer to pattern routine
+mov ecx,[esi + MEMIPB.updatedThreads]   ; ECX = Threads count
+mov eax,[esi + MEMIPB.walkRoutine]      ; EAX  = Pointer to pattern routine
 call ThreadsUpdatePattern  ; replace list build pattern to list walk pattern
 .skip:
 
@@ -64,22 +64,22 @@ call [GetSystemTimeAsFileTime]
 
 mov eax,[Registry]
 lea ecx,[eax + REGISTRY32.mpe32csb.threadList]  ; ECX = Pointer to threads list
-mov edx,[esi + IPB.updatedThreads]              ; EDX = number of threads
+mov edx,[esi + MEMIPB.updatedThreads]           ; EDX = number of threads
 call ThreadsReStart
 mov al,2  ; AL = error status, valid if CF=1 only
 jc .exit
-mov dword [edi + OPB.tscTimerDelta + 0],eax   ; Store delta-TSC, units = TSC clocks
-mov dword [edi + OPB.tscTimerDelta + 4],edx
+mov dword [edi + MEMOPB.tscTimerDelta + 0],eax   ; Store delta-TSC, units = TSC clocks
+mov dword [edi + MEMOPB.tscTimerDelta + 4],edx
 
 ;---------- Get stop time point, by OS timer API ( alternative of TSC ) -------;
 
-lea eax,[edi + OPB.osTimerDelta]  ; EAX = Pointer to updated variable, OS timer, 64-bit
-push eax                          ; Parm#1 = Pointer to updated variable, OS timer, 64-bit 
+lea eax,[edi + MEMOPB.osTimerDelta]  ; EAX = Pointer to updated variable, OS timer, 64-bit
+push eax                             ; Parm#1 = Pointer to updated variable, OS timer, 64-bit 
 call [GetSystemTimeAsFileTime]
 mov eax,[esp + 0]  ; EDX:EAX = Time at this point
 mov edx,[esp + 4]
-sub dword [edi + OPB.osTimerDelta + 0],eax    ; Calculate delta-OS timer, units = 100 ns 
-sbb dword [edi + OPB.osTimerDelta + 4],edx
+sub dword [edi + MEMOPB.osTimerDelta + 0],eax    ; Calculate delta-OS timer, units = 100 ns 
+sbb dword [edi + MEMOPB.osTimerDelta + 4],edx
 
 ;---------- Done --------------------------------------------------------------;
 

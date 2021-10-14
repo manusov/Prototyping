@@ -13,43 +13,43 @@
 ;------------------------------------------------------------------------------;
 
 DialogProcSysinfo:
-mov al,BINDER_SYSINFO
+mov al,BINDER_BUILD_SYSINFO
 jmp DialogProcEntry
 DialogProcMemory:
-mov al,BINDER_MEMORY
+mov al,BINDER_BUILD_MEMORY
 jmp DialogProcEntry
 DialogProcMath:
-mov al,BINDER_MATH
+mov al,BINDER_BUILD_MATH
 jmp DialogProcEntry
 DialogProcOs:
-mov al,BINDER_OS
+mov al,BINDER_BUILD_OS
 jmp DialogProcEntry
 DialogProcNativeOs:
-mov al,BINDER_NATIVE_OS
+mov al,BINDER_BUILD_NATIVE_OS
 jmp DialogProcEntry
 DialogProcProcessor:
-mov al,BINDER_PROCESSOR
+mov al,BINDER_BUILD_PROCESSOR
 jmp DialogProcEntry
 DialogProcTopology:
-mov al,BINDER_TOPOLOGY
+mov al,BINDER_BUILD_TOPOLOGY
 jmp DialogProcEntry
 DialogProcTopologyEx:
-mov al,BINDER_TOPOLOGY_EX
+mov al,BINDER_BUILD_TOPOLOGY_EX
 jmp DialogProcEntry
 DialogProcNuma:
-mov al,BINDER_NUMA
+mov al,BINDER_BUILD_NUMA
 jmp DialogProcEntry
 DialogProcGroups:
-mov al,BINDER_P_GROUPS
+mov al,BINDER_BUILD_P_GROUPS
 jmp DialogProcEntry
 DialogProcAcpi:
-mov al,BINDER_ACPI
+mov al,BINDER_BUILD_ACPI
 jmp DialogProcEntry
 DialogProcAffCpuid:
-mov al,BINDER_AFF_CPUID
+mov al,BINDER_BUILD_AFF_CPUID
 jmp DialogProcEntry
 DialogProcKmd:
-mov al,BINDER_KMD
+mov al,BINDER_BUILD_KMD
 
 ;---------- Entry point with AL = Binder ID for required child window ---------;
 
@@ -60,7 +60,7 @@ push ebx esi edi
 movzx esi,al              ; ESI = Binder ID for this child window
 mov edi,[Registry]
 add edi,REGISTRY32.appData
-mov ebx,PARM_HWNDDLG      ; EBX = Window handle
+mov ebx,PARM_HWNDDLG      ; EBX = This window handle
 
 ;---------- Detect message type -----------------------------------------------;
 
@@ -78,10 +78,20 @@ jmp .finish
 mov eax,esi
 call Binder
 xchg eax,esi
-cmp al,BINDER_MEMORY
+cmp al,BINDER_BUILD_MEMORY
 jne @f
 inc eax
 call Binder
+
+; *** DEBUG ***
+; mov eax,[Registry]
+; mov eax,[eax + REGISTRY32.allocatorBindBuffer.objectStart]
+; mov [eax + BINDLIST.setMemMethod],0010b ; 0001b
+; *** DEBUG ***
+
+mov ax,BINDER_SET_MEMORY
+call Binder
+
 @@:
 jmp .processed
 
@@ -102,6 +112,18 @@ je .mathDraw
 jmp .processed
 
 .memoryRun:
+mov ax,BINDER_GET_MEMORY
+call Binder
+
+
+; *** DEBUG ***
+; mov eax,[Registry]
+; mov eax,[eax + REGISTRY32.allocatorBindBuffer.objectStart]
+; mov eax,[eax + BINDLIST.getMemMethod]
+; INT3
+; *** DEBUG ***
+
+
 push 0                          ; Parm#5 = Pass value
 push DialogProcChildMemoryRun   ; Parm#4 = Pointer to dialogue procedure
 push ebx                        ; Parm#3 = Owner window handle

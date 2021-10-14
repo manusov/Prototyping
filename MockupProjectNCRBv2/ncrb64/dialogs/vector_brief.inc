@@ -44,7 +44,7 @@ jmp .finish                    ; Go exit if unknown event
 ;--- WM_INITDIALOG handler: create child window: vector perf. brief report ----; 
 
 .wminitdialog:
-mov ax,BINDER_VECTOR_BRIEF
+mov ax,BINDER_BUILD_VECTOR_BRIEF
 call Binder
 mov r9,[r15 + APPDATA.createdIcons + MATH_ICON_NUMBER * 8] 
 mov r8d,ICON_SMALL 

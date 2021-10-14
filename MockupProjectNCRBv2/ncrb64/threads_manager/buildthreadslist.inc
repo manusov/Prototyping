@@ -18,18 +18,18 @@ sub rsp,32                          ; Make parameters shadow because WinAPI call
 
 ;---------- Reload parameters to non-volatile registers -----------------------;
 
-mov rsi,rcx                         ; RSI  = Pointer to Threads List
-lea rdi,[rcx + THREAD_LIST_SIZE]    ; RDI  = Pointer to 2 x Events Lists 
+mov rsi,rcx                            ; RSI  = Pointer to Threads List
+lea rdi,[rcx + THREAD_LIST_SIZE]       ; RDI  = Pointer to 2 x Events Lists 
 lea rbx,[rcx + THREAD_LIST_SIZE + EVENT_LIST_SIZE * 2]  ; RBX = NUMA nodes list  
-mov r12,rdx                         ; R12  = Pointer to Input Param. Block (IPB)
-mov r13d,[rdx + IPB.updatedThreads] ; R13D = Number of threads, counter
-xor r14d,r14d                       ; R14D = Threads counter
+mov r12,rdx                            ; R12  = Pointer to Input Param. Block (IPB)
+mov r13d,[rdx + MEMIPB.updatedThreads] ; R13D = Number of threads, counter
+xor r14d,r14d                          ; R14D = Threads counter
 
 ;---------- Initialize THREADS per NODE counter -------------------------------;
 
 mov eax,r13d                        ; EAX = Number of threads
 xor edx,edx
-mov ecx,[r12 + IPB.domainsCount]
+mov ecx,[r12 + MEMIPB.domainsCount]
 test rcx,rcx                        ; Note can't use JRCXZ because out of range
 jz .error                           ; Go error if number of domains = 0 
 div rcx                             ; EAX = R15D = Threads / Node, means
@@ -68,7 +68,7 @@ mov [rdi + EVENT_LIST_SIZE - 8],rax    ; Copy to sequental list, used by OS API
 
 xor ecx,ecx                            ; RCX = Parm#1 = Security
 xor edx,edx                            ; RDX = Parm#2 = Stack size, 0=default
-cmp [r12 + IPB.updatedPG],PG_OPTIMAL   ; Processor Group option, 2=used
+cmp [r12 + MEMIPB.updatedPG],PG_OPTIMAL   ; Processor Group option, 2=used
 lea r8,[ThreadRoutineSingleGroup]      ; R8  = Parm#3 = Execute routine pointer
 mov [rsi + THCTRL.affinityMode],1      ; This added for single-thread affinitization
 jne .afterSetRoutine                   ; Go if simple system, single group 
@@ -89,7 +89,7 @@ mov [rsi + THCTRL.threadHandle],rax    ; Store thread handle in the per-thread l
 ; include special affinization for HT supported but not used
 
 mov rax,[rbx + NUMACTRL.nodeAffinity]
-cmp [r12 + IPB.updatedHT],HT_NOT_USED  ; detect means HT supported but not used
+cmp [r12 + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
 mov rcx,rax
 jne .afterMasking                      ; Go skip masking for other variants
 mov rcx,05555555555555555h
@@ -103,7 +103,7 @@ mov [rsi + THCTRL.threadGroup],rax
 
 ;--- Setup asm method subroutine entry point address from IPB to Thread Entry -;
 
-mov rax,[r12 + IPB.patternRoutine]
+mov rax,[r12 + MEMIPB.patternRoutine]
 mov [rsi + THCTRL.entryPoint],rax
 
 ;---------- Setup base address for block1, block2 -----------------------------;
@@ -112,7 +112,7 @@ mov [rsi + THCTRL.entryPoint],rax
 mov rax,[rbx + NUMACTRL.alignedBase]   ; RAX = base address allocated at node
 add rax,[rbp+08]                       ; add offset
 mov [rsi + THCTRL.origBase],rax        ; store base address
-mov rcx,[r12 + IPB.memoryPerThread]    ; RCX = ALLOCATED size
+mov rcx,[r12 + MEMIPB.memoryPerThread] ; RCX = ALLOCATED size
 add [rbp+08],rcx                       ; modify offset by this thread memory
 shr rcx,1
 mov [rsi + THCTRL.base1],rax           ; Operational base 1 = base
@@ -126,10 +126,10 @@ mov [rsi + THCTRL.sizeBytes],rcx       ; Operational block size, units = BYTES
 ;---------- Setup block size, instructions ------------------------------------; 
 ; this field must be updated per draw iteration
 
-mov ecx,[r12 + IPB.operandWidth]    ; RCX = bits per instruction
+mov ecx,[r12 + MEMIPB.operandWidth] ; RCX = bits per instruction
 shr rcx,3                           ; RCX = bytes per instruction, BPI 
 jz .error
-mov rax,[r12 + IPB.startBlockSize]  ; here OPERATIONAL size
+mov rax,[r12 + MEMIPB.startBlockSize]  ; here OPERATIONAL size
 xor edx,edx
 div rcx                          ; Instruction count = Work length / BPI 
 mov [rsi + THCTRL.sizeInst],rax  ; Operational block size, units = INSTRUCTIONS
@@ -137,12 +137,12 @@ mov [rsi + THCTRL.sizeInst],rax  ; Operational block size, units = INSTRUCTIONS
 ;---------- Setup Large Page option -------------------------------------------; 
 ; note get 32-bit value, set zero-extended 64-bit value
 
-mov eax,[r12 + IPB.updatedLP]
+mov eax,[r12 + MEMIPB.updatedLP]
 mov [rsi + THCTRL.largePages],rax
 
 ;--- Setup number of repeat measurement iterations, note copy 64-bit value ----;
 
-mov rax,[r12 + IPB.measureRepeats]
+mov rax,[r12 + MEMIPB.measureRepeats]
 mov [rsi + THCTRL.repeats],rax 
 
 ;---------- Select next NUMA node if THREADS per NODES counter done -----------;

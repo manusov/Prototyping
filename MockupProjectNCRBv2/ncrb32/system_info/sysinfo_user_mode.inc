@@ -1268,6 +1268,13 @@ mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 0]
 stosd
 mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
 stosd
+
+;---------- ACPI information --------------------------------------------------;
+
+add edi, 1 + ( sizeof.BINDACPI * 2 )      ; RESERVED
+
+;---------- Memory and cache benchmarks methods availability bitmap -----------;
+
 mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 0]
 stosd
 mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 4]

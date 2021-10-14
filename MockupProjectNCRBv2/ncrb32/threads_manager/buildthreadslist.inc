@@ -27,12 +27,12 @@ mov esi,ecx                        ; ESI  = Pointer to Threads List
 lea edi,[ecx + THREAD_LIST_SIZE]   ; EDI  = Pointer to 2 x Events Lists 
 lea ebx,[ecx + THREAD_LIST_SIZE + EVENT_LIST_SIZE * 2]  ; RBX = NUMA nodes list  
 xor ebp,ebp                         ; EBP = Threads counter
-mov eax,[edx + IPB.updatedThreads]  
+mov eax,[edx + MEMIPB.updatedThreads]  
 mov [esp + 04],eax                  ; variable = EAX = Number of threads
 
 ;---------- Initialize THREADS per NODE counter, use EAX = Number of threads --; 
 
-mov ecx,[edx + IPB.domainsCount]
+mov ecx,[edx + MEMIPB.domainsCount]
 xor edx,edx
 test ecx,ecx                       ; Cannot JECXZ because offset out of range
 jz .error                          ; Go error if number of domains = 0 
@@ -74,7 +74,7 @@ push 0                                 ; Parm#6 = Thread ID return , 0=None
 push CREATE_SUSPENDED                  ; Parm#5 = Creating Flags = Suspended
 push ebp                               ; Parm#4 = Subroutine parameter, 0-63 or 0-255(if Groups)
 mov eax,[esp + 12 + 00]                ; EAX = Pointer to IPB
-cmp [eax + IPB.updatedPG],PG_OPTIMAL   ; Processor Group option, 2=used
+cmp [eax + MEMIPB.updatedPG],PG_OPTIMAL   ; Processor Group option, 2=used
 lea edx,[ThreadRoutineSingleGroup]     ; EDX = Execute routine pointer
 mov [esi + THCTRL.affinityMode],1      ; This added for single-thread affinitization
 jne .afterSetRoutine                   ; Go if simple system, single group 
@@ -94,9 +94,9 @@ mov [esi + THCTRL.threadHandle],eax    ; Store thread handle in the per-thread l
 
 mov eax,[ebx + NUMACTRL.nodeAffinity]
 mov ecx,eax
-mov edx,[esp + 00]                     ; EDX = Pointer to IPB
-cmp [edx + IPB.updatedHT],HT_NOT_USED  ; detect means HT supported but not used
-jne .afterMasking                      ; Go skip masking for other variants
+mov edx,[esp + 00]                        ; EDX = Pointer to IPB
+cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
+jne .afterMasking                         ; Go skip masking for other variants
 mov ecx,055555555h
 and ecx,eax
 jnz .afterMasking
@@ -109,7 +109,7 @@ mov [esi + THCTRL.threadGroup],eax
 ;--- Setup asm method subroutine entry point address from IPB to Thread Entry -;
 ; note used EDX from previous step 
 
-mov eax,[edx + IPB.patternRoutine]
+mov eax,[edx + MEMIPB.patternRoutine]
 mov [esi + THCTRL.entryPoint],eax
 
 ;---------- Setup base address for block1, block2 -----------------------------;
@@ -119,7 +119,7 @@ mov [esi + THCTRL.entryPoint],eax
 mov eax,[ebx + NUMACTRL.alignedBase]   ; EAX = base address allocated at node
 add eax,[esp + 16]                     ; add offset
 mov [esi + THCTRL.origBase],eax        ; store base address
-mov ecx,[edx + IPB.memoryPerThread]    ; RCX = ALLOCATED size
+mov ecx,[edx + MEMIPB.memoryPerThread] ; RCX = ALLOCATED size
 add [esp + 16],ecx                     ; modify offset by this thread memory
 shr ecx,1
 mov [esi + THCTRL.base1],eax           ; Operational base 1 = base
@@ -134,10 +134,10 @@ mov [esi + THCTRL.sizeBytes],ecx       ; Operational block size, units = BYTES
 ; this field must be updated per draw iteration
 ; note used EDX from previous step
 
-mov ecx,[edx + IPB.operandWidth]    ; ECX = bits per instruction
-shr ecx,3                           ; ECX = bytes per instruction, BPI 
+mov ecx,[edx + MEMIPB.operandWidth]    ; ECX = bits per instruction
+shr ecx,3                              ; ECX = bytes per instruction, BPI 
 jz .error
-mov eax,[edx + IPB.startBlockSize]  ; here OPERATIONAL size
+mov eax,[edx + MEMIPB.startBlockSize]  ; here OPERATIONAL size
 push edx
 xor edx,edx
 div ecx                          ; Instruction count = Work length / BPI
@@ -147,15 +147,15 @@ mov [esi + THCTRL.sizeInst],eax  ; Operational block size, units = INSTRUCTIONS
 ;---------- Setup Large Page option, 16-bit value -----------------------------;
 ; note used EDX from previous step
 
-mov eax,[edx + IPB.updatedLP]
+mov eax,[edx + MEMIPB.updatedLP]
 mov [esi + THCTRL.largePages],ax
 
 ;--- Setup number of repeat measurement iterations, note copy 64-bit value ----;
 ; note used EDX from previous step
 
-mov eax,dword [edx + IPB.measureRepeats + 00]  ; Low 32 bit
+mov eax,dword [edx + MEMIPB.measureRepeats + 00]  ; Low 32 bit
 mov dword [esi + THCTRL.repeats + 00],eax 
-mov eax,dword [edx + IPB.measureRepeats + 04]  ; High 32 bit
+mov eax,dword [edx + MEMIPB.measureRepeats + 04]  ; High 32 bit
 mov dword [esi + THCTRL.repeats + 04],eax 
 
 ;---------- Select next NUMA node if THREADS per NODES counter done -----------;

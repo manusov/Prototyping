@@ -14,7 +14,7 @@
 
 ThreadsStart:            ; This entry point for measure
 mov eax,[Registry]
-mov [eax + REGISTRY32.ipb.threadStop],0
+mov [eax + REGISTRY32.memIpb.threadStop],0
 
 cld
 push ebx esi edi ebp

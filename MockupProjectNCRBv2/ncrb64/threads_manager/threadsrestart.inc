@@ -16,14 +16,14 @@
 
 ThreadsReStartBreak:
 mov rax,[Registry]
-mov [rax + REGISTRY64.ipb.threadStop],1
+mov [rax + REGISTRY64.memIpb.threadStop],1
 jmp EntryThreadsReStart 
 
 ;---------- This entry point for measure --------------------------------------;
 
 ThreadsReStart:
 mov rax,[Registry]
-mov [rax + REGISTRY64.ipb.threadStop],0
+mov [rax + REGISTRY64.memIpb.threadStop],0
 
 ;---------- Entry procedure ---------------------------------------------------;
 

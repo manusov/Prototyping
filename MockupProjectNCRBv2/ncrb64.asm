@@ -43,6 +43,17 @@ include 'global\registry64.inc'    ; Registry for dynamically created variables
 
 ;---------- Global definitions ------------------------------------------------;
 
+RESOURCE_DESCRIPTION    EQU 'NCRB Win64 edition'
+RESOURCE_VERSION        EQU '0.0.0.1'
+RESOURCE_COMPANY        EQU 'https://github.com/manusov'
+RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
+PROGRAM_NAME            EQU 'NUMA CPU&RAM Benchmarks for Win64'
+ABOUT_CAP               EQU 'Program info'
+ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
+ABOUT_TEXT_2A           EQU 'v2.00.00 for Windows x64'
+ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0001 for Windows x64'
+ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
+
 ID_EXE_ICON             = 100      ; This application icon
 ID_EXE_ICONS            = 101      ; This application icon group
 MSG_MEMORY_ALLOC_ERROR  = 0        ; Error messages IDs, from this file
@@ -245,6 +256,15 @@ jmp .createFonts
 call SysinfoUserMode
 ; TODO. Error handling.
 
+; mov ax,STR_ERROR_CPUID
+; mov ax,STR_ERROR_CPUID_F1    
+; mov ax,STR_ERROR_X87
+; mov ax,STR_ERROR_TSC
+; mov ax,STR_ERROR_TSC_FREQ
+; mov ax,STR_ERROR_MEMORY_API
+; mov ax,STR_ERROR_TOPOLOGY_API
+; jmp .errorPlatform
+
 
 ;---------- Load kernel mode driver kmd64.sys ---------------------------------;
 ; TODO.
@@ -399,12 +419,15 @@ mov al,MSG_INIT_FAILED
 jmp .errorProgram
 .memoryAllocError:
 mov al,MSG_MEMORY_ALLOC_ERROR
-.errorProgram:
 
 ;---------- Show message box and go epplication termination -------------------;
+; This procedure for application error, use message strings from exe file,
+; can execute if resource DLL not loaded or load failes.
 
+.errorProgram:
 lea rsi,[MsgErrors]    ; RSI = Strings pool base, AL = String index 
 mov ah,0
+.errorEntry:
 call IndexString       ; Return ESI = Selected string address 
 mov r9d,MB_ICONERROR   ; R9  = Parm#4 = Attributes
 lea r8,[ProgName]      ; R8  = Parm#3 = Pointer to title (caption) string
@@ -414,19 +437,27 @@ call [MessageBox]
 mov r13d,1
 jmp .exitResources
 
+;---------- Show message box and go epplication termination -------------------;
+; This procedure for incompatible platform detected but application integrity
+; OK, use strings from resource DLL.
 
-
-
-
+.errorPlatform:       ; Input AX = Error string ID.
+mov rsi,[Registry]
+test rsi,rsi
+jz .initFailed
+mov rsi,[rsi + REGISTRY64.appData.lockedStrings]
+jmp .errorEntry 
 
 ;---------- Copy text string terminated by 00h --------------------------------;
 ; Note last byte 00h not copied.                                               ;
 ;                                                                              ;
 ; INPUT:   RSI = Source address                                                ;
 ;          RDI = Destination address                                           ;
+;                                                                              ;
 ; OUTPUT:  RSI = Modified by copy                                              ;
 ;          RDI = Modified by copy                                              ;
 ;          Memory at [Input RDI] modified                                      ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 StringWrite:
@@ -441,9 +472,12 @@ jmp .cycle
 ret
 
 ;---------- Find string in the pool by index ----------------------------------;
+;                                                                              ;
 ; INPUT:   RSI = Pointer to string pool                                        ;
 ;          AX  = String index in the strings pool                              ;
+;                                                                              ;
 ; OUTPUT:  RSI = Updated pointer to string, selected by index                  ;  
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 IndexString:
@@ -459,9 +493,12 @@ loop .cycle
 ret
 
 ;---------- Find string in the pool by index and write this string ------------;
+;                                                                              ;
 ; INPUT:   AX  = String index in the application resources strings pool        ;
+;                                                                              ;
 ; OUTPUT:  RSI = Updated pointer to string, selected by index                  ;
 ;          RDI = Modified by copy                                              ;  
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 PoolStringWrite:
@@ -476,9 +513,12 @@ call StringWrite
 ret
 
 ;---------- Print 64-bit Hex Number -------------------------------------------;
+;                                                                              ;
 ; INPUT:  RAX = Number                                                         ;
 ;         RDI = Destination Pointer                                            ;
+;                                                                              ;
 ; OUTPUT: RDI = Modify                                                         ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HexPrint64:
@@ -489,9 +529,12 @@ pop rax
 ; no RET, continue at next subroutine
 
 ;---------- Print 32-bit Hex Number -------------------------------------------;
+;                                                                              ;
 ; INPUT:  EAX = Number                                                         ;
 ;         RDI = Destination Pointer                                            ;
+;                                                                              ;
 ; OUTPUT: RDI = Modify                                                         ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HexPrint32:
@@ -502,9 +545,12 @@ pop rax
 ; no RET, continue at next subroutine
 
 ;---------- Print 16-bit Hex Number -------------------------------------------;
+;                                                                              ;
 ; INPUT:  AX  = Number                                                         ;
 ;         RDI = Destination Pointer                                            ;
+;                                                                              ;
 ; OUTPUT: RDI = Modify                                                         ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HexPrint16:
@@ -515,9 +561,12 @@ pop rax
 ; no RET, continue at next subroutine
 
 ;---------- Print 8-bit Hex Number --------------------------------------------;
+;                                                                              ;
 ; INPUT:  AL  = Number                                                         ;
 ;         RDI = Destination Pointer                                            ;
+;                                                                              ;
 ; OUTPUT: RDI = Modify                                                         ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HexPrint8:
@@ -528,9 +577,12 @@ pop rax
 ; no RET, continue at next subroutine
 
 ;---------- Print 4-bit Hex Number --------------------------------------------;
+;                                                                              ;
 ; INPUT:  AL  = Number (bits 0-3)                                              ;
 ;         RDI = Destination Pointer                                            ;
+;                                                                              ;
 ; OUTPUT: RDI = Modify                                                         ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HexPrint4:
@@ -549,11 +601,14 @@ pop rax
 ret
 
 ;---------- Print 32-bit Decimal Number ---------------------------------------;
+;                                                                              ;
 ; INPUT:   EAX = Number value                                                  ;
 ;          BL  = Template size, chars. 0=No template                           ;
 ;          RDI = Destination Pointer (flat)                                    ;
+;                                                                              ;
 ; OUTPUT:  RDI = New Destination Pointer (flat)                                ;
 ;                modified because string write                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 DecimalPrint32:
@@ -602,6 +657,7 @@ ret
 ;          RDI = Destination text buffer pointer                               ;
 ;                                                                              ;
 ; OUTPUT:  RDI = Modified by text string write                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 DoublePrint:
@@ -721,13 +777,16 @@ pop r11 r10 r9 r8 rdx rcx rbx rax
 ret
 
 ;---------- Print memory block size as Integer.Float --------------------------;
+;                                                                              ;
 ; INPUT:   RAX = Number value, units = Bytes                                   ;
 ;          BL  = Force units (override as smallest only)                       ;
 ;                FF = No force units, auto select                              ;
 ;                0 = Bytes, 1 = KB, 2 = MB, 3 = GB, 4 = TB                     ;
 ;          RDI = Destination Pointer (flat)                                    ;
+;                                                                              ;
 ; OUTPUT:  RDI = New Destination Pointer (flat)                                ;
 ;                modified because string write                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 SizePrint64:
@@ -795,9 +854,12 @@ pop rsi rdx rcx rbx rax
 ret
 
 ;---------- Execute binder in the binders pool by index -----------------------;
+;                                                                              ;
 ; INPUT:   RBX = Current window handle for get dialogue items                  ;
 ;          AX  = Binder index in the binders pool                              ;
+;                                                                              ;
 ; OUTPUT:  None                                                                ;  
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 Binder:
@@ -818,6 +880,8 @@ sub rsi,3               ; Terminator opcode is single-byte, return pointer back
 loop .find              ; Cycle for skip required number of binders
 .found:                 ; Start execute selected binder
 lodsd
+test al,00111111b
+jz .stop
 mov edx,eax
 mov ecx,eax
 shr eax,6
@@ -828,43 +892,43 @@ and ecx,00111111b
 push rsi
 call [ProcBinders + rcx * 8 - 8]  ; call by ECX = Binder index
 pop rsi
-cmp byte [rsi],0
-jne .found                   ; cycle for next instruction of binder
+jmp .found              ; cycle for next instruction of binder
+.stop:
 pop r15 r14 r13 rbp rdi rsi rbx
 ret
 
 ;---------- Script handler: bind indexed string from pool to GUI object -------;  
 
-BindString:                  ; RDX = Parm#2 = Resource ID for GUI item
+BindSetString:      ; EAX = String ID, RDX = Parm#2 = Resource ID for GUI item
 mov rsi,[r15 + APPDATA.lockedStrings]
-call IndexString             ; Return RSI = Pointer to selected string
+call IndexString    ; Return RSI = Pointer to selected string
 BindEntry:
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-mov rcx,rbx                  ; RCX = Parm#1 = Parent window handle  
-call [GetDlgItem]            ; Return handle of GUI item
+mov rcx,rbx           ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]     ; Return handle of GUI item
 test rax,rax
-jz BindExit                  ; Go skip if error, item not found
-mov r9,rsi                   ; R9  = Parm#4 = lParam = Pointer to string
-xor r8d,r8d                  ; R8  = Parm#3 = wParam = Not used
-mov edx,WM_SETTEXT           ; RDX = Parm#2 = Msg
-xchg rcx,rax                 ; RCX = Parm#1 = hWnd 
-call [SendMessage]           ; Set string for GUI item
+jz BindExit           ; Go skip if error, item not found
+mov r9,rsi            ; R9  = Parm#4 = lParam = Pointer to string
+xor r8d,r8d           ; R8  = Parm#3 = wParam = Not used
+mov edx,WM_SETTEXT    ; RDX = Parm#2 = Msg
+xchg rcx,rax          ; RCX = Parm#1 = hWnd 
+call [SendMessage]    ; Set string for GUI item
 BindExit:
 mov rsp,rbp
 ret
 
 ;---------- Script handler: bind string from temporary buffer to GUI object ---;
 
-BindInfo:
+BindSetInfo:          ; EAX = String offset, RDX = Resource ID for GUI item
 mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
 add rsi,rax
 jmp BindEntry
 
 ;---------- Script handler: bind string referenced by pointer to GUI object ---;
 
-BindBig:
+BindSetPtr:           ; EAX = String pointer, RDX = Resource ID for GUI item
 mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
 add rsi,rax
 mov rsi,[rsi]
@@ -874,7 +938,7 @@ ret
 
 ;---------- Script handler: enable or disable GUI object by binary flag -------;
 
-BindBool:
+BindSetBool:       ; EAX = Variable offset:bit, RDX = Resource ID for GUI item
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
@@ -886,43 +950,126 @@ movzx eax,byte [r8 + rax]
 bt eax,ecx
 setc al
 xchg esi,eax
-mov rcx,rbx                       ; RCX = Parm#1 = Parent window handle  
-call [GetDlgItem]                 ; Return handle of GUI item
+mov rcx,rbx         ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]   ; Return handle of GUI item
 test rax,rax
-jz BindExit                       ; Go skip if error, item not found
+jz BindExit         ; Go skip if error, item not found
 mov edx,esi
 xchg rcx,rax 
 call [EnableWindow]
 jmp BindExit
 
-;---------- Script handler: operations with combo box -------------------------; 
+;---------- Script handler: set GUI object enable and checked states ----------l
+; This handler use 2-bit field: enable flag and state flag.
 
-BindCombo:                        ; RDX = Parm#2 = Resource ID for GUI item
+BindSetSwitch:      ; EAX = Variable offset:bit, RDX = Resource ID for GUI item
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+mov ecx,eax
+shr eax,3
+and ecx,0111b
+mov r8,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
+movzx eax,byte [r8 + rax]
+xor esi,esi
+bt eax,ecx
+rcl esi,1
+inc ecx
+bt eax,ecx
+rcl esi,1           ; Bits ESI.0 = value , ESI.1 = enable
+mov rcx,rbx         ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]   ; Return handle of GUI item
+test rax,rax
+jz BindExit         ; Go skip if error, item not found
+xchg rdi,rax
+mov edx,esi
+shr edx,1           ; RDX = Parm#2 = Data, 0 = disable , 1 = enable
+mov rcx,rdi         ; RCX = Parm#1 = hWnd 
+call [EnableWindow]
+xor r9d,r9d         ; R9  = Parm#4 = lParam = not used
+and esi,1
+mov r8d,esi         ; R8  = Parm#3 = wParam: BST_CHECKED = 1, BST_UNCHECKED = 0
+mov edx,BM_SETCHECK ; RDX = Parm#2 = Msg
+mov rcx,rdi         ; RCX = Parm#1 = hWnd 
+call [SendMessage]  ; Set string for GUI item
+jmp BindExit 
+
+;---------- Script handlers: set decimal and hex number edit field ------------;
+
+BindSetDec32:
+mov cl,0
+jmp BindSetNumberEntry
+BindSetHex32:
+mov cl,1
+jmp BindSetNumberEntry
+BindSetHex64:
+mov cl,2
+BindSetNumberEntry:
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
 mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
-add rsi,rax                       ; RSI = Pointer to combo description list
-mov rcx,rbx                       ; RCX = Parm#1 = Parent window handle  
-call [GetDlgItem]                 ; Return handle of GUI item
-test rax,rax                      ; RAX = Handle of combo box
-jz .exit                          ; Go skip if error, item not found
-xchg rdi,rax                      ; RDI = Handle of combo box
-mov r13d,0FFFF0000h               ; R13D = Store:Counter for selected item
+mov rdi,[r14 + REGISTRY64.allocatorTempBuffer.objectStart]
+add rsi,rax
+push rbx rdi
+dec cl
+jz .printHex32
+dec cl
+jz .printHex64
+lodsd
+mov bl,0
+call DecimalPrint32
+jmp .printDone
+.printHex32:
+lodsd
+call HexPrint32
+jmp .printDone
+.printHex64:
+lodsq
+call HexPrint64
+.printDone:
+mov al,0
+stosb
+pop rdi rbx
+mov rcx,rbx         ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]   ; Return handle of GUI item
+test rax,rax
+jz BindExit         ; Go skip if error, item not found
+mov r9,rdi
+xor r8d,r8d
+mov edx,WM_SETTEXT
+xchg rcx,rax
+call [SendMessage]
+jmp BindExit
+
+;---------- Script handler: operations with combo box -------------------------; 
+
+BindSetCombo:     ; EAX = Combo offset, RDX = Parm#2 = Resource ID for GUI item
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+mov rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
+add rsi,rax           ; RSI = Pointer to combo description list
+mov rcx,rbx           ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]     ; Return handle of GUI item
+test rax,rax          ; RAX = Handle of combo box
+jz .exit              ; Go skip if error, item not found
+xchg rdi,rax          ; RDI = Handle of combo box
+mov r13d,0FFFF0000h   ; R13D = Store:Counter for selected item
 .scan:
-lodsb                             ; AL = Tag from combo description list 
+lodsb                       ; AL = Tag from combo description list 
 movzx rax,al
-call [ProcCombo + rax * 8]        ; Call handler = F(tag)
+call [ProcCombo + rax * 8]  ; Call handler = F(tag)
 inc r13d
-jnc .scan                         ; Continue if end tag yet not found
+jnc .scan                   ; Continue if end tag yet not found
 shr r13d,16
 cmp r13w,0FFFFh
 je .exit
-xor r9d,r9d                   ; R9  = Parm#4 = lParam = Not used 
-mov r8d,r13d                  ; R8 =  Parm#3 = wParam = Selected item, 0-based 
-mov edx,CB_SETCURSEL          ; RDX = Parm#2 = Msg
-mov rcx,rdi                   ; RCX = Parm#1 = hWnd 
-call [SendMessage]            ; Set string for GUI item
+xor r9d,r9d           ; R9  = Parm#4 = lParam = Not used 
+mov r8d,r13d          ; R8  =  Parm#3 = wParam = Selected item, 0-based 
+mov edx,CB_SETCURSEL  ; RDX = Parm#2 = Msg
+mov rcx,rdi           ; RCX = Parm#1 = hWnd 
+call [SendMessage]    ; Set string for GUI item
 .exit:
 mov rsp,rbp
 ret
@@ -947,28 +1094,135 @@ ret
 
 ;---------- Script handler: bind font from registry to GUI object -------------;
 
-BindFont:
+BindSetFont:          ; EAX = Font number, RDX = Resource ID for GUI item
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
 lea rsi,[r15 + APPDATA.hFont1]
 mov rsi,[rsi + rax * 8]
-mov rcx,rbx                  ; RCX = Parm#1 = Parent window handle  
-call [GetDlgItem]            ; Return handle of GUI item
+mov rcx,rbx            ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]      ; Return handle of GUI item
 test rax,rax
-jz BindExit                  ; Go skip if error, item not found
-mov r9d,1                    ; R9  = Parm#4 = lParam = redraw flag
-mov r8,rsi                   ; R8  = Parm#3 = wParam = handle
-mov edx,WM_SETFONT           ; RDX = Parm#2 = Msg
-xchg rcx,rax                 ; RCX = Parm#1 = hWnd
+jz BindExit            ; Go skip if error, item not found
+mov r9d,1              ; R9  = Parm#4 = lParam = redraw flag
+mov r8,rsi             ; R8  = Parm#3 = wParam = handle
+mov edx,WM_SETFONT     ; RDX = Parm#2 = Msg
+xchg rcx,rax           ; RCX = Parm#1 = hWnd
 call [SendMessage]
 jmp BindExit
 
+;--- Script handler: get state of GUI object and write to bit at buffer -------;
+
+BindGetSwitch:        ; EAX = Variable offs:bit, RDX = Resource ID for GUI item
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+xchg esi,eax          ; ESI = Destination variable address and bit position
+mov rcx,rbx           ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]     ; Return handle of GUI item
+test rax,rax
+jz BindExit           ; Go skip if error, item not found
+xchg rcx,rax          ; RCX = Parm#1 = Handle                     
+mov edx,BM_GETCHECK   ; RDX = Parm#2 = Message
+xor r8d,r8d           ; R8  = Parm#3 = Not used = 0
+xor r9d,r9d           ; R9  = Parm#4 = Not used = 0
+call [SendMessage]    ; Return RAX = widget state
+cmp rax,1             ; Compare with BST_CHECKED = 1, set ZF = 1 if this
+pushf
+mov ecx,esi
+shr esi,3
+and ecx,0111b
+add rsi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
+popf
+je .setBit
+mov al,11111110b
+rol al,cl
+and [rsi],al 
+jmp .done
+.setBit:
+mov al,00000001b
+rol al,cl
+or [rsi],al 
+.done:
+jmp BindExit
+
+;---------- Script handlers: get decimal and hex number edit field ------------;
+
+BindGetDec32:
+xor r13d,r13d
+jmp BindGetNumberEntry
+BindGetHex32:
+mov r13b,1
+jmp BindGetNumberEntry
+BindGetHex64:
+mov r13b,2
+BindGetNumberEntry:
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+mov rsi,[r14 + REGISTRY64.allocatorTempBuffer.objectStart]
+mov rdi,[r14 + REGISTRY64.allocatorBindBuffer.objectStart]
+add rdi,rax
+mov rcx,rbx        ; RCX = Parm#1 = Parent window handle, RDX = Parm#2 = ID  
+call [GetDlgItem]  ; Return handle of GUI item
+test rax,rax
+jz .exit           ; Go skip if error, item not found
+mov r9,rsi
+mov r8d,17
+mov edx,WM_GETTEXT
+xchg rcx,rax
+call [SendMessage]
+test rax,rax
+jz .exit           ; Go skip if error, can't read string
+test r13b,r13b
+jz .parseDec
+xor ecx,ecx
+.parseHex:
+xor eax,eax
+lodsb
+cmp al,'0'
+jb .parseDone
+cmp al,'9'
+ja .tryHex 
+and al,0Fh 
+jmp .tryDone
+.tryHex:
+and al,0DFh
+sub al,'A' - 10
+cmp al,10
+jb .parseDone 
+.tryDone:
+rol rcx,4
+or rcx,rax
+jmp .parseHex
+.parseDec:
+xor eax,eax
+lodsb
+sub al,'0'
+jb .parseDone
+cmp al,9
+ja .parseDone
+imul ecx,ecx,10
+add ecx,eax
+.parseDone:
+xchg rax,rcx
+cmp r13b,2
+jb .store32
+stosq
+jmp .exit
+.store32:
+stosd
+.exit:
+jmp BindExit
+
 ;---------- Helper for add string to combo box list ---------------------------;
+;                                                                              ;
 ; INPUT:   RSI = Pointer to binder script                                      ;
 ;          RDI = Parent window handle                                          ;
 ;          R15 = Pointer to application registry for global variables access   ; 
+;                                                                              ;
 ; OUTPUT:  None                                                                ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 
 HelperBindCombo:
@@ -1013,12 +1267,21 @@ AppCtrl       INITCOMMONCONTROLSEX  8, 0   ; Structure for initialization
 
 ;---------- Pointers to procedures of GUI bind scripts interpreter ------------;
 
-ProcBinders   DQ  BindString
-              DQ  BindInfo
-              DQ  BindBig
-              DQ  BindBool
-              DQ  BindCombo
-              DQ  BindFont
+ProcBinders   DQ  BindSetString
+              DQ  BindSetInfo
+              DQ  BindSetPtr
+              DQ  BindSetBool
+              DQ  BindSetSwitch
+              DQ  BindSetDec32
+              DQ  BindSetHex32
+              DQ  BindSetHex64              
+              DQ  BindSetCombo
+              DQ  BindSetFont
+              DQ  BindGetSwitch
+              DQ  BindGetDec32
+              DQ  BindGetHex32
+              DQ  BindGetHex64              
+
 ProcCombo     DQ  BindComboStopOn     ; End of list, combo box enabled
               DQ  BindComboStopOff    ; End of list, combo box disabled (gray) 
               DQ  BindComboCurrent    ; Add item to list as current selected
@@ -1046,12 +1309,11 @@ NameResDll    DB  'DATA.DLL'     , 0
 
 ;---------- Text strings about application ------------------------------------;
 
-ProgName      DB  'NUMA CPU&RAM Benchmarks for Win64',0
-AboutCap      DB  'Program info',0
-AboutText     DB  'NUMA CPU&RAM Benchmark'   , 0Dh,0Ah
-            ; DB  'v2.00.00 for Windows x64' , 0Dh,0Ah
-              DB  0Dh,0Ah, 'ENGINEERING SAMPLE #0000 for Windows x64' , 0Dh,0Ah, 0Dh,0Ah
-              DB  '(C)2021 Ilya Manusov'     , 0Dh,0Ah,0
+ProgName      DB  PROGRAM_NAME   , 0
+AboutCap      DB  ABOUT_CAP      , 0
+AboutText     DB  ABOUT_TEXT_1   , 0Dh,0Ah
+              DB  ABOUT_TEXT_2B  , 0Dh,0Ah
+              DB  ABOUT_TEXT_3   , 0Dh,0Ah, 0
 
 ;---------- Errors messages strings -------------------------------------------;
 
@@ -1098,12 +1360,19 @@ include 'api\gdi32.inc'
 ;------------------------------------------------------------------------------;
 
 section '.rsrc' resource data readable
-directory RT_ICON       , icons,   \
-          RT_GROUP_ICON , gicons,  \
-          RT_MANIFEST   , manifests
+directory RT_ICON       , icons     , \
+          RT_GROUP_ICON , gicons    , \
+          RT_MANIFEST   , manifests , \
+          RT_VERSION    , version
+
+;---------- Icons resource ----------------------------------------------------;
+
 resource icons  , ID_EXE_ICON  , LANG_NEUTRAL , exeicon
 resource gicons , ID_EXE_ICONS , LANG_NEUTRAL , exegicon
 icon exegicon, exeicon, 'images\fasm64.ico'
+
+;---------- Manifest resource -------------------------------------------------;
+
 resource manifests, 1, LANG_NEUTRAL, manifest
 resdata manifest
 db '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -1129,4 +1398,13 @@ db '  </dependency>'
 db '</assembly>'
 endres
 
+;---------- Version resource --------------------------------------------------;
+
+resource     version, 1, LANG_NEUTRAL, version_info
+versioninfo  version_info, \ 
+             VOS__WINDOWS32, VFT_DLL, VFT2_UNKNOWN, LANG_NEUTRAL, 0, \
+'FileDescription' , RESOURCE_DESCRIPTION ,\
+'FileVersion'     , RESOURCE_VERSION     ,\
+'CompanyName'     , RESOURCE_COMPANY     ,\
+'LegalCopyright'  , RESOURCE_COPYRIGHT
 

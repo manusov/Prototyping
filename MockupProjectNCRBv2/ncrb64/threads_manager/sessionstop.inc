@@ -31,12 +31,12 @@
 SessionStop:
 
 mov rax,[Registry]
-lea rdi,[rax + REGISTRY64.ipb]   ; RDI = Pointer to IPB (benchmark scenario)
+lea rdi,[rax + REGISTRY64.memIpb]   ; RDI = Pointer to IPB (benchmark scenario)
 
 ;---------- Threads stop, release handles for Threads and Events --------------;
 
 lea rcx,[rax + REGISTRY64.mpe64csb.threadList]   ; RCX = Pointer to threads list
-mov edx,[rdi + IPB.updatedThreads]               ; EDX = Threads count
+mov edx,[rdi + MEMIPB.updatedThreads]            ; EDX = Threads count
 call ReleaseThreadsList
 mov al,1                             ; AL = error status, valid if CF=1 only
 jc .exit                             ; Go if error
@@ -45,7 +45,7 @@ jc .exit                             ; Go if error
 
 mov rax,[Registry]
 lea rcx,[rax + REGISTRY64.mpe64csb.numaNodeList]  ; RCX = Pointer to NUMA nodes list
-mov edx,[rdi + IPB.domainsCount]                  ; EDX = NUMA domains count
+mov edx,[rdi + MEMIPB.domainsCount]               ; EDX = NUMA domains count
 call MemReleaseNuma
 mov al,1                             ; AL = error status, valid if CF=1 only
 

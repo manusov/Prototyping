@@ -63,7 +63,7 @@ call [WaitForSingleObject]
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
 mov eax,[Registry]
-cmp [eax + REGISTRY32.ipb.threadStop],0
+cmp [eax + REGISTRY32.memIpb.threadStop],0
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -144,7 +144,7 @@ call [WaitForSingleObject]
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
 mov eax,[Registry]
-cmp [eax + REGISTRY32.ipb.threadStop],0
+cmp [eax + REGISTRY32.memIpb.threadStop],0
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;

@@ -38,25 +38,25 @@ sub rsp,32+16                  ; Build parameters shadow, 4 qwords
 ;---------- Setup pointers ----------------------------------------------------;
 
 mov rax,[Registry]
-lea rsi,[rax + REGISTRY64.ipb]   ; RSI = Pointer to IPB, benchmarks scenario
-lea rdi,[rax + REGISTRY64.opb]   ; RDI = Pointer to OPB, benchmarks results
+lea rsi,[rax + REGISTRY64.memIpb]   ; RSI = Pointer to IPB, benchmarks scenario
+lea rdi,[rax + REGISTRY64.memOpb]   ; RDI = Pointer to OPB, benchmarks results
 
 ;---------- Pre-heat phase for result stabilization ---------------------------;
 ; Note this pre-heat for simple only, not use this for drawings
 
 mov rax,[Registry]
 lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
-mov edx,[rsi + IPB.updatedThreads]
+mov edx,[rsi + MEMIPB.updatedThreads]
 call ThreadsReStart
 
 ;---------- Replace fill pattern to walk pattern for latency mode -------------;
 
 mov rax,[Registry]
 lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
-cmp [rsi + IPB.updatedAsm],LATENCY_MODE
+cmp [rsi + MEMIPB.updatedAsm],LATENCY_MODE
 jb .bwmode                ; Go skip this update if not a LATENCY MEASUREMENT mode
-mov r8d,[rsi + IPB.updatedThreads]   ; R8D = Threads count
-mov r9,[rsi + IPB.walkRoutine]       ; R9  = Pointer to pattern routine
+mov r8d,[rsi + MEMIPB.updatedThreads]   ; R8D = Threads count
+mov r9,[rsi + MEMIPB.walkRoutine]       ; R9  = Pointer to pattern routine
 call ThreadsUpdatePattern  ; replace list build pattern to list walk pattern
 .bwmode:
 
@@ -68,12 +68,12 @@ call [GetSystemTimeAsFileTime]
 ;---------- Measurement pattern -----------------------------------------------;
 
 mov rax,[Registry]
-lea rcx,[rax + REGISTRY64.mpe64csb.threadList]   ; RCX = Pointer to threads list
-mov edx,[rsi + IPB.updatedThreads]  ; EDX = number of threads
+lea rcx,[rax + REGISTRY64.mpe64csb.threadList]  ; RCX = Pointer to threads list
+mov edx,[rsi + MEMIPB.updatedThreads]           ; EDX = number of threads
 call ThreadsReStart
 mov al,2  ; AL = error status, valid if CF=1 only
 jc .exit
-mov [rdi + OPB.tscTimerDelta],rax   ; Store delta-TSC, units = TSC clocks
+mov [rdi + MEMOPB.tscTimerDelta],rax   ; Store delta-TSC, units = TSC clocks
 
 ;---------- Get stop time point, by OS timer API ( alternative of TSC ) -------;
 
@@ -81,7 +81,7 @@ lea rcx,[rsp+40]  ; RCX = Pointer to updated variable, OS timer, 64-bit
 call [GetSystemTimeAsFileTime]
 mov rax,[rsp+40]  ; RAX = Time at this point
 sub rax,[rsp+32]  ; Subtract time before target fragment execution
-mov [rdi + OPB.osTimerDelta],rax    ; Store delta-OS timer, units = 100 ns 
+mov [rdi + MEMOPB.osTimerDelta],rax    ; Store delta-OS timer, units = 100 ns 
 
 ;---------- Done --------------------------------------------------------------;
 

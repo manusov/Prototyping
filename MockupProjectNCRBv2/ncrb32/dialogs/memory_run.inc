@@ -36,10 +36,10 @@ jmp .finish
 ;--- WM_INITDIALOG handler: create child window: memory performance report ----;
 
 .wminitdialog:                   ; Build main window 
-mov ax,BINDER_MEMORY_RUN
+mov ax,BINDER_BUILD_MEMORY_RUN
 call Binder
 ; ...
-mov ax,BINDER_MEMORY_MBPS
+mov ax,BINDER_BUILD_MEMORY_MBPS
 call Binder
 ; ...
 push [edi + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 4]

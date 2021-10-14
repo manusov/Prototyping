@@ -44,10 +44,10 @@ jmp .finish                    ; Go exit if unknown event
 ;--- WM_INITDIALOG handler: create child window: memory performance report ----; 
 
 .wminitdialog: 
-mov ax,BINDER_MEMORY_RUN
+mov ax,BINDER_BUILD_MEMORY_RUN
 call Binder
 ; ...
-mov ax,BINDER_MEMORY_MBPS
+mov ax,BINDER_BUILD_MEMORY_MBPS
 call Binder
 ; ...
 mov r9,[r15 + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 8] 

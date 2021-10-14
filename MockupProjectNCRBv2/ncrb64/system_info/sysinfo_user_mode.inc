@@ -431,6 +431,7 @@ test r12l,00001111b
 jz .scanAcpiList
 and r12l,11110000b
 add r12,10h 
+
 .scanAcpiList:
 mov r9,VALUE_BUFFER_LIMIT   ; R9  = Parm#4 = Buffer size limit  
 mov r8,r12                  ; R8  = Parm#3 = Buffer pointer
@@ -449,11 +450,12 @@ mov rdi,r14
 rep movsd
 mov r14,rdi
 pop rdi rsi
+
 .skipOneTable:
 add rbx,4
 cmp rbx,[r13]
 jb .scanAcpiList 
-.doneAcpiList:
+
 mov [r15 + REGISTRY64.listAcpi.objectStart],rbp
 mov [r15 + REGISTRY64.listAcpi.objectStop],r14
 mov rbp,r14
@@ -1192,6 +1194,13 @@ mov rax,[r14 + CPUDATA.extractedAvx512Bitmap]
 stosq
 mov rax,[r14 + CPUDATA.extractedContextBitmap]
 stosq
+
+;---------- ACPI information --------------------------------------------------;
+
+add rdi, 1 + ( sizeof.BINDACPI * 2 )      ; RESERVED
+
+;---------- Memory and cache benchmarks methods availability bitmap -----------;
+
 mov rax,[r14 + CPUDATA.extractedMethodsBitmap]
 stosq
 
@@ -1267,6 +1276,7 @@ ret
 HelperCheckCpuid:
 
 ;---------- Check for ID bit writeable for "1" --------------------------------;
+
 mov ebx,21
 pushf                     ; In the 64-bit mode, push RFLAGS
 pop rax
