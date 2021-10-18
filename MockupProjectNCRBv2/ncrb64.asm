@@ -51,7 +51,7 @@ PROGRAM_NAME            EQU 'NUMA CPU&RAM Benchmarks for Win64'
 ABOUT_CAP               EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
 ABOUT_TEXT_2A           EQU 'v2.00.00 for Windows x64'
-ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0001 for Windows x64'
+ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0002 for Windows x64'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 
 ID_EXE_ICON             = 100      ; This application icon

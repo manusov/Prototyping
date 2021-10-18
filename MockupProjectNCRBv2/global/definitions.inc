@@ -175,25 +175,24 @@ IDC_SYSINFO_CORES       = 370
 IDC_SYSINFO_CORES_V     = 371
 IDC_SYSINFO_SOCKETS     = 372
 IDC_SYSINFO_SOCK_V      = 373
-IDC_SYSINFO_OSPR        = 374
-IDC_SYSINFO_OSPR_V      = 375
-IDC_SYSINFO_OSPR_M      = 376
-IDC_SYSINFO_OSNM        = 377
-IDC_SYSINFO_OSNM_V      = 378
-IDC_SYSINFO_OSNM_C      = 379
-IDC_SYSINFO_OSNM_M      = 380
-IDC_SYSINFO_PGRP        = 381
-IDC_SYSINFO_PGRP_V      = 382
-IDC_SYSINFO_PGRP_C      = 383
-IDC_SYSINFO_MEM         = 384
-IDC_SYSINFO_MEM_V       = 385 
-IDC_SYSINFO_MEM_A       = 386 
-IDC_SYSINFO_MEM_AV      = 387 
-IDC_SYSINFO_LRPG        = 388 
-IDC_SYSINFO_LRPG_V      = 389 
-IDC_SYSINFO_LRPG_E      = 390
-IDB_SYSINFO_REPORT      = 391 
-IDB_SYSINFO_CANCEL      = 392
+IDC_SYSINFO_PTOT        = 374
+IDC_SYSINFO_PTOT_V      = 375
+IDC_SYSINFO_GRP         = 376
+IDC_SYSINFO_GRP_V       = 377
+IDC_SYSINFO_PCUR        = 378
+IDC_SYSINFO_PCUR_V      = 379
+IDC_SYSINFO_NUMA        = 380
+IDC_SYSINFO_NUMA_V      = 381
+IDC_SYSINFO_NUMA_M      = 382
+IDC_SYSINFO_MEM         = 383
+IDC_SYSINFO_MEM_V       = 384 
+IDC_SYSINFO_MEM_A       = 385 
+IDC_SYSINFO_MEM_AV      = 386 
+IDC_SYSINFO_LRPG        = 387 
+IDC_SYSINFO_LRPG_V      = 388 
+IDC_SYSINFO_LRPG_E      = 389
+IDB_SYSINFO_REPORT      = 390 
+IDB_SYSINFO_CANCEL      = 391
 
 ;---------- Identifiers for tab #2 = Memory and cache benchmarks sheet --------;
 
@@ -581,10 +580,16 @@ STR_BNDCSR             = STR_XCR0 + 7
 STR_ACPI               = STR_BNDCSR + 1
 STR_MADT               = STR_ACPI + 1
 STR_SRAT               = STR_ACPI + 2
+STR_OEM_REV            = STR_ACPI + 3
+STR_LOCAL_APICS        = STR_ACPI + 4
+STR_IO_APICS           = STR_ACPI + 5
+STR_DOMAINS            = STR_ACPI + 6
+STR_CPUS               = STR_ACPI + 7
+STR_RAMS               = STR_ACPI + 8
 
 ;---------- Cache memory ------------------------------------------------------;
 
-STR_L1_CODE            = STR_SRAT + 1
+STR_L1_CODE            = STR_RAMS + 1
 STR_L1_DATA            = STR_L1_CODE + 1
 STR_L2_UNIFIED         = STR_L1_CODE + 2
 STR_L3_UNIFIED         = STR_L1_CODE + 3
@@ -595,13 +600,14 @@ STR_L4_UNIFIED         = STR_L1_CODE + 4
 STR_THREADS            = STR_L4_UNIFIED + 1
 STR_CORES              = STR_THREADS + 1
 STR_SOCKETS            = STR_THREADS + 2
-STR_OS_PROCESSORS      = STR_THREADS + 3
-STR_OS_NUMA_NODES      = STR_THREADS + 4
-STR_OS_GROUPS          = STR_THREADS + 5
+STR_PROC_TOTAL         = STR_THREADS + 3
+STR_GRPS               = STR_THREADS + 4
+STR_PROC_CUR           = STR_THREADS + 5
+STR_NUMA_NODES         = STR_THREADS + 6
 
 ;---------- Memory information by WinAPI --------------------------------------;
 
-STR_OS_PHYSICAL        = STR_OS_GROUPS + 1
+STR_OS_PHYSICAL        = STR_NUMA_NODES + 1
 STR_OS_AVAILABLE       = STR_OS_PHYSICAL + 1
 STR_OS_MIN_LARGE       = STR_OS_PHYSICAL + 2
 
@@ -733,10 +739,11 @@ STR_TSC                = STR_UNITS_BYTES + 21
 STR_H                  = STR_UNITS_BYTES + 22
 STR_SUPPORTED          = STR_UNITS_BYTES + 23
 STR_NOT_SUPPORTED      = STR_UNITS_BYTES + 24 
+STR_N_A                = STR_UNITS_BYTES + 25 
 
 ;---------- Up strings for GUI tables -----------------------------------------;
 
-STR_PARM_VALUE_HEX     = STR_NOT_SUPPORTED + 1
+STR_PARM_VALUE_HEX     = STR_N_A + 1
 STR_PARM_VALUE         = STR_PARM_VALUE_HEX + 1
 STR_TOPOLOGY           = STR_PARM_VALUE_HEX + 2
 STR_TOPOLOGY_SUMMARY   = STR_PARM_VALUE_HEX + 3
@@ -978,21 +985,52 @@ osBitmap      dq  ?
 ends
 
 struct BINDACPI
-oem       db  6  + 1  dup ?
-manufact  db  8  + 1  dup ?
-oemRev    db  25 + 1  dup ?
-comment   db  50 + 1  dup ?
+oem           db  6  + 1  dup ?
+manufact      db  8  + 1  dup ?
+oemRev        db  25 + 1  dup ?
+comment       db  50 + 1  dup ?
+ends
+
+struct BINDCACHE
+cacheBitmap   db  ?
+trace         db  40 + 1  dup ?
+l1c           db  40 + 1  dup ?
+l1d           db  40 + 1  dup ?
+l2u           db  40 + 1  dup ?
+l3u           db  40 + 1  dup ?
+l4u           db  40 + 1  dup ?
+ends
+
+struct BINDTOPOLOGY
+threads       db  10 + 1  dup ?
+cores         db  10 + 1  dup ?
+sockets       db  10 + 1  dup ?
+ends
+
+struct BINDSYS
+procTotal     db  10 + 1  dup ?
+groups        db  10 + 1  dup ?
+procCur       db  10 + 1  dup ?
+numaNodes     db  10 + 1  dup ?
+memPhys       db  20 + 1  dup ?
+memAvail      db  20 + 1  dup ?
+largePage     db  20 + 1  dup ?
+largeEnable   db  20 + 1  dup ?   
+masksList     db  80 + 1  dup ?    
 ends
 
 struct BINDLIST
 ; main system information screen, set widgets from bindlist buffer
-bindCpu       BINDCPU  ?
-acpiEnable    db  ?               ; D0=ACPI, D1=MADT, D2=SRAT
-bindMadt      BINDACPI ?
-bindSrat      BINDACPI ?
+bindCpu       BINDCPU       ?
+acpiEnable    db            ?    ; D0 = ACPI, D1 = MADT, D2 = SRAT
+bindMadt      BINDACPI      ?
+bindSrat      BINDACPI      ?
+bindCache     BINDCACHE     ?
+bindTopology  BINDTOPOLOGY  ?
+bindSys       BINDSYS       ?
 
 ; memory and cache benchmarks screen, set widgets from bindlist buffer 
-methodBitmap  dq  ?
+; methodBitmap  dq  ?
 ; ...
 ; mathematics benchmark screen, set widgets from bindlist buffer
 ; UNDER CONSTRUCTION.

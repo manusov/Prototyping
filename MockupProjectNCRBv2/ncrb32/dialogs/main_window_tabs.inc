@@ -165,13 +165,12 @@ jmp .entryDialog
 ;---------- WM_CLOSE handler: close window ------------------------------------;
 
 .wmclose:
-; mov ecx,[edi + APPDATA.hMain]
-; jecxz .processed
+mov ecx,[edi + APPDATA.hMain]
+jecxz .processed
 push 0
 push 0
 push WM_CLOSE
-; push ecx
-push ebx
+push ecx
 call [SendMessage]
 
 ;---------- Exit points -------------------------------------------------------;

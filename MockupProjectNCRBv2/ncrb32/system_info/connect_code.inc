@@ -37,3 +37,18 @@ include 'sysinfo_user_mode.inc'
 include 'sysinfo_kernel_mode.inc'
 
 include 'cpuid_ia32.inc'
+
+include 'info_os.inc'
+include 'info_native_os.inc'
+include 'info_processor.inc'
+include 'info_topology.inc'
+include 'info_extended_topology.inc'
+include 'info_numa_domains.inc'
+include 'info_processor_groups.inc'
+include 'info_acpi.inc'
+include 'info_affinized_cpuid.inc'
+include 'info_kernel_mode.inc'
+
+
+
+

@@ -7,6 +7,7 @@
 ;---------- Operating system constants and structures definition --------------;
 
 ALL_PROCESSOR_GROUPS   = 0000FFFFh  
+
 struct MEMORYSTATUSEX_DEF
 dwLength                 dd ?
 dwMemoryLoad             dd ?
@@ -153,7 +154,7 @@ cpuSignature               dd ?
 extractedFeaturesBitmap    dq ?
 extractedAvx512Bitmap      dq ?
 extractedContextBitmap     dq ?
-extractedMethodsBitmap     dq ?
+; extractedMethodsBitmap   dq ?
 tscClockHz                 dq ?
 ends
 
@@ -253,18 +254,18 @@ ends
 ; Word=Maximum threads at this level
 ; Word=Maximum APIC IDs per package
 ; For Trace Cache size in micro operations, not bytes
-struct CPUCACHE
-CpuidTraceCache   dq  ?         ; Instruction trace cache
-CpuidTraceSmp     dw  ? , ?
-CpuidL1Code       dq  ?	        ; L1 instruction cache
-CpuidL1Csmp       dw  ? , ?
-CpuidL1Data       dq  ?	        ; L1 data cache
-CpuidL1Dsmp       dw  ? , ?
-CpuidL2Unified    dq  ?	        ; L2 unified cache
-CpuidL2Usmp       dw  ? , ?
-CpuidL3Unified    dq  ?	        ; L3 unified cache
-CpuidL3Usmp       dw  ? , ?
-ends
+; struct CPUCACHE
+; CpuidTraceCache   dq  ?         ; Instruction trace cache
+; CpuidTraceSmp     dw  ? , ?
+; CpuidL1Code       dq  ?	        ; L1 instruction cache
+; CpuidL1Csmp       dw  ? , ?
+; CpuidL1Data       dq  ?	        ; L1 data cache
+; CpuidL1Dsmp       dw  ? , ?
+; CpuidL2Unified    dq  ?	        ; L2 unified cache
+; CpuidL2Usmp       dw  ? , ?
+; CpuidL3Unified    dq  ?	        ; L3 unified cache
+; CpuidL3Usmp       dw  ? , ?
+; ends
 
 ;--- 32 bytes CACHE SIZE INFO ---
 ; Qword [000-007] = L1 instruction cache size (bytes)
@@ -281,26 +282,51 @@ ends
 ; Dword [052-055] = Cores per one package (or per one NUMA node)
 ; Dword [056-059] = Total NUMA nodes per platform
 ; Dword [060-063] = Total CPU packages per platform 
-struct OSCACHE
-OsL1Code          dq  ?         ; Cache size information
-OsL1Data          dq  ?
-OsL2Unified       dq  ?
-OsL3Unified       dq  ?
-OsThreadsPerL1C   dd  ?         ; Cache threads information
-OsThreadsPerL1D   dd  ?
-OsThreadsPerL2U   dd  ?
-OsThreadsPerL3U   dd  ?
-OsThreadsPerCore  dd  ?         ; Topology information
-OsThreadsPerNode  dd  ?
-OsNodesTotal      dd  ?
-OsPackagesTotal   dd  ?
+; struct OSCACHE
+; OsL1Code          dq  ?         ; Cache size information
+; OsL1Data          dq  ?
+; OsL2Unified       dq  ?
+; OsL3Unified       dq  ?
+; OsThreadsPerL1C   dd  ?         ; Cache threads information
+; OsThreadsPerL1D   dd  ?
+; OsThreadsPerL2U   dd  ?
+; OsThreadsPerL3U   dd  ?
+; OsThreadsPerCore  dd  ?         ; Topology information
+; OsThreadsPerNode  dd  ?
+; OsNodesTotal      dd  ?
+; OsPackagesTotal   dd  ?
+; ends
+
+; Summary cache information: cache size and units count
+struct SUMMARYCACHE
+sizeTrace         dq  ?
+countTrace        dd  ?
+sizeL1C           dq  ?
+countL1C          dd  ?
+sizeL1D           dq  ?
+countL1D          dd  ?
+sizeL2U           dq  ?
+countL2U          dd  ?
+sizeL3U           dq  ?
+countL3U          dd  ?
+sizeL4U           dq  ?
+countL4U          dd  ?
+ends
+
+; Summary topology information by OS
+struct SUMMARYTOPOLOGY
+threads           dd  ?
+cores             dd  ?
+sockets           dd  ?
 ends
 
 ;---------- System parameters block -------------------------------------------;
+; TODO. REMOVE UNUSED OBJECTS.
 
 struct SYSPARMS
 applicationMode   dd  ?    ; 0 = ia32 under Win32, 1 = x64, 2 = ia32 under Win64
 sseSupported      dd  ?    ; Separate flag for save/restore SSE registers at child thread, 0=No, 1=Yes
+
 ; Performance pattern internal parameters
 ; SSE4.1 validation required for 128-bit MOVNTDQA
 ; AVX2 validation required for 256-bit VMOVNTDQA
@@ -309,25 +335,28 @@ sseSupported      dd  ?    ; Separate flag for save/restore SSE registers at chi
 ; IMPORTANT patch v0.98.0 = non-temporal read use BOTH FOR INTEL AND AMD
 ; IMPORTANT patch v1.01.02 = this byte locked to 0, REJECT (V)MOVNTDQA
 ; selection because optimal variant is PREFETCHNTA from SSE1 
-NonTemporalRead   dd  ?    ; 0 = Default (V)MOVNTPD write and PREFETCHNTA read 
+; NonTemporalRead   dd  ?  ; 0 = Default (V)MOVNTPD write and PREFETCHNTA read 
                            ; 1 = SSE4.1 use MOVNTDQA for read 128-bit 
                            ; 2 = AVX2 use VMOVNTDQA for read 256-bit 
 ; Large page size and availability
-largePageSize     dq  ?              ; Used large page size, bytes
-largePageFlag     dd  ?              ; 0 = mapping not available, 1 = available
+; largePageSize     dq  ?            ; Used large page size, bytes
+; largePageFlag     dd  ?            ; 0 = mapping not available, 1 = available
 ; Processor groups count for support systems with >64 logical processors
 ; 0 means unknown, supported as single group system
 ; 1 means detected single group system
 ; >1 means complex system with >1 groups, required processor group management
-processorGroups   dd  ?
+; processorGroups   dd  ?
 ; Total processors count at all groups
-processorsTotal   dd  ?
+; processorsTotal   dd  ?
 ; NUMA = Non Uniform Memory Access info, maximum for 64 NUMA Nodes
-numaNodes         dd  ?              ; Number of NUMA Nodes
-numaNodesMasks    dq  64 dup ?       ; Affinity masks for 64 nodes maximum
+; numaNodes         dd  ?            ; Number of NUMA Nodes
+; numaNodesMasks    dq  64 dup ?     ; Affinity masks for 64 nodes maximum
 ; Cache information
-cpuCache          CPUCACHE
-osCache           OSCACHE
+; cpuCache        CPUCACHE
+; osCache         OSCACHE
+
+summaryCache      SUMMARYCACHE
+summaryTopology   SUMMARYTOPOLOGY
 ends
 
 ;--- Memory and Cache Benchmark User Parameters Block (UPB) definitions -------;
@@ -575,7 +604,6 @@ APPROX_LIMIT        =  2
 APPROX_NONE         =  0
 APPROX_X16          =  1
 APPROX_X32          =  2
-
 
 ;---------- Root structure: NCRB32 application registry -----------------------;  
 

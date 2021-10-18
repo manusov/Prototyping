@@ -136,13 +136,13 @@ dialogitem  'STATIC'      , '', IDC_SYSINFO_ACPI    ,   7, 115,  49,  10, WS_VIS
 dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT    ,  32, 115,  28,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_1  ,  62, 115,  36,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_2  , 100, 115,  44,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_3  , 146, 115,  80,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_4  , 228, 115, 171,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_3  , 146, 115,  85,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_MADT_4  , 233, 115, 169,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT    ,  32, 128,  28,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_1  ,  62, 128,  36,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_2  , 100, 128,  44,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_3  , 146, 128,  80,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_4  , 228, 128, 171,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_3  , 146, 128,  85,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_SRAT_4  , 233, 128, 169,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_L1C     ,   1, 146,  45,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_L1C_V   ,  48, 146, 105,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_L1D     ,   1, 160,  45,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
@@ -158,24 +158,23 @@ dialogitem  'STATIC'      , '', IDC_SYSINFO_THR_V   , 210, 146,  29,  10, WS_VIS
 dialogitem  'STATIC'      , '', IDC_SYSINFO_CORES   , 250, 146,  38,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_CORES_V , 290, 146,  29,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_SOCKETS , 330, 146,  38,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_SOCK_V  , 370, 146,  29,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSPR    , 170, 160,  82,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSPR_V  , 255, 160,  28,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSPR_M  , 286, 160, 113,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSNM    , 170, 174,  82,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSNM_V  , 255, 174,  28,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSNM_C  , 286, 174, 113,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_OSNM_M  , 170, 188, 229,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_PGRP    , 170, 202,  82,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_PGRP_V  , 255, 202,  28,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_PGRP_C  , 286, 202, 113,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_SOCK_V  , 370, 146,  32,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_PTOT    , 170, 160, 118,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_PTOT_V  , 290, 160,  29,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_GRP     , 330, 160,  38,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_GRP_V   , 370, 160,  32,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_PCUR    , 170, 174, 118,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_PCUR_V  , 290, 174,  29,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_NUMA    , 170, 188, 118,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_NUMA_V  , 290, 188,  29,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_NUMA_M  , 170, 202, 232,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM     ,   1, 217,  79,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_V   ,  82, 217,  50,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_A   , 134, 217,  40,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_AV  , 176, 217,  50,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG    , 240, 217,  79,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_V  , 321, 217,  38,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_E  , 361, 217,  38,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_V   ,  82, 217,  54,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_A   , 139, 217,  40,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_AV  , 181, 217,  54,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG    , 238, 217,  76,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_V  , 316, 217,  32,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_E  , 350, 217,  52,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'BUTTON'      , '', IDB_SYSINFO_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_SYSINFO_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
@@ -233,8 +232,8 @@ dialogitem  'EDIT'        , '', IDE_MEMORY_G_SIZE   , 147, 137,  77,  10, WS_VIS
 dialogitem  'EDIT'        , '', IDE_MEMORY_M_START  , 147, 149,  77,  10, WS_VISIBLE + WS_CHILD + WS_BORDER + WS_TABSTOP + ES_AUTOHSCROLL + WS_DISABLED
 dialogitem  'EDIT'        , '', IDE_MEMORY_M_STOP   , 231, 149,  77,  10, WS_VISIBLE + WS_CHILD + WS_BORDER + WS_TABSTOP + ES_AUTOHSCROLL + WS_DISABLED
 dialogitem  'STATIC'      , '', IDC_MEMORY_M_HYPHEN , 226, 150,   5,  10, WS_VISIBLE
-dialogitem  'COMBOBOX'    , '', IDC_MEMORY_COMBO_F  , 231, 113,  85,  10, WS_VISIBLE + CBS_DROPDOWNLIST + CBS_HASSTRINGS + WS_VSCROLL
-dialogitem  'COMBOBOX'    , '', IDC_MEMORY_COMBO_F  , 231, 128,  85,  10, WS_VISIBLE + CBS_DROPDOWNLIST + CBS_HASSTRINGS + WS_VSCROLL
+dialogitem  'COMBOBOX'    , '', IDC_MEMORY_COMBO_F  , 231, 113,  85,  10, WS_VISIBLE + CBS_DROPDOWNLIST + CBS_HASSTRINGS + WS_VSCROLL + WS_DISABLED 
+dialogitem  'COMBOBOX'    , '', IDC_MEMORY_COMBO_F  , 231, 128,  85,  10, WS_VISIBLE + CBS_DROPDOWNLIST + CBS_HASSTRINGS + WS_VSCROLL + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_MEMORY_MTRR_WB  , 327, 114,  68,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP + WS_GROUP 
 dialogitem  'BUTTON'      , '', IDB_MEMORY_MTRR_WT  , 327, 123,  68,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP
 dialogitem  'BUTTON'      , '', IDB_MEMORY_MTRR_WC  , 327, 132,  68,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP
@@ -630,6 +629,12 @@ DB  'BNDCSR'               , 0
 DB  'ACPI'                 , 0
 DB  'MADT'                 , 0
 DB  'SRAT'                 , 0
+DB  'OEM Rev = '           , 0
+DB  'Local APICs = '       , 0
+DB  'I/O APICs = '         , 0
+DB  'Domains = '           , 0
+DB  'CPUs = '              , 0
+DB  'RAMs = '              , 0
 
 ;---------- Cache memory ------------------------------------------------------;
 
@@ -641,12 +646,13 @@ DB  'L4 Unified'           , 0
 
 ;---------- Platform topology by WinAPI ---------------------------------------;
 
-DB  'Threads'              , 0
-DB  'Cores'                , 0
-DB  'Sockets'              , 0
-DB  'OS processors'        , 0
-DB  'OS NUMA nodes'        , 0
-DB  'OS processor groups'  , 0
+DB  'Threads'                        , 0
+DB  'Cores'                          , 0
+DB  'Sockets'                        , 0
+DB  'OS processors total'            , 0
+DB  'Groups'                         , 0
+DB  'OS processors in current group' , 0
+DB  'OS NUMA nodes'                  , 0
 
 ;---------- Memory information by WinAPI --------------------------------------;
 
@@ -782,6 +788,7 @@ DB  'TSC='          , 0
 DB  'h'             , 0
 DB  'supported'     , 0
 DB  'not supported' , 0
+DB  'n/a'           , 0
 
 ;---------- Up strings for GUI tables -----------------------------------------; 
 
@@ -1037,9 +1044,10 @@ SET_STRING  STR_L4_UNIFIED       , IDC_SYSINFO_L4U
 SET_STRING  STR_THREADS          , IDC_SYSINFO_THREADS
 SET_STRING  STR_CORES            , IDC_SYSINFO_CORES
 SET_STRING  STR_SOCKETS          , IDC_SYSINFO_SOCKETS
-SET_STRING  STR_OS_PROCESSORS    , IDC_SYSINFO_OSPR
-SET_STRING  STR_OS_NUMA_NODES    , IDC_SYSINFO_OSNM
-SET_STRING  STR_OS_GROUPS        , IDC_SYSINFO_PGRP
+SET_STRING  STR_PROC_TOTAL       , IDC_SYSINFO_PTOT
+SET_STRING  STR_GRPS             , IDC_SYSINFO_GRP
+SET_STRING  STR_PROC_CUR         , IDC_SYSINFO_PCUR
+SET_STRING  STR_NUMA_NODES       , IDC_SYSINFO_NUMA
 SET_STRING  STR_OS_PHYSICAL      , IDC_SYSINFO_MEM
 SET_STRING  STR_OS_AVAILABLE     , IDC_SYSINFO_MEM_A
 SET_STRING  STR_OS_MIN_LARGE     , IDC_SYSINFO_LRPG
@@ -1100,6 +1108,65 @@ SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 3 , IDC_SYSINFO_ZMM1631
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 4 , IDC_SYSINFO_K07
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 5 , IDC_SYSINFO_BNDREG
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 6 , IDC_SYSINFO_BNDCSR
+
+;---------- ACPI tables ( MADT and SRAT ) information -------------------------;
+
+SET_BOOL    BINDLIST.acpiEnable + 0 , 0 , IDC_SYSINFO_ACPI
+SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT
+SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT
+SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT_1
+SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT_2   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT_3   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT_4   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT_1   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT_2   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT_3   
+SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT_4   
+SET_INFO    BINDLIST.bindMadt.oem       , IDC_SYSINFO_MADT_1
+SET_INFO    BINDLIST.bindMadt.manufact  , IDC_SYSINFO_MADT_2
+SET_INFO    BINDLIST.bindMadt.oemRev    , IDC_SYSINFO_MADT_3
+SET_INFO    BINDLIST.bindMadt.comment   , IDC_SYSINFO_MADT_4
+SET_INFO    BINDLIST.bindSrat.oem       , IDC_SYSINFO_SRAT_1
+SET_INFO    BINDLIST.bindSrat.manufact  , IDC_SYSINFO_SRAT_2
+SET_INFO    BINDLIST.bindSrat.oemRev    , IDC_SYSINFO_SRAT_3
+SET_INFO    BINDLIST.bindSrat.comment   , IDC_SYSINFO_SRAT_4
+
+;---------- Cache information -------------------------------------------------;
+
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 0 , IDC_SYSINFO_L1C
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 0 , IDC_SYSINFO_L1C_V
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 1 , IDC_SYSINFO_L1D
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 1 , IDC_SYSINFO_L1D_V
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 2 , IDC_SYSINFO_L2U
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 2 , IDC_SYSINFO_L2U_V
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 3 , IDC_SYSINFO_L3U
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 3 , IDC_SYSINFO_L3U_V
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 4 , IDC_SYSINFO_L4U
+SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 4 , IDC_SYSINFO_L4U_V
+SET_INFO    BINDLIST.bindCache.l1c , IDC_SYSINFO_L1C_V
+SET_INFO    BINDLIST.bindCache.l1d , IDC_SYSINFO_L1D_V
+SET_INFO    BINDLIST.bindCache.l2u , IDC_SYSINFO_L2U_V
+SET_INFO    BINDLIST.bindCache.l3u , IDC_SYSINFO_L3U_V
+SET_INFO    BINDLIST.bindCache.l4u , IDC_SYSINFO_L4U_V
+
+;---------- Threads, Cores, Sockets information -------------------------------;
+
+SET_INFO    BINDLIST.bindTopology.threads , IDC_SYSINFO_THR_V
+SET_INFO    BINDLIST.bindTopology.cores   , IDC_SYSINFO_CORES_V
+SET_INFO    BINDLIST.bindTopology.sockets , IDC_SYSINFO_SOCK_V
+
+;--- System info, processors, processor groups, NUMA, memory, large pahes -----;
+
+SET_INFO    BINDLIST.bindSys.procTotal   , IDC_SYSINFO_PTOT_V
+SET_INFO    BINDLIST.bindSys.groups      , IDC_SYSINFO_GRP_V
+SET_INFO    BINDLIST.bindSys.procCur     , IDC_SYSINFO_PCUR_V
+SET_INFO    BINDLIST.bindSys.numaNodes   , IDC_SYSINFO_NUMA_V    
+SET_INFO    BINDLIST.bindSys.memPhys     , IDC_SYSINFO_MEM_V
+SET_INFO    BINDLIST.bindSys.memAvail    , IDC_SYSINFO_MEM_AV
+SET_INFO    BINDLIST.bindSys.largePage   , IDC_SYSINFO_LRPG_V
+SET_INFO    BINDLIST.bindSys.largeEnable , IDC_SYSINFO_LRPG_E
+SET_INFO    BINDLIST.bindSys.masksList   , IDC_SYSINFO_NUMA_M     
+
 BIND_STOP
 
 ;---------- GUI binder script for memory and cache screen ( both ia32, x64 ) --;
@@ -1494,7 +1561,7 @@ SET_SWITCH  BINDLIST.setMemAccess + 0 , 0 , IDB_MEMORY_NORMAL
 SET_SWITCH  BINDLIST.setMemAccess + 0 , 2 , IDB_MEMORY_SK_63
 SET_SWITCH  BINDLIST.setMemAccess + 0 , 4 , IDB_MEMORY_SK_4095
 SET_SWITCH  BINDLIST.setMemAccess + 0 , 6 , IDB_MEMORY_SK_CSTM
-SET_SWITCH  BINDLIST.setMemLpages + 1 , 0 , IDB_MEMORY_LP
+SET_SWITCH  BINDLIST.setMemLpages + 0 , 0 , IDB_MEMORY_LP
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 0 , IDB_MEMORY_NO_PF
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 2 , IDB_MEMORY_DEF_PF
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 4 , IDB_MEMORY_MED_PF
@@ -1634,6 +1701,8 @@ ENTRY_CPUID    00000001h             , R_ECX , 30   ; RDRAND
 ENTRY_CPUID    00000001h             , R_ECX , 05   ; VMX
 ENTRY_CPUID    80000001h             , R_ECX , 02   ; SVM
 ENTRY_CPUID    80000001h             , R_EDX , 29   ; x86-64
+ENTRY_CPUID    00000001h             , R_ECX , 12   ; FMA 256
+ENTRY_CPUID    80000008h             , R_EBX , 0    ; CLZERO
 ENTRY_STOP
 endres  
 

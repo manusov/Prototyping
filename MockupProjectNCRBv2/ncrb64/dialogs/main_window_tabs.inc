@@ -179,12 +179,11 @@ jmp .entryDialog
 ;---------- WM_CLOSE handler: close window ------------------------------------;
 
 .wmclose:
-; mov rcx,[r15 + APPDATA.hMain]
-; jrcxz .processed
+mov rcx,[r15 + APPDATA.hMain]
+jrcxz .processed
 xor r9d,r9d
 xor r8d,r8d
 mov edx,WM_CLOSE
-mov rcx,rbx
 call [SendMessage]
 
 ;---------- Exit points -------------------------------------------------------;

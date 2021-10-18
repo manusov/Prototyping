@@ -1,3 +1,8 @@
+; TODO.
+; MAKE SEPARATE INCLUDE FILES = BINARY + TEXT + SCREEN 0 TEXT AT ONE FILE,
+; DON'T USE SEQUENCE "ALL BINARY + ALL TEXT".
+
+
 ;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;        Scan system configuration and store results t system registry.        ;
@@ -81,9 +86,10 @@ stosd
 
 ;------- Build CPU methods features bitmap, for system information screen -----;
 
-xor eax,eax    ; *** DEBUG ***
-stosd          ; *** DEBUG ***
-stosd          ; *** DEBUG ***
+; xor eax,eax    ; *** DEBUG ***
+; stosd          ; *** DEBUG ***
+; stosd          ; *** DEBUG ***
+
 pop esi
 
 ;---------- Measure TSC frequency ---------------------------------------------;
@@ -437,6 +443,31 @@ mov ebp,edi
 
 ;---------- Get ACPI tables list ----------------------------------------------;
 
+push ebx esi edi
+mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edx,[ecx + BINDLIST.bindMadt]
+mov bl,2
+.writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
+mov ax,STR_N_A
+lea edi,[edx + BINDACPI.oem]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDACPI.manufact]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDACPI.oemRev]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDACPI.comment]
+call PoolStringWrite
+add edx,sizeof.BINDACPI
+dec bl
+jnz .writeNotAvl
+pop edi esi ebx
+
 xor eax,eax
 cmp [esi + REGISTRY32.dynaImport._EnumSystemFirmwareTables],eax
 je .skipAcpiList
@@ -480,7 +511,93 @@ cld
 mov ecx,9
 mov esi,edx
 rep movsd
-pop esi ecx
+
+;--- start of addition for show ACPI tables MADT and SRAT at screen 0 ---------;
+
+pop esi
+push esi edi ebx edx ebp
+mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ebx,[ecx + BINDLIST.acpiEnable]
+or byte [ebx],00000001b
+mov ebp,[edx]
+cmp ebp,'APIC'
+je .madtFound
+cmp ebp,'SRAT'
+je .sratFound
+jmp .skipTable
+.madtFound:
+or byte [ebx],00000010b
+lea ebx,[ecx + BINDLIST.bindMadt]
+jmp .copyAcpi
+.sratFound:
+or byte [ebx],00000100b
+lea ebx,[ecx + BINDLIST.bindSrat]
+.copyAcpi:
+lea esi,[edx + 10]
+lea edi,[ebx + BINDACPI.oem]
+mov ecx,6
+call HelperCopyAcpi
+lea esi,[edx + 16]
+lea edi,[ebx + BINDACPI.manufact]
+mov ecx,8
+call HelperCopyAcpi
+lea edi,[ebx + BINDACPI.oemRev]
+mov ax,STR_OEM_REV
+call PoolStringWrite
+mov eax,[edx + 24]
+call HexPrint32
+mov ax,0000 + 'h'
+stosw 
+cmp ebp,'SRAT'
+je .sratParse
+.madtParse:        ; Interpreting ACPI MADT table, get number of APICs
+lea esi,[edx + 44] ; ESI = Pointer to APIC list in the MADT
+mov ecx,[edx + 4]
+add ecx,edx        ; ECX = Table limit
+xor ebp,ebp        ; EBP = Counter of Local APICs (MADT), start clear EBP = 0
+xor edi,edi        ; EDI = Counter of I/O APICs (MADT), start clear EDI = 0
+.madtScanApics:    ; This code for parse ACPI MADT, signature = "APIC"
+mov al,[esi]
+cmp al,0           ; 0 = Local APIC
+jne @f             ; Go skip if not a Local APIC
+test byte [esi + 4],00000001b
+jz @f              ; Go skip if Local APIC disabled
+inc ebp            ; counter+1 if local APIC found
+@@:
+cmp al,1			     ; 1 = I/O APIC
+jne @f				     ; Go skip if not a I/O APIC
+inc edi            ; +1 if found
+@@:
+movzx eax,byte [esi + 1] ; RAX = Size of structure, for skip it and access next
+add esi,eax
+cmp esi,ecx
+jb .madtScanApics  ; Cycle for scan structures in the MADT
+push ebx edi
+lea edi,[ebx + BINDACPI.comment]
+mov ax,STR_LOCAL_APICS
+call PoolStringWrite 
+mov bl,0
+xchg eax,ebp
+call DecimalPrint32
+mov ax,', '
+stosw
+mov ax,STR_IO_APICS
+call PoolStringWrite 
+pop eax
+call DecimalPrint32
+mov al,0
+stosb
+pop ebx
+jmp .skipTable
+.sratParse:
+
+; UNDER CONSTRUCTION.
+
+.skipTable:
+
+;--- end of addition for show ACPI tables MADT and SRAT at screen 0 -----------;
+
+pop ebp edx ebx edi esi ecx
 .skipOneTable:
 add ebx,4
 cmp ebx,ecx
@@ -653,6 +770,64 @@ stosb
 mov ebp,edi
 mov [esi + REGISTRY32.textOs.objectStop],ebp
 
+;---------- Additions for screen 0 information --------------------------------;
+
+mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+add ecx,BINDLIST.bindSys
+lea edi,[ecx + BINDSYS.procTotal]
+mov eax,[esi + REGISTRY32.osData.activeProcessorCount]      ; Processors total
+mov bl,0
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.groups]
+mov eax,[esi + REGISTRY32.osData.activeProcessorGroupCount] ; Processors groups
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.procCur]
+mov eax,[esi + REGISTRY32.osData.systemInfo.dwNumberOfProcessors]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.numaNodes]
+mov eax,[esi + REGISTRY32.osData.numaNodeCount]  ; NUMA domains
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.memPhys]
+mov eax,dword [esi + REGISTRY32.osData.memoryStatusEx.ullTotalPhys + 0]
+mov edx,dword [esi + REGISTRY32.osData.memoryStatusEx.ullTotalPhys + 4]
+mov bl,2
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.memAvail]
+mov eax,dword [esi + REGISTRY32.osData.memoryStatusEx.ullAvailPhys + 0]
+mov edx,dword [esi + REGISTRY32.osData.memoryStatusEx.ullAvailPhys + 4]
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.largePage]
+mov eax,[esi + REGISTRY32.osData.largePageSize]
+xor edx,edx
+mov bl,0FFh
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.largeEnable]
+cmp [esi + REGISTRY32.osData.largePageEnable],0
+mov ax,STR_OS_DISABLED
+je @f
+mov ax,STR_OS_ENABLED
+@@:
+push esi
+call PoolStringWrite
+pop esi
+mov al,0
+stosb
+
+
 ;---------- Build text block for native operating system information screen ---;
 
 mov [esi + REGISTRY32.textNativeOs.objectStart],ebp
@@ -665,9 +840,16 @@ mov [esi + REGISTRY32.textNativeOs.objectStop],ebp
 
 ;---------- Build text block for processor details screen ---------------------;
 
-
+; UNDER CONSTRUCTION.
 
 ;---------- Build text block for topology screen, first block = list ----------;
+
+; TODO. REDESIGN CYCLE WITH MORE EFFECTIVE CPU REGISTERS USAGE,
+; WITHOUT STACK VARIABLES.
+
+TEMP_THREADS   EQU  dword [esp + 00 + 04]
+TEMP_CORES     EQU  dword [esp + 04 + 04]
+TEMP_SOCKETS   EQU  dword [esp + 08 + 04]
 
 mov [esi + REGISTRY32.textTopology1.objectStart],ebp
 mov ebx,[esi + REGISTRY32.listTopology.objectStart]
@@ -682,8 +864,11 @@ xchg ecx,eax
 test ecx,ecx
 jz .error
 mov edi,ebp
-push ebx ecx esi
+
+push ebx ecx esi 0 0 0   ; Include local variables
+
 mov esi,ebx
+
 .scanRelations:
 mov edx,edi
 push ecx
@@ -705,17 +890,26 @@ cmp al,1
 je .relationNuma
 cmp al,0
 je .relationCore
+
 .relationUnknown:
 mov ax,STR_TP_UNKNOWN_ID
 call HelperRelationName 
 jmp .doneRelation
+
 .relationCore:
+inc TEMP_CORES
+inc TEMP_THREADS
+cmp byte [esi + 8],1
+jne @f
+inc TEMP_THREADS
+@@:
 mov ax,STR_TP_CPU_CORE
 call HelperRelationName 
 call HelperAffinity
 mov eax,( STR_TP_HT SHL 16 ) + 2908h
 call HelperParameter8
 jmp .doneRelation
+
 .relationNuma: 
 mov ax,STR_TP_NUMA_NODE
 call HelperRelationName 
@@ -723,6 +917,7 @@ call HelperAffinity
 mov eax,( STR_TP_NODE SHL 16 ) + 2908h
 call HelperParameter32
 jmp .doneRelation
+
 .relationCache:
 mov ax,STR_TP_L
 call HelperRelationName
@@ -764,22 +959,62 @@ pop eax
 call DecimalPrint32
 pop esi ecx
 jmp .doneRelation 
+
 .relationPackage:
+inc TEMP_SOCKETS
 mov ax,STR_TP_CPU_PACKAGE
 call HelperRelationName 
 call HelperAffinity
+
 .doneRelation:
 add esi,24
 pop edi
 dec ecx
 jnz .scanRelations
+
+;---------- Support screen 0 threads, cores, sockets --------------------------;
+
+mov esi,[esp + 12]
+lea ebx,[esi + REGISTRY32.sysParms.summaryTopology]
+pop dword [ebx + SUMMARYTOPOLOGY.threads]
+pop dword [ebx + SUMMARYTOPOLOGY.cores]
+pop dword [ebx + SUMMARYTOPOLOGY.sockets]
+
+;---------- End of support screen 0 threads, cores, sockets -------------------;
+
 pop esi ecx ebx
+
 mov al,0
 stosb
 mov ebp,edi
 mov [esi + REGISTRY32.textTopology1.objectStop],ebp
 
 ;---------- Build text block for topology screen, second block = summary ------;
+
+; TODO. OPTIMIZE BY ELIMINATE DUAL ADDRESS CALCULATION: FOR "N/A" AND FOR VALUES
+push esi ecx
+mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edx,[ecx + BINDLIST.bindCache]
+mov ax,STR_N_A
+lea edi,[edx + BINDCACHE.l1c]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDCACHE.l1d]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDCACHE.l2u]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDCACHE.l3u]
+push eax
+call PoolStringWrite
+pop eax
+lea edi,[edx + BINDCACHE.l4u]
+call PoolStringWrite
+pop ecx esi
 
 mov [esi + REGISTRY32.textTopology2.objectStart],ebp
 push esi
@@ -809,8 +1044,11 @@ mov ecx,[esi + REGISTRY32.listTopologyEx.objectStop]
 test ecx,ecx
 jz .noTopologyEx
 mov edi,ebp
-push ebx ecx esi
+
+push ebx ecx esi 0 0 0
+
 mov esi,ebx
+
 .scanRelationsEx:
 mov edx,edi
 push ecx
@@ -834,11 +1072,19 @@ cmp al,1
 je .relationNumaEx
 cmp al,0
 je .relationCoreEx
+
 .relationUnknownEx:
 mov ax,STR_TP_UNKNOWN_ID
 call HelperRelationName 
 jmp .doneRelationEx
+
 .relationCoreEx:
+inc TEMP_CORES
+inc TEMP_THREADS
+cmp byte [esi + 8],1
+jne @f
+inc TEMP_THREADS
+@@:
 mov ax,STR_TP_CPU_CORE
 call HelperRelationName 
 mov al,32
@@ -848,6 +1094,7 @@ call HelperParameter8
 mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
 call HelperParameter8
 jmp .doneRelationEx
+
 .relationNumaEx: 
 mov ax,STR_TP_NUMA_NODE
 call HelperRelationName 
@@ -898,7 +1145,9 @@ pop eax
 call DecimalPrint32
 pop esi ecx
 jmp .doneRelationEx 
+
 .relationPackageEx:
+inc TEMP_SOCKETS
 mov ax,STR_TP_CPU_PACKAGE
 call HelperRelationName 
 mov al,32
@@ -908,22 +1157,68 @@ call HelperParameter8
 mov eax,( STR_ET_EFFICIENCY SHL 16 ) + 3209h
 call HelperParameter8
 jmp .doneRelationEx
+
 .relationGroupEx: 
 mov ax,STR_ET_GROUP
 call HelperRelationName 
 mov al,32
 call HelperAffinityMask
+
 .doneRelationEx:
 pop edi
 add esi,[esi + 04]
 cmp esi,ecx
 jb .scanRelationsEx
+
+;---------- Support screen 0 threads, cores, sockets ( variables ) ------------;
+
+mov esi,[esp + 12]
+lea ebx,[esi + REGISTRY32.sysParms.summaryTopology]
+pop ecx
+jecxz @f
+mov [ebx + SUMMARYTOPOLOGY.threads],ecx
+@@:
+pop ecx
+jecxz @f
+mov [ebx + SUMMARYTOPOLOGY.cores],ecx
+@@:
+pop ecx
+jecxz @f
+mov [ebx + SUMMARYTOPOLOGY.sockets],ecx
+@@:
+
+;---------- End of support screen 0 threads, cores, sockets -------------------;
+
 pop esi ecx ebx
 mov al,0
 stosb
 mov ebp,edi
 mov [esi + REGISTRY32.textTopologyEx1.objectStop],ebp
+
 .noTopologyEx:
+
+;---------- Support screen 0 threads, cores, sockets ( text ) -----------------;
+
+push ebx ecx
+mov edx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[esi + REGISTRY32.sysParms.summaryTopology]
+mov bl,0
+lea edi,[edx + BINDLIST.bindTopology.threads]
+mov eax,[ecx + SUMMARYTOPOLOGY.threads]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[edx + BINDLIST.bindTopology.cores]
+mov eax,[ecx + SUMMARYTOPOLOGY.cores]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[edx + BINDLIST.bindTopology.sockets]
+mov eax,[ecx + SUMMARYTOPOLOGY.sockets]
+call DecimalPrint32
+mov al,0
+stosb
+pop ecx ebx
 
 ;--- Build text block for extended topology screen, second block = summary ----;
 
@@ -959,9 +1254,10 @@ mov esi,edx
 lodsd
 test eax,eax
 jnz .numaExt
+
 .numaStd:
 cmp esi,ecx
-jae .numaDone
+jae .numaDoneStd
 lodsd
 call HelperNumberString
 lea edx,[ebp - 82 - 02]
@@ -974,9 +1270,46 @@ call SizePrint64
 add esi,16
 inc ebx
 jmp .numaStd
-.numaExt:
+
+.numaDoneStd:
+mov al,0
+stosb
+push edi
+mov edx,[Registry]
+mov esi,[edx + REGISTRY32.listNuma.objectStart]
+lodsd  ; this for ADD ESI,4
+mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+add edi,BINDLIST.bindSys.masksList
+xor edx,edx
+.masksStd:
 cmp esi,ecx
 jae .numaDone
+test edx,edx
+jz .firstMaskStd
+cmp edx,4
+jb .nextMaskStd
+ja .skipMaskStd
+mov eax,', ..'
+stosd
+mov al,'.'
+stosb
+jmp .skipMaskStd
+.nextMaskStd:
+mov ax,', '
+stosw
+.firstMaskStd:
+mov eax,[esi + 04]
+call HexPrint32
+mov al,'h'
+stosb
+.skipMaskStd:
+add esi,20
+inc edx
+jmp .masksStd
+
+.numaExt:
+cmp esi,ecx
+jae .numaDoneExt
 lodsd
 call HelperNumberString
 lea edx,[ebp - 82 - 02]
@@ -989,10 +1322,47 @@ mov edx,[esi + 20]
 call SizePrint64
 add esi,24
 jmp .numaExt
-.numaDone:
-pop esi
+
+.numaDoneExt:
 mov al,0
 stosb
+push edi
+mov edx,[Registry]
+mov esi,[edx + REGISTRY32.listNuma.objectStart]
+lodsd  ; this for ADD ESI,4
+mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+add edi,BINDLIST.bindSys.masksList
+xor edx,edx
+.masksExt:
+cmp esi,ecx
+jae .numaDone
+test edx,edx
+jz .firstMaskExt
+cmp edx,4
+jb .nextMaskExt
+ja .skipMaskExt 
+mov eax,', ..'
+stosd
+mov al,'.'
+stosb
+jmp .skipMaskExt 
+.nextMaskExt:
+mov ax,', '
+stosw
+.firstMaskExt:
+mov eax,[esi + 04]
+call HexPrint32
+mov al,'h'
+stosb
+.skipMaskExt:
+add esi,28
+inc edx
+jmp .masksExt
+
+.numaDone:
+mov al,0
+stosb
+pop edi esi
 mov ebp,edi
 mov [esi + REGISTRY32.textNuma.objectStop],ebp
 .noNuma:
@@ -1269,16 +1639,17 @@ stosd
 mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
 stosd
 
-;---------- ACPI information --------------------------------------------------;
+;---------- Skip some screen 0 information ------------------------------------;
 
-add edi, 1 + ( sizeof.BINDACPI * 2 )      ; RESERVED
+add edi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + sizeof.BINDSYS     ; RESERVED
 
 ;---------- Memory and cache benchmarks methods availability bitmap -----------;
 
-mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 4]
-stosd
+; mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 0]
+; stosd
+; mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 4]
+; stosd
+
 pop esi
 
 ;---------- Text blocks for viewers -------------------------------------------;
@@ -1328,7 +1699,179 @@ stosd       ; Affinized CPUID dump
 xor eax,eax
 stosd
 
-; ...
+;---------- Data for memory and cache benchmark setup -------------------------;
+; TODO. Move this to separate include file with subroutine.
+; TODO. Remove "magic numbers" use names for bits positions.
+
+mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+
+;---------- Benchmark methods based on CPU instructions -----------------------;
+
+mov eax,dword [esi + REGISTRY32.cpuData.extractedFeaturesBitmap]
+mov edx,dword [esi + REGISTRY32.cpuData.extractedContextBitmap]
+mov ebx,00000555h       ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
+mov ebp,00010000h
+test al,00000001b
+jz @f
+or ebx,00015000h        ; MMX (3) 
+@@:
+test al,00000010b
+jz @f
+or ebx,00540000h        ; SSE (3) 
+@@:
+test al,10000000b
+jz @f
+test dl,00000010b
+jz @f
+or ebx,15000000h        ; AVX (3) 
+@@:
+test ah,00000010b
+jz @f
+mov cl,dl
+and cl,00011100b
+cmp cl,00011100b
+jne @f
+or ebx,40000000h        ; AVX512 (3), FMA 512, VGATHERQPD 512, VSCATTERQPD 512
+or ebp,00001445h 
+@@:
+test ah,01000000b
+jz @f
+bts ebp,4               ; FMA 256
+@@:
+test ah,00000001b
+jz @f
+bts ebp,8               ; VGATHERQPD 256
+@@:
+test ah,10000000b
+jz @f
+bts ebp,14              ; CLZERO (AMD)
+@@:
+test ah,00000100b
+jz @f
+bts ebp,18              ; Latency by RDRAND
+@@:
+
+mov ecx,0C0000000h
+test ebx,ecx
+jnz @f
+mov ecx,03000000h
+test ebx,ecx
+jnz @f
+mov ecx,00C00000h
+test ebx,ecx
+jnz @f
+mov ecx,00003000h
+test ebx,ecx
+jnz @f
+mov ecx,00000003h
+@@:
+or ebx,ecx
+mov [edi + BINDLIST.setMemMethod + 0],ebx
+mov [edi + BINDLIST.setMemMethod + 4],ebp
+
+;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
+; Plus custom block size
+
+lea ecx,[esi + REGISTRY32.sysParms.summaryCache]
+mov ebx,010100000000b      ; Custom block, DRAM
+xor eax,eax
+cdq
+mov ebp,dword [ecx + SUMMARYCACHE.sizeL1D + 0]
+or ebp,dword [ecx + SUMMARYCACHE.sizeL1D + 4]
+jz @f 
+or bl,00000011b            ; L1 data cache
+mov eax,dword [ecx + SUMMARYCACHE.sizeL1D + 0]
+mov edx,dword [ecx + SUMMARYCACHE.sizeL1D + 4]
+@@:
+mov ebp,dword [ecx + SUMMARYCACHE.sizeL2U + 0]
+or ebp,dword [ecx + SUMMARYCACHE.sizeL2U + 4]
+jz @f
+or bl,00000100b            ; L2 unified cache
+mov ebp,eax
+or ebp,edx
+jnz @f
+mov eax,dword [ecx + SUMMARYCACHE.sizeL2U + 0]
+mov edx,dword [ecx + SUMMARYCACHE.sizeL2U + 4]
+or bl,00001000b
+@@:
+mov ebp,dword [ecx + SUMMARYCACHE.sizeL3U + 0]
+or ebp,dword [ecx + SUMMARYCACHE.sizeL3U + 4]
+jz @f
+or bl,00010000b            ; L3 unified cache
+mov ebp,eax
+or ebp,edx
+jnz @f
+mov eax,dword [ecx + SUMMARYCACHE.sizeL3U + 0]
+mov edx,dword [ecx + SUMMARYCACHE.sizeL3U + 4]
+or bl,00100000b
+@@:
+mov ebp,dword [ecx + SUMMARYCACHE.sizeL4U + 0]
+or ebp,dword [ecx + SUMMARYCACHE.sizeL4U + 4]
+jz @f
+or bl,00010000b            ; L4 unified cache
+mov ebp,eax
+or ebp,edx
+jnz @f
+mov eax,dword [ecx + SUMMARYCACHE.sizeL4U + 0]
+mov edx,dword [ecx + SUMMARYCACHE.sizeL4U + 4]
+or bl,10000000b
+@@:
+mov ebp,eax
+or ebp,edx
+jnz @f
+or bh,00001000b
+mov eax,32768
+@@:
+mov dword [edi + BINDLIST.setMemObject],ebx
+mov dword [edi + BINDLIST.setBlkCustom + 0],eax
+mov dword [edi + BINDLIST.setBlkCustom + 4],edx
+
+;---------- Benchmark options: SMP/SMT ----------------------------------------;
+
+lea ecx,[esi + REGISTRY32.sysParms.summaryTopology]
+xor ebx,ebx
+mov eax,[ecx + SUMMARYTOPOLOGY.threads]
+cmp eax,2
+jb @f
+inc ebx           ; Parallel threads (SMP)
+@@:
+shr eax,1
+jz @f
+cmp eax,[ecx + SUMMARYTOPOLOGY.cores]
+jne @f
+or bl,00000100b   ; Hyper threading (SMT)
+@@:
+lea ecx,[esi + REGISTRY32.osData]
+cmp [ecx + OSDATA.activeProcessorGroupCount],2
+jb @f
+or bl,00010000b   ; Processor groups (PG)
+@@:
+mov word [edi + BINDLIST.setMemSmp],bx
+
+;---------- Benchmark option: NUMA --------------------------------------------;
+
+mov bx,00000010b
+cmp [ecx + OSDATA.numaNodeCount],2
+jb @f
+mov bl,01110101b   ; Unaware, Single domain, optimal, non-optimal
+@@:
+mov word [edi + BINDLIST.setMemNuma],bx
+
+;---------- Benchmark option: Large Pages -------------------------------------;
+
+xor ebx,ebx
+cmp [ecx + OSDATA.largePageEnable],ebx
+je @f
+inc ebx
+@@:
+mov word [edi + BINDLIST.setMemLpages],bx
+
+;---------- Benchmark options, unconditionally set ----------------------------;
+
+mov word [edi + BINDLIST.setMemAccess],00000010b  ; Access step
+mov word [edi + BINDLIST.setMemPref],00000010b    ; 01010101b  ; Prefetch modes
+mov word [edi + BINDLIST.setMemMeas],11010101b    ; Measure precision modes
+mov word [edi + BINDLIST.setMemPix],00010111b     ; Pixels approximation modes
 
 ;---------- Exit points -------------------------------------------------------;
 
@@ -2090,6 +2633,7 @@ jmp ParameterEntry
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;
+;          EDI = Destination text buffer                                       ;
 ;          ECX = Entries count at topology information buffer                  ;  
 ;          AL  = Cache level                                                   ;  
 ;          AH  = Cache type                                                    ;    
@@ -2099,10 +2643,12 @@ jmp ParameterEntry
 HelperCacheSummary:
 push ecx esi 0 0 ebp
 mov ebp,esp
+push eax
 test ecx,ecx
 jz .nodata
 movzx ebx,ah
 xchg edx,eax
+
 .scanCaches:
 cmp dword [esi + 04],2
 jne .done
@@ -2116,6 +2662,7 @@ inc dword [ebp + 08]
 .done:
 add esi,24
 loop .scanCaches
+
 cmp dword [ebp + 08],0
 je .nodata
 mov bh,dl
@@ -2151,8 +2698,71 @@ mov eax,[ebp + 08]
 mov bl,0
 call DecimalPrint32
 pop edi
+
+;---------- additions for screen 0 --------------------------------------------;
+
+pop eax
+push eax
+call HelperSummaryCache
+
 .nodata:
-pop ebp eax eax esi ecx
+pop eax ebp eax eax esi ecx
+ret
+
+HelperSummaryCache:
+push edi
+mov ebx,[Registry]
+mov ecx,[ebx + REGISTRY32.allocatorBindBuffer.objectStart]
+add ebx,REGISTRY32.sysParms.summaryCache
+add ecx,BINDLIST.bindCache
+lea esi,[ebx + SUMMARYCACHE.sizeL1C]
+lea edi,[ecx + BINDCACHE.l1c]  
+mov dl,00000001b
+cmp ax,0101h
+je .detected 
+lea esi,[ebx + SUMMARYCACHE.sizeL1D]
+lea edi,[ecx + BINDCACHE.l1d]  
+mov dl,00000010b
+cmp ax,0201h
+je .detected 
+lea esi,[ebx + SUMMARYCACHE.sizeL2U]
+lea edi,[ecx + BINDCACHE.l2u]  
+mov dl,00000100b
+cmp ax,0002h
+je .detected 
+lea esi,[ebx + SUMMARYCACHE.sizeL3U]
+lea edi,[ecx + BINDCACHE.l3u]  
+mov dl,00001000b
+cmp ax,0003h
+je .detected 
+lea esi,[ebx + SUMMARYCACHE.sizeL4U]
+lea edi,[ecx + BINDCACHE.l4u]  
+mov dl,00010000b
+cmp ax,0004h
+je .detected 
+jmp .nodata
+.detected:
+or [ecx + BINDCACHE.cacheBitmap],dl
+mov eax,[ebp + 08]
+mov [esi + 8],eax
+mov eax,[ebp + 04]
+xor edx,edx
+mov [esi + 0],eax
+mov [esi + 4],edx
+mov bl,0FFh
+mov eax,[ebp + 04]
+call SizePrint64
+mov al,' '
+stosb
+mov ax,STR_TP_X
+call PoolStringWrite
+mov eax,[ebp + 08]
+mov bl,0
+call DecimalPrint32
+mov al,0
+stosb
+.nodata:
+pop edi
 ret
 
 ;---------- Get topological information ---------------------------------------;
@@ -2295,6 +2905,7 @@ ret
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;
+;          EDI = Destination text buffer                                       ;
 ;          ECX = Topology information buffer address limit                     ;  
 ;          AL  = Cache level                                                   ;  
 ;          AH  = Cache type                                                    ;    
@@ -2304,6 +2915,7 @@ ret
 HelperCacheSummaryEx:
 push ecx esi 0 0 ebp
 mov ebp,esp
+push eax
 test ecx,ecx
 jz .nodata
 movzx ebx,ah
@@ -2358,8 +2970,15 @@ mov eax,[ebp + 08]
 mov bl,0
 call DecimalPrint32
 pop edi
+
+;---------- additions for screen 0 --------------------------------------------;
+
+pop eax
+push eax
+call HelperSummaryCache
+
 .nodata:
-pop ebp eax eax esi ecx
+pop eax ebp eax eax esi ecx
 ret
 
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
@@ -2461,3 +3080,33 @@ movzx ecx,al
 mov eax,[ebx + ecx]
 jmp HexPrint32
 
+;--- Copy fixed size string and write last 0, verify chars printability -------;
+;                                                                              ;
+; INPUT:   RSI = Source string                                                 ;
+;          RDI = Destination string                                            ;
+;          RCX = String size                                                   ;
+;                                                                              ;
+; OUTPUT:  RSI = Updated by copy                                               ;
+;          RDI = Updated by copy                                               ;
+;                                                                              ;
+;------------------------------------------------------------------------------; 
+
+HelperCopyAcpi:
+lodsb
+cmp al,0
+je .space
+cmp al,' '
+jb .change
+cmp al,'z'
+jbe .store
+.change:
+mov al,'.'
+jmp .store
+.space:
+mov al,' '
+.store:
+stosb
+loop HelperCopyAcpi 
+mov al,0
+stosb
+ret
