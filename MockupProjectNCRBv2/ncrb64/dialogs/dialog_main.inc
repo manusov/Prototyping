@@ -21,8 +21,12 @@ mov PARM_HWNDDLG,rcx                 ; Save input parameters to shadow
 mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
-mov r15,[Registry]                   ; R15 = Pointer to global registry
-add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData 
+
+;mov r15,[Registry]                   ; R15 = Pointer to global registry
+;add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData
+
+lea r15,[APP_DATA] 
+
 lea rbx,[r15 + APPDATA.tabCtrlItem]  ; RBX = Pointer to tab item structure
 lea rsi,[r15 + APPDATA.hTabDlg]      ; RSI = Pointer to sheets handles array
 
@@ -207,7 +211,7 @@ mov r8d,ICON_SMALL                   ; R8  = Parm#3 = WPARAM = Icon type
 mov edx,WM_SETICON                   ; RDX = Parm#2 = Message 
 mov rcx,PARM_HWNDDLG                 ; RCX = Parm#1 = Window handle
 call [SendMessage]                   ; Set main window icon
-lea rdx,[ProgName]                   ; RDX = Parm#2 = Pointer to text string
+lea rdx,[PROGRAM_NAME]               ; RDX = Parm#2 = Pointer to text string
 mov rcx,PARM_HWNDDLG                 ; RCX = Parm#1 = Window handle
 call [SetWindowText]                 ; Set main window text title
 jmp .processed
@@ -225,8 +229,8 @@ jne .noabout
 ;---------- "About" message box and wait user input ---------------------------;
 
 mov r9d,MB_ICONINFORMATION   ; R9  = Parm#4 = Message box icon type = Info
-lea r8,[AboutCap]            ; R8  = Parm#3 = Pointer to caption
-lea rdx,[AboutText]          ; RDX = Parm#2 = Pointer to "About" string
+lea r8,[ABOUT_CAP]           ; R8  = Parm#3 = Pointer to caption
+lea rdx,[ABOUT_NAME]         ; RDX = Parm#2 = Pointer to "About" string
 mov rcx,PARM_HWNDDLG         ; RCX = Parm#1 = Parent window handle
 call [MessageBoxA]
 jmp .processed

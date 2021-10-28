@@ -1,3 +1,10 @@
+
+
+; UNDER CONSTRUCTION.
+; TODO. ERROR REPORTING.
+; TODO. LABELS AND COMMENTS STYLE.
+
+
 ;--- Start measurement session ------------------------------------------------;
 ; Analysing user settings and system configuration, build test scenario        ;
 ; Main actions is:                                                             ;
@@ -41,112 +48,136 @@
 
 SessionStart:
 
-; UNDER CONSTRUCTION
+;---------- Build IPB ( Input Parameters Block ) for benchmarking -------------; 
+; IPB = f ( UPB, SYSPARMS ),  IPB content depends on:
+; 1) UPB ( User Parameters Block ), user settings by options widgets.
+; 2) SYSPARMS ( System Parameters ), platform configuration, detected when
+;    NCRB application starts.
 
-;;---------- Build IPB ( Input Parameters Block ) for benchmarking -------------; 
-;; IPB = f ( UPB, SYSPARMS ),  IPB content depends on:
-;; 1) UPB ( User Parameters Block ), user settings by options widgets.
-;; 2) SYSPARMS ( System Parameters ), platform configuration, detected when
-;;    NCRB application starts.
-;
-;mov rax,[Registry]
-;lea rsi,[rax + REGISTRY64.upb]       ; RSI = Pointer to user parameters block (UPB)
-;lea rdi,[rax + REGISTRY64.ipb]       ; RDI = Pointer to input parameters block (IPB)  
-;lea rbx,[rax + REGISTRY64.sysParms]  ; RBX = Pointer for sys. info detected at NCRB start 
-;
-;;---------- Setup benchmark method --------------------------------------------; 
-;; assembler routine = f ( user settings method, test object, system config. )
-;; test object = f ( user settings object )
-;
-;mov eax,[rsi + UPB.optionAsm]
-;mov edx,[rsi + UPB.optionTarget]
-;cmp eax,ASM_ARGUMENT_LIMIT
-;ja .limit
-;cmp edx,TARGET_LIMIT
-;ja .limit
-;
-;;---------- Select CPU-specific non-temporal optimization ---------------------;
-;
-;mov ecx,[rbx + SYSPARMS.nonTemporalRead]
-;inc ecx
-;imul ecx,ecx,AM_BYTE_COUNT
-;
-;;---------- Select prefetch distance for non-temporal optimization ------------;
-;
-;push rax
-;mov [rdi + IPB.updatedDistance],PD_NOT_USED
-;mov eax,[rsi + UPB.optionDistance]
-;cmp eax,PD_DEFAULT
-;jne @f
-;mov [rdi + IPB.updatedDistance],eax
-;@@:
-;cmp eax,PD_MEDIUM
-;jne @f
-;mov [rdi + IPB.updatedDistance],eax
-;add ecx,AM_BYTE_COUNT * 4
-;@@:
-;cmp eax,PD_LONG
-;jne @f
-;mov [rdi + IPB.updatedDistance],eax
-;add ecx,AM_BYTE_COUNT * 8
-;@@:
-;pop rax
-;
-;;--- Remove prefetch distance option if associated methods not detected -------;
-;
-;cmp eax,READ_SSE128_MODE
-;je @f
-;cmp eax,READ_AVX256_MODE
-;je @f
-;cmp eax,READ_AVX512_MODE
-;je @f
-;mov [rdi + IPB.updatedDistance],PD_NOT_USED
-;@@: 
-;
-;; Remove non-temporal optimization if object type not a DRAM
-;cmp edx,TARGET_DRAM
-;je @f
-;mov [rdi + IPB.updatedDistance],PD_NOT_USED  ; Remove prefetch distance option if not a DRAM
-;xor ecx,ecx
-;@@:
-;movzx eax,byte [AM_Selector + rax + rcx]
-;jmp @f
-;.limit:
-;xor eax,eax
-;@@:
-;mov [rdi + IPB.updatedAsm],eax       ; Select assembler method ID
-;
-;; Setup tested object
-;mov [rdi + IPB.updatedTarget],edx    ; Select target object (Cache/DRAM/Custom)
-;
-;; Setup asm. routine address, set address and memory dump region, 
-;; note here EAX valid after previous fragment
-;push rbx
-;cmp eax,LATENCY_MODE
-;jae .latencyDump          ; Go if measurement mode = LATENCY
-;push rax                  ; this branch for bandwidth patterns
-;call GetBandwidthPattern  
-;pop rax
-;call GetBandwidthDump
-;jmp .doneDump
-;.latencyDump:             ; this branch for latency patterns
-;sub eax,LATENCY_MODE      ; first latency method ID must be 0
-;push rax
-;call GetLatencyPattern
-;mov [rdi + IPB.walkRoutine],rax  
-;pop rax
-;call GetLatencyDump
-;.doneDump:
-;mov [rdi + IPB.patternRoutine],rbx     ; Pointer to performance pattern 
-;mov [rdi + IPB.dumpMethodStart],rax    ; Pointer to hex-dumped part of pattern
-;mov [rdi + IPB.dumpMethodLength],edx   ; Hex-dumped part length
-;shl ecx,3                              ; convert bytes to bits, means * 8
-;mov [rdi + IPB.operandWidth],ecx       ; Select instruction operand width
-;pop rbx
-;
-;; Setup number of threads, use platform total number of threads if auto
-;mov eax,1
-;cmp [rsi + UPB.OptionParallel],PARALLEL_USED
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov r15,[Registry]
+
+; lea rsi,[r15 + REGISTRY64.memUpb]    ; RSI = Pointer to user parameters block (UPB)
+lea rsi,[MEM_UPB]
+
+
+; lea rdi,[r15 + REGISTRY64.memIpb]    ; RDI = Pointer to input parameters block (IPB)
+lea rdi,[MEM_IPB]  
+
+
+lea rbx,[SYS_PARMS]  ; RBX = Pointer for sys. info detected at NCRB start 
+
+;---------- Setup benchmark method --------------------------------------------; 
+; assembler routine = f ( user settings method, test object, system config. )
+; test object = f ( user settings object )
+
+mov eax,[rsi + MEMUPB.optionAsm]
+mov edx,[rsi + MEMUPB.optionTarget]
+cmp eax,ASM_ARGUMENT_LIMIT
+ja .limit
+cmp edx,TARGET_LIMIT
+ja .limit
+
+;---------- Select CPU-specific non-temporal optimization ---------------------;
+; TODO. This step non-functional, remove/replace.
+
+; mov ecx,[rbx + SYSPARMS.nonTemporalRead]
+; inc ecx
+; imul ecx,ecx,AM_BYTE_COUNT
+xor ecx,ecx
+
+;---------- Select prefetch distance for non-temporal optimization ------------;
+
+push rax
+mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED
+mov eax,[rsi + MEMUPB.optionDistance]
+cmp eax,PD_DEFAULT
+jne @f
+mov [rdi + MEMIPB.updatedDistance],eax
+@@:
+cmp eax,PD_MEDIUM
+jne @f
+mov [rdi + MEMIPB.updatedDistance],eax
+add ecx,AM_BYTE_COUNT * 4
+@@:
+cmp eax,PD_LONG
+jne @f
+mov [rdi + MEMIPB.updatedDistance],eax
+add ecx,AM_BYTE_COUNT * 8
+@@:
+pop rax
+
+;--- Remove prefetch distance option if associated methods not detected -------;
+
+cmp eax,READ_SSE128_MODE
+je @f
+cmp eax,READ_AVX256_MODE
+je @f
+cmp eax,READ_AVX512_MODE
+je @f
+mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED
+@@: 
+
+; Remove non-temporal optimization if object type not a DRAM
+cmp edx,TARGET_DRAM
+je @f
+mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED  ; Remove prefetch distance option if not a DRAM
+xor ecx,ecx
+@@:
+
+; TODO. Support this logic
+; movzx eax,byte [AM_Selector + rax + rcx]
+
+jmp @f
+.limit:
+xor eax,eax
+@@:
+mov [rdi + MEMIPB.updatedAsm],eax       ; Select assembler method ID
+
+; Setup tested object
+mov [rdi + MEMIPB.updatedTarget],edx    ; Select target object (Cache/DRAM/Custom)
+
+; Setup asm. routine address, set address and memory dump region, 
+; note here EAX valid after previous fragment
+push rbx
+cmp eax,LATENCY_MODE
+jae .latencyDump          ; Go if measurement mode = LATENCY
+push rax                  ; this branch for bandwidth patterns
+
+; TODO. Add support non-temporal.
+
+call GetBandwidthTemporalPattern  
+pop rax
+
+; TODO. Add support non-temporal.
+
+call GetBandwidthTemporalDump
+jmp .doneDump
+.latencyDump:             ; this branch for latency patterns
+sub eax,LATENCY_MODE      ; first latency method ID must be 0
+push rax
+call GetLatencyPattern
+mov [rdi + MEMIPB.walkRoutine],rax  
+pop rax
+call GetLatencyDump
+.doneDump:
+mov [rdi + MEMIPB.patternRoutine],rbx     ; Pointer to performance pattern 
+mov [rdi + MEMIPB.dumpMethodStart],rax    ; Pointer to hex-dumped part of pattern
+mov [rdi + MEMIPB.dumpMethodLength],edx   ; Hex-dumped part length
+shl ecx,3                                 ; convert bytes to bits, means * 8
+mov [rdi + MEMIPB.operandWidth],ecx       ; Select instruction operand width
+pop rbx
+
+
+; TODO. Labels convention.
+; TODO. Comments convention.
+; TODO. Fix NUMA support.
+; TODO. Fix Thread Count support.
+
+
+; Setup number of threads, use platform total number of threads if auto
+mov eax,1
+;cmp [rsi + MEMUPB.OptionParallel],PARALLEL_USED
 ;jne .L5
 ;mov rcx,[rbx + SYSPARMS.NumaNodesMasks]
 ;mov edx,1
@@ -171,56 +202,64 @@ SessionStart:
 ;je .L8     ; Skip divide if threads count = 1
 ;shr eax,1  ; Threads count / 2  if Hyper-Threading supported but not used
 ;.L8:
-;mov [rdi + IPB.UpdatedThreads],eax  ; Setup number of threads
-;
-;; Setup Hyper-Threading mode, 
-;; plus, see above dependences on HT for threads count
-;mov eax,[rsi + UPB.OptionHT]
-;mov [rdi + IPB.UpdatedHT],eax       ; Copy Hyper-Threading option (UPB to IPB)
-;
-;; Setup Processor Group mode, 
-;; plus, see above dependences on PG for threads count
-;mov eax,[rsi + UPB.OptionPG]
-;mov [rdi + IPB.UpdatedPG],eax       ; Copy Processor Groups option 
-;
-;; Setup NUMA mode, plus, see above dependences on NUMA for threads count
-;mov eax,[rsi + UPB.OptionNUMA]
-;mov [rdi + IPB.UpdatedNUMA],eax     ; Copy NUMA option
-;
-;; Setup Large Page mode
-;mov eax,[rsi + UPB.OptionLP]
-;mov [rdi + IPB.UpdatedLP],eax       ; Copy Large Pages option
-;
-;; Setup measurement precision ( calibration repeats ) mode
-;mov eax,[rsi + UPB.OptionMeasure]
-;mov [rdi + IPB.UpdatedMeasure],eax
-;lea rcx,[BenchmarksRepeats]  ; select measurements constants
-;; Note for "Run simple" mode, no differentiation adaptive/non-adaptive,
-;; see also gui\drawsessionstart.inc, gui\drawsessionthread.inc
-;; for adaptive modes support
-;cmp al,MEASURE_BRIEF
-;je .L10                      ; Go with constants for fast (non precision) mode 
-;cmp al,MEASURE_B_ADAPTIVE
-;je .L10                      ; Go with constants for fast (non precision) mode
-;add rcx,REPEAT_SERIES_BYTES  ; use constants for slow (precision) mode
-;.L10:
-;mov eax,[rdi + IPB.UpdatedTarget]
-;mov eax,[rcx + rax * REPEAT_ENTRY_BYTES]  ; note after this, bits RAX.63-32 = 0
-;cmp [rdi + IPB.UpdatedAsm],LATENCY_MODE
-;jb .L13
-;xor edx,edx
-;mov ecx,50     ; Important DIVISOR CONSTANT for latency mode
-;div ecx        ; If Latency mode, make measurement repeats / 50 ,
-;.L13:          ; note after this, bits RAX.63-32 = 0
-;mov [rdi + IPB.MeasureRepeats],rax  ; Setup number of measurement repeats
-;; Note this measurement repeats value can be updated in the adaptive modes,
-;; for drawings, at subroutine gui\drawsessionstart.inc,
-;; at this subroutine sessionstart.inc set default approximation only 
-;
-;; Setup measurement scenario as block sizes sequence,
-;; for "Run simple" mode required one block size only 
-;; Detect L1 cache
-;mov eax,[rdi + IPB.UpdatedTarget]
+mov [rdi + MEMIPB.updatedThreads],eax  ; Setup number of threads
+
+; Setup Hyper-Threading mode, 
+; plus, see above dependences on HT for threads count
+mov eax,[rsi + MEMUPB.optionHT]
+mov [rdi + MEMIPB.updatedHT],eax       ; Copy Hyper-Threading option (UPB to IPB)
+
+; Setup Processor Group mode, 
+; plus, see above dependences on PG for threads count
+mov eax,[rsi + MEMUPB.optionPG]
+mov [rdi + MEMIPB.updatedPG],eax       ; Copy Processor Groups option 
+
+; Setup NUMA mode, plus, see above dependences on NUMA for threads count
+mov eax,[rsi + MEMUPB.optionNUMA]
+mov [rdi + MEMIPB.updatedNUMA],eax     ; Copy NUMA option
+
+; Setup Large Page mode
+mov eax,[rsi + MEMUPB.optionLP]
+mov [rdi + MEMIPB.updatedLP],eax       ; Copy Large Pages option
+
+; Setup measurement precision ( calibration repeats ) mode
+mov eax,[rsi + MEMUPB.optionMeasure]
+mov [rdi + MEMIPB.updatedMeasure],eax
+lea rcx,[BenchmarksRepeats]  ; select measurements constants
+
+
+; TODO. Actualize next comments.
+; TODO. Data labels convention: dataLabel or DataLabel ? See also vectorBrief.
+
+
+; Note for "Run simple" mode, no differentiation adaptive/non-adaptive,
+; see also gui\drawsessionstart.inc, gui\drawsessionthread.inc
+; for adaptive modes support
+
+
+cmp al,MEASURE_BRIEF
+je .L10                      ; Go with constants for fast (non precision) mode 
+cmp al,MEASURE_B_ADAPTIVE
+je .L10                      ; Go with constants for fast (non precision) mode
+add rcx,REPEAT_SERIES_BYTES  ; use constants for slow (precision) mode
+.L10:
+mov eax,[rdi + MEMIPB.updatedTarget]
+mov eax,[rcx + rax * REPEAT_ENTRY_BYTES]  ; note after this, bits RAX.63-32 = 0
+cmp [rdi + MEMIPB.updatedAsm],LATENCY_MODE
+jb .L13
+xor edx,edx
+mov ecx,50     ; Important DIVISOR CONSTANT for latency mode
+div ecx        ; If Latency mode, make measurement repeats / 50 ,
+.L13:          ; note after this, bits RAX.63-32 = 0
+mov [rdi + MEMIPB.measureRepeats],rax  ; Setup number of measurement repeats
+; Note this measurement repeats value can be updated in the adaptive modes,
+; for drawings, at subroutine gui\drawsessionstart.inc,
+; at this subroutine sessionstart.inc set default approximation only 
+
+; Setup measurement scenario as block sizes sequence,
+; for "Run simple" mode required one block size only 
+; Detect L1 cache
+;mov eax,[rdi + MEMIPB.updatedTarget]
 ;xor edx,edx    ; Previous level for L1 is 0 , not exist
 ;mov rcx,[rbx + SYSPARMS.CpuCache + CPUCACHE.CpuidL1Data]
 ;cmp al,TARGET_L1
@@ -271,13 +310,27 @@ SessionStart:
 ;sub rcx,512 
 ;; Done arithmetic, store block size
 ;.L9:
-;mov [rdi + IPB.StartBlockSize],rcx  ; Setup Block Size
-;
-;; Setup approximation option, yet value copy only
-;mov eax,[rsi + UPB.OptionApprox]
-;mov [rdi + IPB.UpdatedApprox],eax   ; Copy X-approximation option (UPB to IPB)
-;
-;; Setup Processor Groups parameters
+
+; TODO. Add block size select logic.
+
+mov ecx,32768 / 2 - 512
+
+; mov ecx,16384 ; DEBUG VALUE
+; mov ecx,8192
+
+; TODO. Add block size select logic.
+
+mov [rdi + MEMIPB.startBlockSize],rcx  ; Setup Block Size
+
+; Setup approximation option, yet value copy only
+mov eax,[rsi + MEMUPB.optionApprox]
+mov [rdi + MEMIPB.updatedApprox],eax   ; Copy X-approximation option (UPB to IPB)
+
+
+; TODO. Update this by new layout of parameters.
+
+
+; Setup Processor Groups parameters
 ;mov eax,[rbx + SYSPARMS.ProcessorGroups]
 ;mov [rdi + IPB.GroupsCount],eax     ; Setup number of Processor Groups
 ;
@@ -291,158 +344,209 @@ SessionStart:
 ;jb .L11
 ;mov rax,[rbx + SYSPARMS.LargePageSize]    ; RAX = Large page size 
 ;.L11:
-;mov [rdi + IPB.PageSize],rax    ; Setup used Standard or Large Page size, bytes
+
+; TODO. Add page size select logic.
+mov rax,4096 ; DEBUG VALUE
+; TODO. Add page size select logic.
+
+
+mov [rdi + MEMIPB.pageSize],rax    ; Setup used Standard or Large Page size, bytes
 ;
-;; Setup memory allocation parameters, align allocated size by page size
-;mov rax,[rdi + IPB.StartBlockSize]
-;shl rax,1             ; Memory size * 2 because source+destination for copy
-;mov rcx,[rdi + IPB.PageSize]
-;dec rcx               ; for example, make addend 0FFFh from 1000h
-;add rax,rcx           ; add this addend
-;not rcx               ; for example, make mask FFFFFFFFFFFFF000h from 0FFFh
-;and rax,rcx           ; AND-masking with this mask
-;
-;; Check drawings mode, big block required for 
-;; service all sizes when draw Performance = F(Size)
-;cmp [rsi + UPB.RunContext],0
-;je .L14   ; Go skip multiplication if simple measurement mode
-;; This required for memory reservation per drawings session
-;bsr rcx,rax
-;mov edx,1
-;shl rdx,cl
-;cmp rax,rdx
-;jbe .L15
-;lea rax,[rdx*2]  ; Make integer power of 2
-;.L15:
-;; X*5 for memory reservation per X axis values
-;imul rax,rax,5   ; Xmax = Xtarget * 5
-;.L14:
-;
-;; Store memory size per one thread and total
-;mov [rdi + IPB.MemoryPerThread],rax   ; Setup memory size per one thread
-;mov ecx,[rdi + IPB.UpdatedThreads]
-;mul rcx                               ; multiply by number of threads
-;mov [rdi + IPB.MemoryTotal],rax       ; Setup memory size per all threads
-;
-;; IPB initialization as  IPB = f ( UPB, SYSPARMS )  done at this point,
-;; next steps is resources allocation. 
-;
-;; Build NUMA nodes list, 
-;; this is FIRST step before memory allocation
-;; NUMA unaware mode by option and by system limitations,
-;; supported by transfer R8D = option value to subroutine BuildNumaNodesList 
+
+
+; TODO. Update this by new layout of parameters.
+
+
+; Setup memory allocation parameters, align allocated size by page size
+mov rax,[rdi + MEMIPB.startBlockSize]
+shl rax,1             ; Memory size * 2 because source+destination for copy
+mov rcx,[rdi + MEMIPB.pageSize]
+dec rcx               ; for example, make addend 0FFFh from 1000h
+add rax,rcx           ; add this addend
+not rcx               ; for example, make mask FFFFFFFFFFFFF000h from 0FFFh
+and rax,rcx           ; AND-masking with this mask
+
+; Check drawings mode, big block required for 
+; service all sizes when draw Performance = F(Size)
+cmp [rsi + MEMUPB.runContext],0
+je .L14   ; Go skip multiplication if simple measurement mode
+; This required for memory reservation per drawings session
+bsr rcx,rax
+mov edx,1
+shl rdx,cl
+cmp rax,rdx
+jbe .L15
+lea rax,[rdx * 2]  ; Make integer power of 2
+.L15:
+; X*5 for memory reservation per X axis values
+imul rax,rax,5   ; Xmax = Xtarget * 5
+.L14:
+
+; Store memory size per one thread and total
+mov [rdi + MEMIPB.memoryPerThread],rax   ; Setup memory size per one thread
+mov ecx,[rdi + MEMIPB.updatedThreads]
+mul rcx                                  ; multiply by number of threads
+mov [rdi + MEMIPB.memoryTotal],rax       ; Setup memory size per all threads
+
+; IPB initialization as  IPB = f ( UPB, SYSPARMS )  done at this point,
+; next steps is resources allocation. 
+
+; Build NUMA nodes list, 
+; this is FIRST step before memory allocation
+; NUMA unaware mode by option and by system limitations,
+; supported by transfer R8D = option value to subroutine BuildNumaNodesList 
+
 ;lea rcx,[NumaNodesList]          ; RCX = Pointers to NUMA nodes list for build
-;mov edx,[rdi + IPB.UpdatedPG]    ; EDX = Processor Groups option
-;mov r8d,[rdi + IPB.UpdatedNUMA]  ; R8D = NUMA option
-;call BuildNumaNodesList          ; CF returned, build list of NUMA nodes
-;jnc .NumaValid                 ; Go if no errors, means EAX = NUMA nodes count
-;mov al,0                       ; otherwise AL = error status
-;jmp .Exit                      ; Go for error handling
-;.NumaValid:
-;
-;; Update NUMA nodes count after rejection nodes with affinity mask = 0
-;mov [rdi + IPB.DomainsCount],eax
-;
-;; Note verify required).
-;; Support NUMA options by update IPB and NUMA nodes list
-;; Option = NUMA_NOT_SUPPORTED, NUMA_NO_CONTROL
-;;   NUMA unaware = not change prepared list 
-;; Option = NUMA_CURRENT_ONLY
-;;   NUMA single domain = reduce node count to 1, reduce CPU count = per node 0
-;; Option = NUMA_OPTIMAL 
-;;   NUMA optimal = not change prepared list
-;; Option = NUMA_NON_OPTIMAL 
-;;   NUMA not optimal = shift affinity masks by ring, example 1-2-3-4 to 4-1-2-3
-;
-;; Reduce domains count for NUMA single domain scenario
-;cmp [rdi + IPB.UpdatedNUMA],NUMA_CURRENT_ONLY
-;jne .L30                         ; Go if not a single NUMA domain mode
-;mov [rdi + IPB.DomainsCount],1
-;cmp [rdi + IPB.UpdatedThreads],1
-;jbe .L30                         ; Go if not a multi-thread mode
-;
-;;--- This code executed only for NUMA Option = single domain 
-;xor eax,eax                 ; Pre-blank logical CPU count = 0
-;mov rdx,qword [NumaNodesList + NUMACTRL.NodeAffinity]  ; Node 0 affinity mask
-;.L34:
-;shr rdx,1
-;jnc .L35
-;inc eax                     ; This counts "1" bits at node 0 affinity mask 
-;.L35:
-;test rdx,rdx
-;jnz .L34                    ; Cycle exit when all "1" shifted
-;cmp [rsi + UPB.OptionHT],HT_NOT_USED
-;jne .L36                    ; Skip "Threads count / 2" if no HT rejection case
-;cmp eax,1
-;je .L36                     ; Skip "Threads count / 2" if Threads count = 1
-;shr eax,1                   ; Threads count / 2  if required HT rejection
-;.L36:
-;mov [rdi + IPB.UpdatedThreads],eax  ; Update number of threads = f ( NUMA mode )
-;.L30:
-;;--- End of conditionally executed code only for NUMA Option = single domain
-;
-;; Swap affinity masks for NUMA Non Optimal scenario, force remote access
-;cmp [rdi + IPB.UpdatedNUMA],NUMA_NON_OPTIMAL
-;jne .L31         ; Go if NUMA mode not a "force non-optimal"
+
+; TODO. Fix registry 32/64 field alignment.
+; TODO. Add runtime errors messages boxes.
+
+
+;lea rcx,[r15 + REGISTRY64.mpe64csb.numaNodeList]
+lea rcx,[NUMA_LIST]
+
+
+mov edx,[rdi + MEMIPB.updatedPG]    ; EDX = Processor Groups option
+mov r8d,[rdi + MEMIPB.updatedNUMA]  ; R8D = NUMA option
+call BuildNumaNodesList             ; CF returned, build list of NUMA nodes
+jnc .numaValid                 ; Go if no errors, means EAX = NUMA nodes count
+mov al,0                       ; otherwise AL = error status
+jmp .exit                      ; Go for error handling
+.numaValid:
+
+; Update NUMA nodes count after rejection nodes with affinity mask = 0
+mov [rdi + MEMIPB.domainsCount],eax
+
+; Note verify required).
+; Support NUMA options by update IPB and NUMA nodes list
+; Option = NUMA_NOT_SUPPORTED, NUMA_NO_CONTROL
+;   NUMA unaware = not change prepared list 
+; Option = NUMA_CURRENT_ONLY
+;   NUMA single domain = reduce node count to 1, reduce CPU count = per node 0
+; Option = NUMA_OPTIMAL 
+;   NUMA optimal = not change prepared list
+; Option = NUMA_NON_OPTIMAL 
+;   NUMA not optimal = shift affinity masks by ring, example 1-2-3-4 to 4-1-2-3
+
+; Reduce domains count for NUMA single domain scenario
+cmp [rdi + MEMIPB.updatedNUMA],NUMA_CURRENT_ONLY
+jne .L30                         ; Go if not a single NUMA domain mode
+mov [rdi + MEMIPB.domainsCount],1
+cmp [rdi + MEMIPB.updatedThreads],1
+jbe .L30                         ; Go if not a multi-thread mode
+
+;--- This code executed only for NUMA Option = single domain 
+xor eax,eax                 ; Pre-blank logical CPU count = 0
+
+; mov rdx,qword [NumaNodesList + NUMACTRL.NodeAffinity]  ; Node 0 affinity mask
+; lea rcx,[r15 + REGISTRY64.mpe64csb.numaNodeList]
+lea rcx,[NUMA_LIST]
+
+mov rdx,qword [rcx + NUMACTRL.nodeAffinity]  ; Node 0 affinity mask
+
+.L34:
+shr rdx,1
+jnc .L35
+inc eax                     ; This counts "1" bits at node 0 affinity mask 
+.L35:
+test rdx,rdx
+jnz .L34                    ; Cycle exit when all "1" shifted
+cmp [rsi + MEMUPB.optionHT],HT_NOT_USED
+jne .L36                    ; Skip "Threads count / 2" if no HT rejection case
+cmp eax,1
+je .L36                     ; Skip "Threads count / 2" if Threads count = 1
+shr eax,1                   ; Threads count / 2  if required HT rejection
+.L36:
+mov [rdi + MEMIPB.updatedThreads],eax  ; Update number of threads = f ( NUMA mode )
+.L30:
+
+;--- End of conditionally executed code only for NUMA Option = single domain
+
+; Swap affinity masks for NUMA Non Optimal scenario, force remote access
+cmp [rdi + MEMIPB.updatedNUMA],NUMA_NON_OPTIMAL
+jne .L31         ; Go if NUMA mode not a "force non-optimal"
 ;lea rdx,[NumaNodesList + NUMACTRL.NodeAffinity]
-;mov r8,rdx
-;mov ecx,[rdi + IPB.DomainsCount]
-;jrcxz .L31       ; skip swap if domains count = 0
-;dec ecx          ; domains count - 1
-;jrcxz .L31       ; skip swap if domains count = 1
-;mov rax,[rdx]    ; read mask from first NUMA domain entry
-;.L32:
-;add rdx,NUMACTRL_SIZE
-;xchg rax,[rdx]  ; rotate masks at domains entries, example 1-2-3-4 to 4-1-2-3
-;loop .L32       ; cycle for swapped domains
-;mov [r8],rax    ; write mask to last NUMA domain entry 
-;.L31:
-;
-;; Note possible bug if assymetric domains (processors per domain).
-;
-;; Both NUMA-aware / unaware memory allocation 
-;; inside subroutine MemAllocationNuma, 
-;; this si SECOND step with memory allocation,
-;; after NUMA nodes list build and optionally swapped
-;mov rax,[rdi + IPB.MemoryTotal]
-;mov r8d,[rdi + IPB.DomainsCount]  ; R8 = Number of nodes
-;
-;;--- Skip division buffer size by nodes count if threads count = 1 
-;cmp [rdi + IPB.UpdatedThreads],1
-;je .L33          ; Skip if threads = 1 and all memory allocated at node 0
-;xor edx,edx
-;div r8           ; Divide  allocated memory / node count  for multi-thread 
-;.L33:
-;
+lea rdx,[rcx + NUMACTRL.nodeAffinity]
+
+mov r8,rdx
+mov ecx,[rdi + MEMIPB.domainsCount]
+jrcxz .L31       ; skip swap if domains count = 0
+dec ecx          ; domains count - 1
+jrcxz .L31       ; skip swap if domains count = 1
+mov rax,[rdx]    ; read mask from first NUMA domain entry
+.L32:
+add rdx,NUMACTRL_SIZE
+xchg rax,[rdx]  ; rotate masks at domains entries, example 1-2-3-4 to 4-1-2-3
+loop .L32       ; cycle for swapped domains
+mov [r8],rax    ; write mask to last NUMA domain entry 
+.L31:
+
+; TODO.
+; Note possible bug if assymetric domains ( processors per domain ).
+
+; Both NUMA-aware / unaware memory allocation 
+; inside subroutine MemAllocationNuma, 
+; this si SECOND step with memory allocation,
+; after NUMA nodes list build and optionally swapped
+
+mov rax,[rdi + MEMIPB.memoryTotal]
+mov r8d,[rdi + MEMIPB.domainsCount]  ; R8 = Number of nodes
+
+;--- Skip division buffer size by nodes count if threads count = 1 
+cmp [rdi + MEMIPB.updatedThreads],1
+je .L33          ; Skip if threads = 1 and all memory allocated at node 0
+xor edx,edx
+div r8           ; Divide  allocated memory / node count  for multi-thread 
+.L33:
+
 ;lea rcx,[NumaNodesList]           ; RCX = Base address of NUMA nodes list
-;mov rdx,rax                       ; RDX = Memory allocation size per one node
-;mov r9d,[rdi + IPB.UpdatedLP]     ; R9D = Large Pages option
-;call MemAllocationNuma   ; CF returned
-;mov al,0                 ; AL = error status
-;jc .Exit                 ; Go if error
-;
-;; Build threads list
-;; this is THIRD step after NUMA domains list build and its memory allocated
+; lea rcx,[r15 + REGISTRY64.mpe64csb.numaNodeList]
+lea rcx,[NUMA_LIST]
+
+mov rdx,rax                       ; RDX = Memory allocation size per one node
+mov r9d,[rdi + MEMIPB.updatedLP]  ; R9D = Large Pages option
+call MemAllocationNuma   ; CF returned
+mov al,0                 ; AL = error status
+jc .exit                 ; Go if error
+
+; Build threads list
+; this is THIRD step after NUMA domains list build and its memory allocated
 ;lea rcx,[ThreadsList]
 ;lea rdx,[InputParms]
-;call BuildThreadsList    ; CF returned 
-;mov al,0                 ; AL = error status, valid if CF=1
-;jc .Exit                 ; Go if error
-;
-;; Update visualized block#1, block#2 bases at IPB from Threads List first entry
+
+; lea rcx,[r15 + REGISTRY64.mpe64csb.threadList]
+lea rcx,[THREAD_LIST]
+
+; lea rdx,[r15 + REGISTRY64.memIpb]
+lea rdx,[MEM_IPB]
+
+call BuildThreadsList    ; CF returned 
+mov al,0                 ; AL = error status, valid if CF=1
+jc .exit                 ; Go if error
+
+; Update visualized block#1, block#2 bases at IPB from Threads List first entry
 ;lea rcx,[ThreadsList]
-;mov rax,[rcx + THCTRL.Base1]
-;mov [rdi + IPB.AllocatedBlock1],rax
-;mov rax,[rcx + THCTRL.Base2]
-;mov [rdi + IPB.AllocatedBlock2],rax
-;
-;;---------- Now IPB initialized -----------------------------------------------; 
-;; NUMA domains listed, its memory allocated, execution threads listed
-;; Next steps is TSC frequency measurements and benchmarks calibration
-;; Note repeat TSC frequency measurement after NCRB application start,
-;; for better adaptation to run conditions.
-;; Re-measure TSC clock before start benchmarks
-;
+
+; lea rcx,[r15 + REGISTRY64.mpe64csb.threadList]
+lea rcx,[THREAD_LIST]
+
+mov rax,[rcx + THCTRL.base1]
+mov [rdi + MEMIPB.allocatedBlock1],rax
+mov rax,[rcx + THCTRL.base2]
+mov [rdi + MEMIPB.allocatedBlock2],rax
+
+;---------- Now IPB initialized -----------------------------------------------; 
+; NUMA domains listed, its memory allocated, execution threads listed
+; Next steps is TSC frequency measurements and benchmarks calibration
+; Note repeat TSC frequency measurement after NCRB application start,
+; for better adaptation to run conditions.
+; Re-measure TSC clock before start benchmarks
+
+;---
+; THIS DISABLED, BECAUSE IN THE scenario_memory_run.inc EXIST:
+; " mov r15,[Registry]
+;   call InfoProcessor "
+;---
 ;push rdi
 ;mov rdi,[Registry]
 ;lea rdi,[rdi + REGISTRY64.opb.deltaTSC]   ; RDI = Pointer to destination area
@@ -451,18 +555,22 @@ SessionStart:
 ;mov al,2           ; AL = error status, valid if CF=1
 ;jc .Exit           ; Go if error
 ;
-;;---------- Start execution threads before per-iterations calls ---------------; 
+;---
+
+;---------- Start execution threads before per-iterations calls ---------------; 
 ;
 ;mov rcx,[Registry]
 ;lea rcx,[rcx + REGISTRY64.mpe64csb.threadList]
-;mov edx,[rdi + IPB.updatedThreads]
-;call ThreadsStart  ; CF returned
-;mov al,2           ; AL = error status, valid if CF=1 only
-;
-;;---------- Initialization done -----------------------------------------------;
-;; next phase is per-iterations calls, CF actual here
 
-; UNDER CONSTRUCTION
+; lea rcx,[r15 + REGISTRY64.mpe64csb.threadList]
+lea rcx,[THREAD_LIST]
+
+mov edx,[rdi + MEMIPB.updatedThreads]
+call ThreadsStart  ; CF returned
+mov al,2           ; AL = error status, valid if CF=1 only
+
+;---------- Initialization done -----------------------------------------------;
+; next phase is per-iterations calls, CF actual here
 
 .exit:
 ret

@@ -29,8 +29,10 @@ jbe .withoutNuma
 ;---------- Get maximum node number -------------------------------------------;
 
 mov rcx,rbp                          ; RCX = Parm #1 = Pointer to variable
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._GetNumaHighestNodeNumber]     ; Return EAX=0 if error, EAX>0 if no errors
+
+; mov rax,[Registry]
+call [DYNA_IMPORT._GetNumaHighestNodeNumber]     ; Return EAX=0 if error, EAX>0 if no errors
+
 test rax,rax
 jz .error                ; Go if function status = error
 mov eax,[rbp]            ; Get variable updated by OS API = highest node number
@@ -54,13 +56,17 @@ cmp r14d,PG_OPTIMAL                    ; R14D = PG_OPTIMAL if Processor Groups:
 jne .getSmallMask                      ; supported and enabled              
 
 .getBigMask:
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._GetNumaNodeProcessorMaskEx]  ; Write qword to [rdx], [rdx+8], mask+group
+
+; mov rax,[Registry]
+call [DYNA_IMPORT._GetNumaNodeProcessorMaskEx]  ; Write qword to [rdx], [rdx+8], mask+group
+
 jmp .afterGetMask
 
 .getSmallMask:
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._GetNumaNodeProcessorMask]    ; Write qword to [rdx], affinity mask
+
+; mov rax,[Registry]
+call [DYNA_IMPORT._GetNumaNodeProcessorMask]    ; Write qword to [rdx], affinity mask
+
 mov [rbx + NUMACTRL.nodeGroup],0    ; Processor Group always 0 for this branch  
 
 .afterGetMask:
@@ -112,8 +118,10 @@ mov rdi,rbx                      ; RDI = RBX = Base address of build nodes list
 mov ecx,NUMACTRL_SIZE / 4        ; RCX = One NUMA entry size, units = dwords
 xor eax,eax                      ; EAX = write data = 0
 rep stosd                        ; Blank entry
-mov rax,[Registry]
-mov rax,[rax + REGISTRY64.osData.systemInfo.dwActiveProcessorMask]  ; RAX = mask 
+
+; mov rax,[Registry]
+mov rax,[OS_DATA.systemInfo.dwActiveProcessorMask]  ; RAX = mask 
+
 mov [rbx + NUMACTRL.nodeAffinity],rax  ; set affinity mask = all system mask
 mov eax,1               ; Set return nodes count = 1, this branch without NUMA
 jmp .done

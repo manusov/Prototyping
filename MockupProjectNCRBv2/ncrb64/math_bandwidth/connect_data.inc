@@ -6,6 +6,14 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+; Entries for compact encoding performance method 
+; Use 16-bit base-relative offsets instead full 64-bit offsets
+; 6 or 2 bytes per entry, compact encoding
+MACRO MATH_ENTRY x1
+{
+dw  x1 - RoutinesMath 
+}
+
 ;--- List of performance patterns: math performance measurement ---------------;
 
 align 2

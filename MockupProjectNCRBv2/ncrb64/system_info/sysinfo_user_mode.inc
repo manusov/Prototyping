@@ -24,76 +24,25 @@ mov r13,rsp                  ; R13 used for RSP restore before return
 and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment by Microsoft x64 calling convention
 sub rsp,32                   ; Parameter shadow by Microsoft x64 calling convention 
 cld
-mov r15,[Registry]           ; R15 = Registry base address
 
-;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov r15,[Registry]           ; R15 = Registry base address
 
-lea rdi,[r15 + REGISTRY64.cpuData.vendorString]  ; RDI = Destination pointer
-call HelperCheckCpuid
+;---------- Processor information ---------------------------------------------;
+
+call InfoProcessor
 jc .error
-cmp eax,1
-jb .error
-
-;---------- Get 48-chars CPU model string -------------------------------------;
-
-call HelperGetCpuName
-
-;---------- Get CPU signature: type, family, model, stepping ------------------;
-
-mov eax,1
-cpuid
-stosd
-
-;------- Build CPU common features bitmap, for system information screen ------; 
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuCommon]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
-@@:
-bts rax,63
-stosq
-
-;------- Build CPU AVX512 features bitmap, for system information screen ------;
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataCpuAvx512]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
-@@:
-stosq
-
-;------- Build OS context features bitmap, for system information screen ------;
-
-xor eax,eax
-mov rsi,[r15 + REGISTRY64.appData.lockedDataOsContext]
-test rsi,rsi
-jz @f
-call HelperBuildBitmap
-@@:
-test rax,rax
-jz @f
-bts rax,63
-@@:
-stosq
-
-;------- Build CPU methods features bitmap, for system information screen -----;
-
-; xor eax,eax    ; *** DEBUG ***
-; stosq          ; *** DEBUG ***
-
-;---------- Measure TSC frequency ---------------------------------------------;
-
-call HelperMeasureTsc
-; TODO. Check for errors, CF=1
 
 ;---------- Initializing dynamical import WinAPI list -------------------------; 
 
-lea rsi,[NameKernel32]       ; RSI = Pointer to libraries names array
-mov rbx,[r15 + REGISTRY64.appData.lockedImportList] ; RBX = to functions names
-lea rdi,[r15 + REGISTRY64.dynaImport]               ; RDI = to fnc. addresses               
+lea rsi,[NAME_KERNEL32]       ; RSI = Pointer to libraries names array
+
+; mov rbx,[r15 + REGISTRY64.appData.lockedImportList] ; RBX = to functions names
+mov rbx,[APP_DATA.lockedImportList] ; RBX = to functions names
+
+; lea rdi,[r15 + REGISTRY64.dynaImport]               ; RDI = to fnc. addresses
+lea rdi,[DYNA_IMPORT]               
+
 .scanLibs:
 cmp byte [rsi],0
 je .doneLibs
@@ -124,8 +73,10 @@ jmp .scanLibs               ; External cycle for libraries list
 
 ;---------- Get system and memory information parameters ----------------------;
 
-lea rsi,[r15 + REGISTRY64.dynaImport]
-lea rdi,[r15 + REGISTRY64.osData]
+; lea rsi,[r15 + REGISTRY64.dynaImport]
+lea rsi,[DYNA_IMPORT]
+
+lea rdi,[OS_DATA] ; [r15 + REGISTRY64.osData]
 mov rax,[rsi + DYNAIMPORT._GlobalMemoryStatusEx]
 test rax,rax
 jz .error
@@ -255,7 +206,9 @@ call rax
 ; Start operations with unformatted part of application registry,
 ; RBP = Pointer for unformatted part addressing 
 
-lea rbp,[r15 + REGISTRY64.unformatted]
+; lea rbp,[r15 + REGISTRY64.unformatted]
+mov rbp,[APP_MEMORY]
+
 call HelperAlignment
 mov rbx,[rsi + DYNAIMPORT._GetLogicalProcessorInformation]
 test rbx,rbx
@@ -277,9 +230,9 @@ mov rcx,rbp                  ; RCX = Parm#1 = Pointer to buffer
 call rbx
 test rax,rax
 jz .error                    ; Go if unexpected error: zero-sized buffer
-mov [r15 + REGISTRY64.listTopology.objectStart],rbp
+mov [DYNA_PTR.listTopology.objectStart],rbp
 add rbp,r14
-mov [r15 + REGISTRY64.listTopology.objectStop],rbp
+mov [DYNA_PTR.listTopology.objectStop],rbp
 @@:
 
 ;---------- Get platform extended topology by WinAPI --------------------------;
@@ -306,9 +259,9 @@ mov al,4                  ; 4 = RelationGroup
 call HelperTopologyEx
 .errorTopologyEx:
 jc .error
-mov [r15 + REGISTRY64.listTopologyEx.objectStart],rbp
+mov [DYNA_PTR.listTopologyEx.objectStart],rbp
 add rbp,r14
-mov [r15 + REGISTRY64.listTopologyEx.objectStop],rbp
+mov [DYNA_PTR.listTopologyEx.objectStop],rbp
 @@:
 
 ;---------- Get NUMA nodes list -----------------------------------------------;
@@ -373,8 +326,8 @@ inc ebx
 cmp ebx,r12d
 jbe .standardNumaList 
 .doneNumaList:
-mov [r15 + REGISTRY64.listNuma.objectStart],rbp
-mov [r15 + REGISTRY64.listNuma.objectStop],rdi
+mov [DYNA_PTR.listNuma.objectStart],rbp
+mov [DYNA_PTR.listNuma.objectStop],rdi
 mov rbp,rdi
 mov rdi,r14
 .skipNumaList:
@@ -403,8 +356,8 @@ inc ebx
 cmp ebx,r12d
 jb .groupList
 .doneGroupList:
-mov [r15 + REGISTRY64.listGroup.objectStart],rbp
-mov [r15 + REGISTRY64.listGroup.objectStop],rdi
+mov [DYNA_PTR.listGroup.objectStart],rbp
+mov [DYNA_PTR.listGroup.objectStop],rdi
 mov rbp,rdi
 mov rdi,r14
 .skipGroupList:
@@ -412,7 +365,10 @@ mov rdi,r14
 ;---------- Get ACPI tables list ----------------------------------------------;
 
 push rsi rdi
-mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+
+; mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rcx,[BIND_LIST]
+
 lea rdx,[rcx + BINDLIST.bindMadt]
 mov r8d,2
 .writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
@@ -482,7 +438,9 @@ mov r14,rdi
 
 ;--- start of addition for show ACPI tables MADT and SRAT at screen 0 ---------;
 
-mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+; mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rcx,[BIND_LIST]
+
 lea rdx,[rcx + BINDLIST.acpiEnable]
 or byte [rdx],00000001b
 mov r8d,[r12]
@@ -591,8 +549,8 @@ add rbx,4
 cmp rbx,[r13]
 jb .scanAcpiList 
 
-mov [r15 + REGISTRY64.listAcpi.objectStart],rbp
-mov [r15 + REGISTRY64.listAcpi.objectStop],r14
+mov [DYNA_PTR.listAcpi.objectStart],rbp
+mov [DYNA_PTR.listAcpi.objectStop],r14
 mov rbp,r14
 .skipAcpiList:
 
@@ -608,7 +566,7 @@ call [GetCurrentThread]
 test rax,rax
 jz .skipAffCpuid 
 mov r13,rax              ; R13 = Current thread handle
-mov r14d,[r15 + REGISTRY64.osData.systemInfo.dwNumberOfProcessors]
+mov r14d,[OS_DATA.systemInfo.dwNumberOfProcessors] ; [r15 + REGISTRY64.osData.systemInfo.dwNumberOfProcessors] 
 test r14d,r14d
 jz .skipAffCpuid
 cmp r14d,16              ; Yet limited for maximum 16 logical processors
@@ -639,8 +597,8 @@ mov rdx,r12              ; RDX = Parm#2 = Affinity mask
 mov rcx,r13              ; RCX = Parm#1 = Current thread handle 
 call [rsi + DYNAIMPORT._SetThreadAffinityMask]
 @@:
-mov [r15 + REGISTRY64.listAffCpuid.objectStart],rbp
-mov [r15 + REGISTRY64.listAffCpuid.objectStop],rdi
+mov [DYNA_PTR.listAffCpuid.objectStart],rbp
+mov [DYNA_PTR.listAffCpuid.objectStop],rdi
 mov rbp,rdi
 .skipAffCpuid:
 
@@ -651,7 +609,7 @@ pop r13 rdi
 ; Start text blocks build operations.
 
 mov r14,rdi
-mov [r15 + REGISTRY64.textOs.objectStart],rbp
+mov [DYNA_PTR.textOs.objectStart],rbp
 mov ax,STR_OS_MEMORY_LOAD                        ; Memory load percentage
 call HelperOsInfoString
 mov eax,[r14 + OSDATA.memoryStatusEx.dwMemoryLoad]
@@ -707,7 +665,7 @@ mov ax,STR_OS_PROC_CURRENT                       ; Processors at currebt group
 call HelperOsInfoString
 mov al,SYSTEM_INFO.dwNumberOfProcessors
 call HelperOsInfoNumber32
-mov ecx,[r15 + REGISTRY64.osData.activeProcessorCount]      ; Processors total
+mov ecx,[OS_DATA.activeProcessorCount] ; [r15 + REGISTRY64.osData.activeProcessorCount]      ; Processors total
 jecxz @f
 push rcx
 mov ax,STR_OS_PROC_TOTAL
@@ -715,7 +673,7 @@ call HelperOsInfoString
 pop rax
 call HelperOsInfoValue32
 @@:
-mov ecx,[r15 + REGISTRY64.osData.activeProcessorGroupCount] ; Processors groups
+mov ecx,[OS_DATA.activeProcessorGroupCount]   ; [r15 + REGISTRY64.osData.activeProcessorGroupCount] ; Processors groups
 jecxz @f
 push rcx
 mov ax,STR_OS_PROC_GROUPS
@@ -723,7 +681,7 @@ call HelperOsInfoString
 pop rax
 call HelperOsInfoValue32
 @@:
-mov ecx,[r15 + REGISTRY64.osData.numaNodeCount]  ; NUMA domains
+mov ecx,[OS_DATA.numaNodeCount] ; [r15 + REGISTRY64.osData.numaNodeCount]  ; NUMA domains
 jecxz @f
 push rcx
 mov ax,STR_OS_NUMA_DOMAINS
@@ -735,7 +693,7 @@ mov ax,STR_OS_NORMAL_PAGE                        ; Normal page size
 call HelperOsInfoString
 mov al,SYSTEM_INFO.dwPageSize
 call HelperOsInfoSizeAuto32
-mov rcx,[r15 + REGISTRY64.osData.largePageSize]  ; Large page size and status
+mov rcx,[OS_DATA.largePageSize] ; [r15 + REGISTRY64.osData.largePageSize]  ; Large page size and status
 jrcxz .skipLargePages
 push rcx
 mov ax,STR_OS_LARGE_PAGE
@@ -744,7 +702,7 @@ pop rax
 push rax
 mov bl,0FFh
 call SizePrint64
-cmp [r15 + REGISTRY64.osData.largePageEnable],0
+cmp [OS_DATA.largePageEnable],0 ; [r15 + REGISTRY64.osData.largePageEnable],0
 mov ax,STR_OS_DISABLED
 je @f
 mov ax,STR_OS_ENABLED
@@ -757,52 +715,54 @@ call HexPrint64
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textOs.objectStop],rbp
+mov [DYNA_PTR.textOs.objectStop],rbp
 
 ;---------- Additions for screen 0 information --------------------------------;
 
-mov rdx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+; mov rdx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdx,[BIND_LIST]
+
 add rdx,BINDLIST.bindSys
 lea rdi,[rdx + BINDSYS.procTotal]
-mov eax,[r15 + REGISTRY64.osData.activeProcessorCount]      ; Processors total
+mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
 mov bl,0
 call DecimalPrint32
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.groups]
-mov eax,[r15 + REGISTRY64.osData.activeProcessorGroupCount] ; Processors groups
+mov eax,[OS_DATA.activeProcessorGroupCount] ; Processors groups
 call DecimalPrint32
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.procCur]
-mov eax,[r15 + REGISTRY64.osData.systemInfo.dwNumberOfProcessors]
+mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
 call DecimalPrint32
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.numaNodes]
-mov eax,[r15 + REGISTRY64.osData.numaNodeCount]  ; NUMA domains
+mov eax,[OS_DATA.numaNodeCount]  ; NUMA domains
 call DecimalPrint32
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.memPhys]
-mov rax,[r15 + REGISTRY64.osData.memoryStatusEx.ullTotalPhys]
+mov rax,[OS_DATA.memoryStatusEx.ullTotalPhys]
 mov bl,2
 call SizePrint64
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.memAvail]
-mov rax,[r15 + REGISTRY64.osData.memoryStatusEx.ullAvailPhys]
+mov rax,[OS_DATA.memoryStatusEx.ullAvailPhys]
 call SizePrint64
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.largePage]
-mov rax,[r15 + REGISTRY64.osData.largePageSize]
+mov rax,[OS_DATA.largePageSize]
 mov bl,0FFh
 call SizePrint64
 mov al,0
 stosb
 lea rdi,[rdx + BINDSYS.largeEnable]
-cmp [r15 + REGISTRY64.osData.largePageEnable],0
+cmp [OS_DATA.largePageEnable],0
 mov ax,STR_OS_DISABLED
 je @f
 mov ax,STR_OS_ENABLED
@@ -813,13 +773,13 @@ stosb
 
 ;---------- Build text block for native operating system information screen ---;
 
-mov [r15 + REGISTRY64.textNativeOs.objectStart],rbp
+mov [DYNA_PTR.textNativeOs.objectStart],rbp
 mov bh,1                                  ; BH = 1 means native system info
 call HelperSystemInfo
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textNativeOs.objectStop],rbp
+mov [DYNA_PTR.textNativeOs.objectStop],rbp
 
 ;---------- Build text block for processor details screen ---------------------;
 
@@ -835,9 +795,9 @@ TEMP_CORES     EQU  dword [rsp + 04 + 08]
 TEMP_SOCKETS   EQU  dword [rsp + 08 + 08]
 TEMP_RESERVED  EQU  dword [rsp + 12 + 08]   
 
-mov [r15 + REGISTRY64.textTopology1.objectStart],rbp
-mov rsi,[r15 + REGISTRY64.listTopology.objectStart]
-mov rcx,[r15 + REGISTRY64.listTopology.objectStop]
+mov [DYNA_PTR.textTopology1.objectStart],rbp
+mov rsi,[DYNA_PTR.listTopology.objectStart]
+mov rcx,[DYNA_PTR.listTopology.objectStop]
 sub rcx,rsi
 test cl,00011111b
 jnz .error
@@ -956,11 +916,13 @@ pop r8 r9 rcx rsi
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textTopology1.objectStop],rbp
+mov [DYNA_PTR.textTopology1.objectStop],rbp
 
 ;---------- Support screen 0 threads, cores, sockets --------------------------;
 
-lea rax,[r15 + REGISTRY64.sysParms.summaryTopology]
+; lea rax,[r15 + REGISTRY64.sysParms.summaryTopology]
+lea rax,[SYS_PARMS.summaryTopology]
+
 mov qword [rax + SUMMARYTOPOLOGY.threads],r8
 mov [rax + SUMMARYTOPOLOGY.sockets],r9d
 
@@ -968,7 +930,10 @@ mov [rax + SUMMARYTOPOLOGY.sockets],r9d
 
 ; TODO. OPTIMIZE BY ELIMINATE DUAL ADDRESS CALCULATION: FOR "N/A" AND FOR VALUES
 push rsi rcx
-mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+
+; mov rcx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rcx,[BIND_LIST]
+
 lea rdx,[rcx + BINDLIST.bindCache]
 mov ax,STR_N_A
 lea rdi,[rdx + BINDCACHE.l1c]
@@ -991,7 +956,7 @@ lea rdi,[rdx + BINDCACHE.l4u]
 call PoolStringWrite
 pop rcx rsi
 
-mov [r15 + REGISTRY64.textTopology2.objectStart],rbp
+mov [DYNA_PTR.textTopology2.objectStart],rbp
 mov rdi,rbp
 mov ax,0101h                 ; Instruction cache , L1
 call HelperCacheSummary 
@@ -1006,13 +971,13 @@ call HelperCacheSummary
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textTopology2.objectStop],rbp
+mov [DYNA_PTR.textTopology2.objectStop],rbp
 
 ;--- Build text block for extended topology screen, first block = list --------;
 
-mov [r15 + REGISTRY64.textTopologyEx1.objectStart],rbp
-mov rsi,[r15 + REGISTRY64.listTopologyEx.objectStart]
-mov rcx,[r15 + REGISTRY64.listTopologyEx.objectStop]
+mov [DYNA_PTR.textTopologyEx1.objectStart],rbp
+mov rsi,[DYNA_PTR.listTopologyEx.objectStart]
+mov rcx,[DYNA_PTR.listTopologyEx.objectStop]
 test rcx,rcx
 jz .noTopologyEx
 
@@ -1148,11 +1113,12 @@ pop r8 r9 rcx rsi
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textTopologyEx1.objectStop],rbp
+mov [DYNA_PTR.textTopologyEx1.objectStop],rbp
 
 ;---------- Support screen 0 threads, cores, sockets ( variables ) ------------;
 
-lea rax,[r15 + REGISTRY64.sysParms.summaryTopology]
+lea rax,[SYS_PARMS.summaryTopology]
+
 test r8d,r8d
 jz @f
 mov [rax + SUMMARYTOPOLOGY.threads],r8d
@@ -1170,8 +1136,10 @@ mov [rax + SUMMARYTOPOLOGY.sockets],r9d
 
 ;---------- Support screen 0 threads, cores, sockets ( text ) -----------------;
 
-mov rdx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
-lea r8,[r15 + REGISTRY64.sysParms.summaryTopology]
+; mov rdx,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdx,[BIND_LIST]
+
+lea r8,[SYS_PARMS.summaryTopology]
 mov bl,0
 lea rdi,[rdx + BINDLIST.bindTopology.threads]
 mov eax,[r8 + SUMMARYTOPOLOGY.threads]
@@ -1191,7 +1159,7 @@ stosb
 
 ;--- Build text block for extended topology screen, second block = summary ----;
 
-mov [r15 + REGISTRY64.textTopologyEx2.objectStart],rbp
+mov [DYNA_PTR.textTopologyEx2.objectStart],rbp
 mov rdi,rbp
 mov ax,0101h                 ; Instruction cache , L1
 call HelperCacheSummaryEx 
@@ -1206,15 +1174,15 @@ call HelperCacheSummaryEx
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textTopologyEx2.objectStop],rbp
+mov [DYNA_PTR.textTopologyEx2.objectStop],rbp
 
 ;---------- Build text block for NUMA domains list screen ---------------------;
 
-mov rsi,[r15 + REGISTRY64.listNuma.objectStart]
-mov rcx,[r15 + REGISTRY64.listNuma.objectStop]
+mov rsi,[DYNA_PTR.listNuma.objectStart]
+mov rcx,[DYNA_PTR.listNuma.objectStop]
 test rcx,rcx
 jz .noNuma
-mov [r15 + REGISTRY64.textNuma.objectStart],rbp
+mov [DYNA_PTR.textNuma.objectStart],rbp
 lodsd
 test eax,eax
 jnz .numaExt
@@ -1238,9 +1206,12 @@ jmp .numaStd
 mov al,0
 stosb
 push rdi
-mov rsi,[r15 + REGISTRY64.listNuma.objectStart]
+mov rsi,[DYNA_PTR.listNuma.objectStart]
 lodsd  ; this for ADD RSI,4
-mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+
+; mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdi,[BIND_LIST]
+
 add rdi,BINDLIST.bindSys.masksList
 xor edx,edx
 .masksStd:
@@ -1288,9 +1259,12 @@ jmp .numaExt
 mov al,0
 stosb
 push rdi
-mov rsi,[r15 + REGISTRY64.listNuma.objectStart]
+mov rsi,[DYNA_PTR.listNuma.objectStart]
 lodsd  ; this for ADD RSI,4
-mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+
+; mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdi,[BIND_LIST]
+
 add rdi,BINDLIST.bindSys.masksList
 xor edx,edx
 .masksExt:
@@ -1324,17 +1298,17 @@ mov al,0
 stosb
 pop rdi
 mov rbp,rdi
-mov [r15 + REGISTRY64.textNuma.objectStop],rbp
+mov [DYNA_PTR.textNuma.objectStop],rbp
 
 .noNuma:
 
 ;---------- Build text block for processor groups list screen -----------------;
 
-mov rsi,[r15 + REGISTRY64.listGroup.objectStart]
-mov rcx,[r15 + REGISTRY64.listGroup.objectStop]
+mov rsi,[DYNA_PTR.listGroup.objectStart]
+mov rcx,[DYNA_PTR.listGroup.objectStop]
 test rcx,rcx
 jz .noGroups
-mov [r15 + REGISTRY64.textGroup.objectStart],rbp
+mov [DYNA_PTR.textGroup.objectStart],rbp
 .groupsScan:
 cmp rsi,rcx
 jae .groupsDone
@@ -1349,13 +1323,13 @@ jmp .groupsScan
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textGroup.objectStop],rbp
+mov [DYNA_PTR.textGroup.objectStop],rbp
 .noGroups:
 
 ;---------- Build text block for ACPI screen, first block = tables list -------;
 
-mov rsi,[r15 + REGISTRY64.listAcpi.objectStart]
-mov rcx,[r15 + REGISTRY64.listAcpi.objectStop]
+mov rsi,[DYNA_PTR.listAcpi.objectStart]
+mov rcx,[DYNA_PTR.listAcpi.objectStop]
 test rcx,rcx
 jz .noAcpi
 mov rcx,[rsi]
@@ -1364,7 +1338,7 @@ sub rcx,rsi
 sub ecx,16
 shr ecx,2
 jrcxz .noAcpi
-mov [r15 + REGISTRY64.textAcpi1.objectStart],rbp
+mov [DYNA_PTR.textAcpi1.objectStart],rbp
 .acpiScan:
 mov rdi,rbp
 push rcx
@@ -1395,16 +1369,18 @@ loop .acpiScan
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textAcpi1.objectStop],rbp
+mov [DYNA_PTR.textAcpi1.objectStop],rbp
 .noAcpi: 
 
 ;--- Build text block for ACPI screen, second block = tables detection --------;
 
-mov r14,[r15 + REGISTRY64.appData.lockedDataAcpi]
+; mov r14,[r15 + REGISTRY64.appData.lockedDataAcpi]
+mov r14,[APP_DATA.lockedDataAcpi]
+
 test r14,r14
 jz .noAcpiData 
-mov rsi,[r15 + REGISTRY64.listAcpi.objectStart]
-mov rcx,[r15 + REGISTRY64.listAcpi.objectStop]
+mov rsi,[DYNA_PTR.listAcpi.objectStart]
+mov rcx,[DYNA_PTR.listAcpi.objectStop]
 jrcxz .noAcpiData
 mov rcx,[rsi]
 sub rcx,rsi
@@ -1412,7 +1388,7 @@ sub ecx,16
 shr ecx,2
 jrcxz .noAcpiData
 lea rbx,[rsi + 16]
-mov [r15 + REGISTRY64.textAcpi2.objectStart],rbp
+mov [DYNA_PTR.textAcpi2.objectStart],rbp
 .acpiDataScan:
 mov rdi,rbp
 push rcx
@@ -1453,16 +1429,16 @@ loop .acpiDataScan
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textAcpi2.objectStop],rbp
+mov [DYNA_PTR.textAcpi2.objectStop],rbp
 .noAcpiData:
 
 ;---------- Build text block for affinized CPUID dump -------------------------;
 
-mov rsi,[r15 + REGISTRY64.listAffCpuid.objectStart]
-mov rcx,[r15 + REGISTRY64.listAffCpuid.objectStop]
+mov rsi,[DYNA_PTR.listAffCpuid.objectStart]
+mov rcx,[DYNA_PTR.listAffCpuid.objectStop]
 test rcx,rcx
 jz .noAffCpuidData
-mov [r15 + REGISTRY64.textAffCpuid.objectStart],rbp
+mov [DYNA_PTR.textAffCpuid.objectStart],rbp
 xor r14,r14
 .scanBlocks:
 push rcx
@@ -1510,71 +1486,22 @@ jb .scanBlocks
 mov al,0
 stosb
 mov rbp,rdi
-mov [r15 + REGISTRY64.textAffCpuid.objectStop],rbp
+mov [DYNA_PTR.textAffCpuid.objectStop],rbp
 .noAffCpuidData:
 
 ;---------- Build bind buffer -------------------------------------------------;
-; Start operations with bind buffer part of application registry,
-; RDI = Pointer for bind buffer addressing.
-; R14 = Pointer for CPU data addressing in the application registry 
+; Start operations with bind buffer part of application registry.
 
-mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
-lea r14,[r15 + REGISTRY64.cpuData.vendorString]
-
-;---------- CPU vendor string, 12 chars ---------------------------------------; 
-
-mov rax,r14
-stosq
-
-;---------- CPU signature: type, family, model, stepping ----------------------;
-
-mov ax,STR_TFMS
-call PoolStringWrite
-mov eax,[r14 + CPUDATA.cpuSignature]
-call HexPrint32
-mov ax,STR_H
-call PoolStringWrite
-mov al,0
-stosb 
-
-;---------- CPU model string, maximum 48 chars --------------------------------;
-
-lea rax,[r14 + CPUDATA.modelString]
-stosq
-
-;---------- TSC frequency -----------------------------------------------------;
-
-mov ecx,32
-mov al,0
-rep stosb
-push rdi
-sub rdi,32
-mov ax,STR_TSC
-call PoolStringWrite
-finit
-push 1000000
-fild qword [r14 + CPUDATA.tscClockHz] 
-fidiv dword [rsp]
-fstp qword [rsp]
-pop rax
-mov bx,0100h
-call DoublePrint
-mov ax,STR_MHZ
-call PoolStringWrite
-pop rdi
-
-;---------- CPU instructions and OS context management features bitmaps -------;
-
-mov rax,[r14 + CPUDATA.extractedFeaturesBitmap]
-stosq
-mov rax,[r14 + CPUDATA.extractedAvx512Bitmap]
-stosq
-mov rax,[r14 + CPUDATA.extractedContextBitmap]
-stosq
 
 ;---------- Skip some screen 0 information ------------------------------------;
 
-add rdi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + sizeof.BINDSYS      ; RESERVED
+; add rdi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + sizeof.BINDSYS      ; RESERVED
+
+; mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdi,[BIND_LIST]
+
+
+add rdi,BINDLIST.viewOs
 
 ;---------- Memory and cache benchmarks methods availability bitmap -----------;
 
@@ -1583,39 +1510,40 @@ add rdi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + 
 
 ;---------- Text blocks for viewers -------------------------------------------;
 
-mov rax,[r15 + REGISTRY64.textOs.objectStart]
+mov rax,[DYNA_PTR.textOs.objectStart]
 stosq       ; Operating system information
-mov rax,[r15 + REGISTRY64.textNativeOs.objectStart]
+mov rax,[DYNA_PTR.textNativeOs.objectStart]
 stosq       ; Native operating system information
-mov rax,[r15 + REGISTRY64.textTopology1.objectStart]
+mov rax,[DYNA_PTR.textTopology1.objectStart]
 stosq       ; Topology information by operating system, text block 1, list
-mov rax,[r15 + REGISTRY64.textTopology2.objectStart]
+mov rax,[DYNA_PTR.textTopology2.objectStart]
 stosq       ; Topology information by operating system, text block 2, summary
-mov rax,[r15 + REGISTRY64.textTopologyEx1.objectStart]
+mov rax,[DYNA_PTR.textTopologyEx1.objectStart]
 stosq       ; Extended topology information by OS, text block 1, list
-mov rax,[r15 + REGISTRY64.textTopologyEx2.objectStart]
+mov rax,[DYNA_PTR.textTopologyEx2.objectStart]
 stosq       ; Extended topology information by OS, text block 2, summary
-mov rax,[r15 + REGISTRY64.textNuma.objectStart]
+mov rax,[DYNA_PTR.textNuma.objectStart]
 stosq       ; NUMA domains list by OS
-mov rax,[r15 + REGISTRY64.textGroup.objectStart]
+mov rax,[DYNA_PTR.textGroup.objectStart]
 stosq       ; Processor groups list by OS
-mov rax,[r15 + REGISTRY64.textAcpi1.objectStart]
+mov rax,[DYNA_PTR.textAcpi1.objectStart]
 stosq       ; ACPI tables, text block 1 = tables list
-mov rax,[r15 + REGISTRY64.textAcpi2.objectStart]
+mov rax,[DYNA_PTR.textAcpi2.objectStart]
 stosq       ; ACPI tables, text block 2 = tables detection by data base
-mov rax,[r15 + REGISTRY64.textAffCpuid.objectStart]
+mov rax,[DYNA_PTR.textAffCpuid.objectStart]
 stosq       ; Affinized CPUID dump
 
 ;---------- Data for memory and cache benchmark setup -------------------------;
 ; TODO. Move this to separate include file with subroutine.
 ; TODO. Remove "magic numbers" use names for bits positions.
 
-mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+; mov rdi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rdi,[BIND_LIST]
 
 ;---------- Benchmark methods based on CPU instructions -----------------------; 
 
-mov eax,dword [r15 + REGISTRY64.cpuData.extractedFeaturesBitmap]
-mov edx,dword [r15 + REGISTRY64.cpuData.extractedContextBitmap]
+mov eax,dword [CPU_DATA.extractedFeaturesBitmap]
+mov edx,dword [CPU_DATA.extractedContextBitmap]
 mov rbx,0001000000000555h   ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
 test al,00000001b
 jz @f
@@ -1657,6 +1585,15 @@ jz @f
 bts rbx,50              ; Latency by RDRAND
 @@:
 
+test al,00000100b
+jz @f
+bts rbx,60             ; SSE2 (for vector brief)
+@@:
+bt eax,16
+jnc @f
+bts rbx,62             ; x87 (for vector brief, redundant because run criteria)
+@@:
+
 mov ecx,0C0000000h
 test ebx,ecx
 jnz @f
@@ -1677,7 +1614,7 @@ mov qword [rdi + BINDLIST.setMemMethod],rbx
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
 ; Plus custom block size
 
-lea rsi,[r15 + REGISTRY64.sysParms.summaryCache]
+lea rsi,[SYS_PARMS.summaryCache]
 mov ebx,010100000000b      ; Custom block, DRAM
 xor eax,eax
 mov rcx,[rsi + SUMMARYCACHE.sizeL1D]
@@ -1719,7 +1656,7 @@ mov [rdi + BINDLIST.setBlkCustom],rax
 
 ;---------- Benchmark options: SMP/SMT ----------------------------------------;
 
-lea rsi,[r15 + REGISTRY64.sysParms.summaryTopology]
+lea rsi,[SYS_PARMS.summaryTopology]
 xor ebx,ebx
 mov eax,[rsi + SUMMARYTOPOLOGY.threads]
 cmp eax,2
@@ -1732,7 +1669,10 @@ cmp eax,[rsi + SUMMARYTOPOLOGY.cores]
 jne @f
 or bl,00000100b   ; Hyper threading (SMT)
 @@:
-lea rsi,[r15 + REGISTRY64.osData]
+
+;lea rsi,[r15 + REGISTRY64.osData]
+lea rsi,[OS_DATA]
+
 cmp [rsi + OSDATA.activeProcessorGroupCount],2
 jb @f
 or bl,00010000b   ; Processor groups (PG)
@@ -2214,18 +2154,22 @@ HelperOsInfoSize:
 mov bl,2
 SizeHelperEntry:
 movzx eax,al
-mov rcx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rcx,[Registry]
+
+
 cmp bl,0FFh
 je .sysinfo
-lea rcx,[rcx + REGISTRY64.osData.memoryStatusEx]
+lea rcx,[OS_DATA.memoryStatusEx]
 jmp .done
 .sysinfo:
 test bh,bh
 jnz .nativeInfo
-lea rcx,[rcx + REGISTRY64.osData.systemInfo]
+lea rcx,[OS_DATA.systemInfo]
 jmp .done
 .nativeInfo:
-lea rcx,[rcx + REGISTRY64.osData.nativeSystemInfo]
+lea rcx,[OS_DATA.nativeSystemInfo]
 .done:
 mov rax,[rcx + rax]
 cmp bl,0
@@ -2277,13 +2221,17 @@ jmp SizeHelperEntry
 HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
-mov rcx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rcx,[Registry]
+
+
 test bh,bh
 jnz .nativeInfo
-mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+mov eax,[OS_DATA.systemInfo + rax]
 jmp .doneInfo
 .nativeInfo:
-mov eax,[rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+mov eax,[OS_DATA.nativeSystemInfo + rax]
 .doneInfo:
 push rax
 call SizePrint64
@@ -2301,13 +2249,16 @@ jmp HexPrint32
 
 HelperOsInfoNumber32:
 movzx eax,al
-mov rcx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rcx,[Registry]
+
 test bh,bh
 jnz .nativeInfo
-mov eax,[rcx + REGISTRY64.osData.systemInfo + rax]
+mov eax,[OS_DATA.systemInfo + rax]
 jmp .doneInfo
 .nativeInfo:
-mov eax,[rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+mov eax,[OS_DATA.nativeSystemInfo + rax]
 .doneInfo:
 HelperOsInfoValue32:     ; Entry point for EAX = value, RDI, R8 same usage
 push rax
@@ -2327,13 +2278,16 @@ jmp HexPrint32
 
 HelperOsInfoNumber16:
 movzx eax,al
-mov rcx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rcx,[Registry]
+
 test bh,bh
 jnz .nativeInfo
-movzx eax,word [rcx + REGISTRY64.osData.systemInfo + rax]
+movzx eax,word [OS_DATA.systemInfo + rax]
 jmp .doneInfo
 .nativeInfo:
-movzx eax,word [rcx + REGISTRY64.osData.nativeSystemInfo + rax]
+movzx eax,word [OS_DATA.nativeSystemInfo + rax]
 .doneInfo:
 push rax
 mov bl,0
@@ -2364,10 +2318,10 @@ mov al,'-'
 stosb
 test bh,bh
 jnz .nativeInfo
-mov rax,[r15 + REGISTRY64.osData.systemInfo.dwActiveProcessorMask]
+mov rax,[OS_DATA.systemInfo.dwActiveProcessorMask]
 jmp .doneInfo
 .nativeInfo:
-mov rax,[r15 + REGISTRY64.osData.nativeSystemInfo.dwActiveProcessorMask]
+mov rax,[OS_DATA.nativeSystemInfo.dwActiveProcessorMask]
 .doneInfo:
 mov rdi,r8
 call HexPrint64 
@@ -2587,9 +2541,18 @@ ret
 
 HelperSummaryCache:
 push rdi
-mov rbx,[Registry]
-mov rcx,[rbx + REGISTRY64.allocatorBindBuffer.objectStart]
-add rbx,REGISTRY64.sysParms.summaryCache
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rbx,[Registry]
+
+; mov rcx,[rbx + REGISTRY64.allocatorBindBuffer.objectStart]
+lea rcx,[BIND_LIST]
+
+
+; add rbx,REGISTRY64.sysParms.summaryCache
+
+lea rbx,[SYS_PARMS.summaryCache]
+
 add rcx,BINDLIST.bindCache
 lea rsi,[rbx + SUMMARYCACHE.sizeL1C]
 lea rdi,[rcx + BINDCACHE.l1c]  

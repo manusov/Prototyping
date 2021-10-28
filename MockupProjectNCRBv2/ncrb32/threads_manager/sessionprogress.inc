@@ -32,21 +32,34 @@ push 0 0
 
 ;---------- Setup pointers ----------------------------------------------------;
 
-mov eax,[Registry]
-lea esi,[eax + REGISTRY32.memIpb]   ; ESI = Pointer to IPB, benchmarks scenario
-lea edi,[eax + REGISTRY32.memOpb]   ; EDI = Pointer to OPB, benchmarks results
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+; lea esi,[eax + REGISTRY32.memIpb]   ; ESI = Pointer to IPB, benchmarks scenario
+lea esi,[MEM_IPB]
+
+; lea edi,[eax + REGISTRY32.memOpb]   ; EDI = Pointer to OPB, benchmarks results
+lea edi,[MEM_OPB]
 
 ;---------- Pre-heat phase for result stabilization ---------------------------;
 ; Note this pre-heat for simple only, not use this for drawings
 
-lea ecx,[eax + REGISTRY32.mpe32csb.threadList]
+; lea ecx,[eax + REGISTRY32.mpe32csb.threadList]
+
+lea ecx,[THREAD_LIST]
+
 mov edx,[esi + MEMIPB.updatedThreads]
 call ThreadsReStart
 
 ;---------- Replace fill pattern to walk pattern for latency mode -------------;
 
-mov eax,[Registry]
-lea ebx,[eax + REGISTRY32.mpe32csb.threadList]
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+; lea ebx,[eax + REGISTRY32.mpe32csb.threadList]
+lea ebx,[THREAD_LIST]
+
+
 cmp [esi + MEMIPB.updatedAsm],LATENCY_MODE
 jb .skip                ; Go skip this update if not a LATENCY MEASUREMENT mode
 mov ecx,[esi + MEMIPB.updatedThreads]   ; ECX = Threads count
@@ -62,8 +75,13 @@ call [GetSystemTimeAsFileTime]
 
 ;---------- Measurement pattern -----------------------------------------------;
 
-mov eax,[Registry]
-lea ecx,[eax + REGISTRY32.mpe32csb.threadList]  ; ECX = Pointer to threads list
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+;lea ecx,[eax + REGISTRY32.mpe32csb.threadList]  ; ECX = Pointer to threads list
+
+lea ecx,[THREAD_LIST]
+
 mov edx,[esi + MEMIPB.updatedThreads]           ; EDX = number of threads
 call ThreadsReStart
 mov al,2  ; AL = error status, valid if CF=1 only

@@ -15,15 +15,25 @@
 ;---------- This entry point for return from thread subroutine ----------------;
 
 ThreadsReStartBreak:
-mov rax,[Registry]
-mov [rax + REGISTRY64.memIpb.threadStop],1
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; mov [rax + REGISTRY64.memIpb.threadStop],1
+mov [MEM_IPB.threadStop],1
+
+
 jmp EntryThreadsReStart 
 
 ;---------- This entry point for measure --------------------------------------;
 
 ThreadsReStart:
-mov rax,[Registry]
-mov [rax + REGISTRY64.memIpb.threadStop],0
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; mov [rax + REGISTRY64.memIpb.threadStop],0
+mov [MEM_IPB.threadStop],0
 
 ;---------- Entry procedure ---------------------------------------------------;
 
@@ -61,6 +71,7 @@ mov ebx,edi                    ; EBX = Store number of threads
 mov rcx,[rsi + THCTRL.eventDone]   ; RCX = Parm#1 = Event handle
 jrcxz ErrorThreads                 ; Error if this entry not allocated
 call [ResetEvent]                  ; Reset event cause done signal clear
+
 mov rcx,[rsi + THCTRL.eventStart]  ; RCX = Parm#1 = Event handle
 jrcxz ErrorThreads                 ; Error if this entry not allocated
 call [SetEvent]                    ; Set event cause repeat benchmark call

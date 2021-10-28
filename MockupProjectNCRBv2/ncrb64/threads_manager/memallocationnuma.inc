@@ -59,8 +59,10 @@ mov r9,r12                            ; Parm#4 = R9  = Allocation type (mode fla
 push qword [rbx + NUMACTRL.nodeID]    ; Parm#6 = NUMA node preferred
 push PAGE_READWRITE                   ; Parm#5 = Pages protection attributes = Read/Write
 sub rsp,32			                      ; Create parameters shadow
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._VirtualAllocExNuma]  ; Call memory allocation WinAPI, return RAX = Pointer
+
+;mov rax,[Registry]
+call [DYNA_IMPORT._VirtualAllocExNuma]  ; Call memory allocation WinAPI, return RAX = Pointer
+
 add rsp,32+16			                    ; Remove parameters shadow + parameters 5,6
 test rax,rax
 jz .error                             ; Go error if returned 0

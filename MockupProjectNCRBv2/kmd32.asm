@@ -49,13 +49,19 @@
 ;=========================================================================================================;
 
 ;------------------------------------------------------------------------------;
-;                               Definitions.                                   ;
-;  IMPORTANT NOTE. Some zero constant values used for XOR/TEST optimizations,  ; 
-;                     carefully inspect code if change.                        ;
+;                                                                              ;
+;                        FASM and NCRB definitions.                            ;        
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
-include 'win32a.inc'                 ; FASM definitions
-
+include 'win32a.inc'   ; FASM definitions
+;---------- Global application and version description definitions ------------;
+RESOURCE_DESCRIPTION   EQU  'NCRB Kernel Mode Driver for Win32'
+RESOURCE_VERSION       EQU  '0.0.0.1'
+RESOURCE_COMPANY       EQU  'https://github.com/manusov'
+RESOURCE_COPYRIGHT     EQU  '(C) 2021 Ilya Manusov'
+;---------- Kernel Mode Driver definitions ------------------------------------;
+; Some zero constant values used for XOR/TEST optimizations, 
+; carefully inspect code if change.                        ;
 RZ_REQUEST_CODE        = 41h         ; Request ID for ring0 callback function 
 STATUS_SUCCESS         = 0           ; 0 means OK, it used for XOR/TEST optim. 
 STATUS_UNSUCCESSFUL    = 0C0000001h  ; Driver IO status for operation failed 
@@ -63,38 +69,34 @@ STATUS_NOT_IMPLEMENTED = 0C0000002h  ; Driver IO status for unknown request
 FILE_DEVICE_UNKNOWN    = 0022h       ; Device type for this device
 RZ_DRIVER_BUFFER_SIZE  = 1000h       ; Additional buffer size for this device 
 IO_NO_INCREMENT        = 0           ; Not change priority, 0 used for XOR/TEST 
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                                Code section.                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 format PE DLL native 4.0 at 10000h
 entry DriverLoadEntryPoint
 section '.text' code readable executable notpageable
-
 ;---------- Driver Load entry point -------------------------------------------;
+;                                                                              ;
 ; Parm#1 = dword [ebp+08h] = Pointer to the Driver Object structure            ;
 ; Parm#2 = dword [ebp+0Ch] = Pointer to registry key string (UNICODE)          ;
 ; Return = EAX = Status by NTDDK.H                                             ;
 ; Text strings represented as UNICODE_STRING structures, see MSDN.             ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DriverLoadEntryPoint:
 push ebp                      ; because 4(call push eip) + 4(push ebp) = 8,
 mov ebp,esp                   ; first parm. means [ebp + 08h]
 sub esp,32                    ; Reserve space
 push ebx esi edi              ; Save non-volatile but used registers
-
 ;---------- Initialize UNICODE string: Device Name ----------------------------;
-
 push usDevice                 ; Parm#2 = Destination pointer
 lea eax,[esp + 12 + 04 + 00]
 push eax                      ; Parm#1 = Source pointer , push _USD
 call [RtlInitUnicodeString]
-
 ;---------- Create and initialize device object -------------------------------;
-
 push DeviceObject             ; Parm#7 = Pointer to returned Dev.Obj. pointer 
 push FALSE                    ; Parm#6 = Exclusive access flag
 push 0                        ; Parm#5 = Device Characteristics
@@ -106,9 +108,7 @@ push dword [ebp + 8]          ; Parm#1 = Pointer to Drv. Obj., [lpDriverObject]
 call [IoCreateDevice]
 test eax,eax                  ; cmp eax,STATUS_SUCCESS
 jne .exit                     ; Go exit if error
-
 ;---------- Assign device extension variable ----------------------------------;
-
 mov eax,[DeviceObject]
 mov eax,[eax + 28h]           ; V_DEVICE_OBJECT.DeviceExtension
 mov [DeviceExtension],eax
@@ -116,33 +116,25 @@ push usSymbolicLink
 lea eax,[esp + 12 + 04 + 16]
 push eax                      ; push _USSL
 call [RtlInitUnicodeString]  
-
 ;---------- Create symbolic link to the user-visible name ---------------------;
-
 lea eax,[esp + 12 + 00 + 00]
 push eax                     ; Parm#2 = Pointer to device name, push _USD 
 lea eax,[esp + 12 + 04 + 16] ; Required push _USSL 
 push eax                     ; Parm#1 = Pointer to symbolic link name
 call [IoCreateSymbolicLink]
-
 ;---------- Save status and check result --------------------------------------; 
-
 mov ebx,eax
 test eax,eax                 ; cmp eax,STATUS_SUCCESS
 je .success                  ; Go continue if no errors
-
 ;---------- Delete device object if not successful ----------------------------;
-
 push [DeviceObject] 
 call [IoDeleteDevice]
 jmp .exit
-
 ;---------- Branch for continue initialization if success create link ---------;
 ; Load structure to point to IRP handlers
 ; IRP = I/O Request Packet
 ; Create functions pointers list
 ; Load structure to point to IRP handlers
-
 .success:
 mov eax,[ebp + 8]            ; [lpDriverObject]
 lea edx,[DriverUnloadEntryPoint]
@@ -153,21 +145,19 @@ mov [eax + 40h],edx          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_CLOSE_OFFS
 lea edx,[DispatchReadWrite]
 mov [eax + 44h],edx          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_READ_OFFSET
 mov [eax + 48h],edx          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_WRITE_OFFSET
-
 ;---------- Assign result, exit -----------------------------------------------;
-
 xchg eax,ebx                 ; XCHG (not MOV) because compact code
 .exit:
 pop edi esi ebx
 leave
 ret 8
-
 ;---------- Driver UnLoad entry point -----------------------------------------;
+;                                                                              ;
 ; Parm#1 = dword [ebp+08h] = Pointer to the Driver Object structure            ;
 ; No Return                                                                    ;
 ; Text strings represented as UNICODE_STRING structures, see MSDN.             ;              
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DriverUnloadEntryPoint:
 push ebp                      ; because 4(call push eip) + 4(push ebp) = 8,
@@ -177,27 +167,23 @@ push usSymbolicLink
 lea eax,[esp + 04]
 push eax                      ; push _USSL  
 call [RtlInitUnicodeString]
-
 ;---------- Delete symbolic link to the user-visible name ---------------------;
-
 mov eax,esp
 push eax                      ; push _USSL 
 call [IoDeleteSymbolicLink]
-
 ;---------- Delete device object, exit ----------------------------------------;
-
 mov eax,[ebp + 8]            ; [lpDriverObject]
 push dword [eax + 4]         ; V_DRIVER_OBJECT.DeviceObject
 call [IoDeleteDevice]
 leave
 ret 4
-
 ;---------- Driver DispatchCreateClose entry point ----------------------------;
+;                                                                              ;
 ; Parm#1 = dword [ebp+08h] = Pointer to the Driver Object structure            ;
 ; Parm#2 = dword [ebp+0Ch] = Pointer to IRP (I/O Request Packet)               ;
 ; Return = EAX = Status (NTSTATUS.H)                                           ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DispatchCreateClose:
 push ebp                     ; because 4(call push eip) + 4(push ebp) = 8,
@@ -211,13 +197,13 @@ call [IoCompleteRequest]
 xor eax,eax                  ; mov eax,STATUS_SUCCESS
 leave
 ret 8
-
 ;---------- Driver DispatchReadWrite entry point ------------------------------;
+;                                                                              ;
 ; Parm#1 = dword [ebp+08h] = Pointer to the Driver Object structure            ;
 ; Parm#2 = dword [ebp+0Ch] = Pointer to IRP (I/O Request Packet)               ;
 ; Return = EAX = Status (NTSTATUS.H)                                           ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DispatchReadWrite:
 push ebp                    ; because 4(call push eip) + 4(push ebp) = 8,
@@ -230,9 +216,7 @@ mov ebx,STATUS_NOT_IMPLEMENTED
 mov esi,[edi + 3Ch]          ; ESI = PR0DriverQuery, V_IRP.UserBuffer
 mov dword [esi + 20h], 0     ; V_RZDriverQuery.RESULT
 mov ecx,dword [esi + 0]      ; ECX = user I/O code, V_RZDriverQuery.IOCODE 
-
 ;---------- Detect and execute target operation -------------------------------;
-
 mov ebx,STATUS_NOT_IMPLEMENTED
 cmp ecx,RZ_REQUEST_CODE
 jne @f
@@ -240,9 +224,7 @@ mov eax,[esi + 16]
 call dword [esi + 8]
 xor ebx,ebx                  ; mov ebx,STATUS_SUCCESS
 @@:
-
 ;---------- Target operation done, exit ---------------------------------------;
-
 mov [edi + 18h],ebx          ; V_IRP.IoStatus.Status
 push IO_NO_INCREMENT 
 push edi
@@ -251,31 +233,27 @@ xchg eax,ebx                 ; XCHG (not MOV) because compact code
 pop edi esi ebx
 leave
 ret 8
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                              Data section.                                   ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.data' data readable writeable notpageable
-
 ;---------- Device and symbolic link names ------------------------------------;
 ; Unified for support KMD32 + SCP64 ( WoW 32/64 ).
-
 align 10h
 usDevice         DU '\Device\ICR0'     , 0
 align 10h
 usSymbolicLink   DU '\DosDevices\ICR0' , 0
-
 ;---------- Pointers to device data -------------------------------------------;
-
 align 10h
 DeviceObject     DD 0   ; Pointer to device object
 DeviceExtension  DD 0   ; Pointer to device extension (driver-specific)
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                              Import section.                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section 'INIT' data import readable notpageable
 library ntoskrnl, 'ntoskrnl.exe'
 import  ntoskrnl,\
@@ -285,22 +263,12 @@ IoCreateSymbolicLink  ,  'IoCreateSymbolicLink'  , \
 IoDeleteDevice        ,  'IoDeleteDevice'        , \
 IoDeleteSymbolicLink  ,  'IoDeleteSymbolicLink'  , \
 IoCompleteRequest     ,  'IoCompleteRequest'
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                             Resources section.                               ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.rsrc' resource data readable
-
-;---------- Equations ---------------------------------------------------------;
-
-RESOURCE_DESCRIPTION  EQU  'NCRB Kernel Mode Driver for Win32'
-RESOURCE_VERSION      EQU  '0.0.0.1'
-RESOURCE_COMPANY      EQU  'https://github.com/manusov'
-RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
-
-;---------- Resources ---------------------------------------------------------;
-
 directory    RT_VERSION, r_version_info
 resource     r_version_info, 1, LANG_NEUTRAL, version_info
 versioninfo  version_info, \
@@ -309,11 +277,11 @@ versioninfo  version_info, \
 'FileVersion'     , RESOURCE_VERSION     ,\
 'CompanyName'     , RESOURCE_COMPANY     ,\
 'LegalCopyright'  , RESOURCE_COPYRIGHT
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                            Relocations section.                              ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.reloc' fixups data readable discardable
 
 

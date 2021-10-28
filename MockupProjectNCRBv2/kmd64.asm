@@ -49,13 +49,19 @@
 ;=========================================================================================================;
 
 ;------------------------------------------------------------------------------;
-;                               Definitions.                                   ;
-;  IMPORTANT NOTE. Some zero constant values used for XOR/TEST optimizations,  ; 
-;                     carefully inspect code if change.                        ;
+;                                                                              ;
+;                        FASM and NCRB definitions.                            ;        
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
-include 'win64a.inc'                 ; FASM definitions
-
+include 'win64a.inc'   ; FASM definitions
+;---------- Global application and version description definitions ------------;
+RESOURCE_DESCRIPTION   EQU  'NCRB Kernel Mode Driver for Win64'
+RESOURCE_VERSION       EQU  '0.0.0.1'
+RESOURCE_COMPANY       EQU  'https://github.com/manusov'
+RESOURCE_COPYRIGHT     EQU  '(C) 2021 Ilya Manusov'
+;---------- Kernel Mode Driver definitions ------------------------------------;
+; Some zero constant values used for XOR/TEST optimizations, 
+; carefully inspect code if change.                        ;
 RZ_REQUEST_CODE        = 41h         ; Request ID for ring0 callback function
 STATUS_SUCCESS         = 0           ; 0 means OK, it used for XOR/TEST
 STATUS_UNSUCCESSFUL    = 0C0000001h  ; Driver IO status for operation failed
@@ -63,22 +69,22 @@ STATUS_NOT_IMPLEMENTED = 0C0000002h  ; Driver IO status for unknown request
 FILE_DEVICE_UNKNOWN    = 0022h       ; Device type for this device
 RZ_DRIVER_BUFFER_SIZE  = 1000h       ; Additional buffer size for this device 
 IO_NO_INCREMENT        = 0           ; Not change priority, 0 used for XOR/TEST 
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                                Code section.                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 format PE64 DLL native 5.02 at 10000h
 entry DriverLoadEntryPoint
 section '.text' code readable executable notpageable
-
 ;---------- Driver Load entry point -------------------------------------------;
+;                                                                              ;
 ; Parm#1 = RCX = Pointer to the Driver Object structure                        ;
 ; Parm#2 = RDX = Pointer to registry key string (UNICODE)                      ;
 ; Return = RAX = Status by NTDDK.H                                             ;
 ; Text strings represented as UNICODE_STRING structures, see MSDN.             ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DriverLoadEntryPoint:
 push rsi rdi rbx rbp          ; Save non-volatile but used registers
@@ -87,15 +93,11 @@ and rsp,0FFFFFFFFFFFFFFF0h    ; Stack alignment
 mov rbx,rsp                   ; RBX = Pointer to aligned stack
 sub rsp,32 + 32               ; Create parms. shadow for called + text buffers
 mov rdi,rcx                   ; RDI = Pointer to the Driver Object structure 
-
 ;---------- Initialize UNICODE string: Device Name ----------------------------;
-
 mov rcx,rsp                   ; Parm#1 = RCX = Destination pointer, [_USDevice]
 lea rdx,[DeviceName]          ; Parm#2 = RDX = Source pointer
 call [RtlInitUnicodeString]
-
 ;---------- Create and initialize Device Object -------------------------------;
-
 mov rcx,rdi                   ; Parm#1 = Pointer to Driver Object
 mov edx,RZ_DRIVER_BUFFER_SIZE ; Parm#2 = Device extension size 
 mov r8,rsp                    ; Parm#3 = Pointer to struc. with UNICODE string, [_USDevice]
@@ -111,39 +113,29 @@ call [IoCreateDevice]
 add rsp,32 + 24 + 8           ; Remove parameters shadow, parameters, alignment
 test eax,eax                  ; Check status, use fact STATUS_SUCCESS = 0
 jnz .return                   ; Go return if error
-
 ;---------- Assign device extension variable ----------------------------------;
-
 mov rax,[rsi + 40h]           ; V_DEVICE_OBJECT.DeviceExtension offset 40h
 mov [DeviceExtension],rax
-
 ;---------- Initialize UNICODE string: Symbolic Link --------------------------;
-
 lea rcx,[rbx - 32 - 16]       ; Parm#1 = RCX = Destination pointer, [_USSymLink]
 lea rdx,[SymbolicLinkName]    ; Parm#2 = RDX = Source pointer
 call [RtlInitUnicodeString]
-
 ;---------- Create symbolic link to the user-visible name (associate it) ------;
-
 lea rcx,[rbx - 32 - 16]       ; Parm#1 = RCX = Pointer to symbolic link name, [_USSymLink] 
 mov rdx,rsp                   ; Parm#2 = RDX = Pointer to device name, [_USDevice]
 call [IoCreateSymbolicLink]
 mov esi,eax                   ; ESI = Save status
 test eax,eax                  ; Check status, use fact STATUS_SUCCESS = 0
 jz .success                   ; Go continue if no errors
-
 ;---------- Delete device object if not successful ----------------------------;
-
 mov rcx,[DeviceObject]        ; Parm#1 = RCX = Pointer to object
 call [IoDeleteDevice]
 jmp .return
-
 ;---------- Branch for continue initialization if success create link ---------;
 ; Load structure to point to IRP handlers
 ; IRP = I/O Request Packet
 ; Create functions pointers list
 ; RDI = Pointer to driver object
-
 .success:
 lea rax,[DriverUnloadEntryPoint]
 mov [rdi + 068h],rax          ; V_DRIVER_OBJECT.DriverUnload = 068h
@@ -153,21 +145,19 @@ mov [rdi + 080h],rax          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_CLOSE_OFF
 lea rax,[DispatchReadWrite]
 mov [rdi + 088h],rax          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_READ_OFFSET = 088h
 mov [rdi + 090h],rax          ; V_DRIVER_OBJECT.MajorFunction + IRP_MJ_WRITE_OFFSET = 090h
-
 ;---------- Exit Load Function ------------------------------------------------;
-
 xchg eax,esi                  ; EAX = Restore status value, previously saved
 .return:                      ; XCHG used instead MOV for compact code
 mov rsp,rbp
 pop rbp rbx rdi rsi
 ret
-
 ;---------- Driver UnLoad entry point -----------------------------------------;
+;                                                                              ;
 ; Parm#1 = RCX = Pointer to the Driver Object structure                        ;
 ; No Return                                                                    ;
 ; Text strings represented as UNICODE_STRING structures, see MSDN.             ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DriverUnloadEntryPoint:
 push rdi rbx rbp             ; Save non-volatile but used registers
@@ -176,32 +166,26 @@ and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment
 mov rbx,rsp                  ; RBX = Pointer to aligned stack
 sub rsp,32 + 16              ; Create parms. shadow for called + text buffers
 mov rdi,rcx                  ; Save first parameter
-
 ;---------- Initialize UNICODE string: Device symbol link (for delete) --------;
-
 mov rcx,rsp                  ; Parm#1 = RCX = Pointer to destination string
 lea rdx,[SymbolicLinkName]   ; Parm#2 = RDX = Pointer to name
 call [RtlInitUnicodeString]
-
 ;---------- Delete symbolic link to the user-visible name ---------------------;
-
 mov rcx,rsp                  ; Parm#1 = RCX = Pointer to destination string
 call [IoDeleteSymbolicLink]  ; Return EAX = Status (NTSTATUS)
-
 ;---------- Delete device object, exit ----------------------------------------;
-
 mov rcx,[rdi + 8]            ; mov rcx,[rcx + V_DRIVER_OBJECT.DeviceObject]  
 call [IoDeleteDevice]        ; Parm#1 = RCX = Pointer to Device Object
 mov rsp,rbp
 pop rbp rbx rdi
 ret
-
 ;---------- Driver DispatchCreateClose entry point ----------------------------;
+;                                                                              ;
 ; Parm#1 = RCX = Pointer to the Driver Object structure                        ;
 ; Parm#2 = RDX = Pointer to IRP (I/O Request Packet)                           ;
 ; Return = RAX = Status (NTSTATUS.H)                                           ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DispatchCreateClose:
 push rbp                    ; Save non-volatile but used registers
@@ -211,9 +195,7 @@ sub rsp,32                  ; Create parameters shadow for called
 xor eax,eax
 mov [rdx + 030h],eax        ; V_IRP.IoStatus.Status = 030h , STATUS_SUCCESS = 0
 mov [rdx + 038h],rax        ; V_IRP.IoStatus.Information = 038h
-
 ;---------- Indicate completion, exit -----------------------------------------;
-
 mov rcx,rdx                 ; Parm#1 = RCX = Pointer IRP = Input RDX
 xor edx,edx                 ; Parm#2 = Priority Boost = IO_NO_INCREMENT = 0
 call [IoCompleteRequest]
@@ -221,13 +203,13 @@ xor eax,eax                 ; Use fact STATUS_SUCCESS = 0
 mov rsp,rbp
 pop rbp
 ret
-
 ;---------- Driver DispatchReadWrite entry point ------------------------------;
+;                                                                              ;
 ; Parm#1 = RCX = Pointer to the Driver Object structure                        ;
 ; Parm#2 = RDX = Pointer to IRP (I/O Request Packet)                           ;
 ; Return = Status (NTSTATUS.H)                                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 align 10h
 DispatchReadWrite:
 push rbx rsi rdi rbp        ; Save non-volatile but used registers
@@ -244,23 +226,17 @@ ja .done
 mov rsi,[rdi + 070h]        ; RSI = Pointer to DriverQuery, V_IRP.UserBuffer = 070h
 mov qword [rsi + 020h],0    ; V_RZDriverQuery.RESULT = 020h
 mov ecx,[rsi]               ; ECX = User I/O code, V_RZDriverQuery.IOCODE = 000h
-
 ;---------- Target operation --------------------------------------------------;
-
 mov ebx,STATUS_NOT_IMPLEMENTED  ; STATUS_NOT_IMPLEMENTED = 0C0000002h
 cmp ecx,RZ_REQUEST_CODE
 jne .done
 mov rax,[rsi + 16]          ; RAX = user parameter
 call qword [rsi + 8]        ; call user subroutine
 mov ebx,STATUS_SUCCESS
-
 ;---------- End of target operation -------------------------------------------;
-
 .done:
 mov [rdi + 030h],ebx        ; V_IRP.IoStatus.Status = 030h
-
 ;---------- Indicate completion, exit -----------------------------------------;
-
 mov rcx,rdi                 ; Parm#1 = RCX = Pointer IRP = Input RDX
 xor edx,edx                 ; Parm#2 = Priority Boost = IO_NO_INCREMENT = 0
 call [IoCompleteRequest]
@@ -268,31 +244,27 @@ xchg eax,ebx
 mov rsp,rbp
 pop rbp rdi rsi rbx
 ret
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                              Data section.                                   ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.data' data readable writeable notpageable
-
 ;---------- Device and symbolic link names ------------------------------------; 
 ; Unified for availability 64-bit KMD under WoW mode ( Win32-on-Window64 ).
-
 align 10h
 DeviceName        DU '\Device\ICR0'     , 0
 align 10h
 SymbolicLinkName  DU '\DosDevices\ICR0' , 0
-
 ;---------- Pointers to device data -------------------------------------------;
-
 align 10h
 DeviceObject      DQ  0   ; Pointer to device object
 DeviceExtension   DQ  0   ; Pointer to device extension ( driver-specific )
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                              Import section.                                 ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section 'INIT' data import readable notpageable
 library ntoskrnl, 'ntoskrnl.exe'
 import  ntoskrnl,\
@@ -302,22 +274,12 @@ IoCreateSymbolicLink  ,  'IoCreateSymbolicLink'  , \
 IoDeleteDevice        ,  'IoDeleteDevice'        , \
 IoDeleteSymbolicLink  ,  'IoDeleteSymbolicLink'  , \
 IoCompleteRequest     ,  'IoCompleteRequest'
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                             Resources section.                               ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.rsrc' resource data readable
-
-;---------- Equations ---------------------------------------------------------;
-
-RESOURCE_DESCRIPTION  EQU  'NCRB Kernel Mode Driver for Win64'
-RESOURCE_VERSION      EQU  '0.0.0.1'
-RESOURCE_COMPANY      EQU  'https://github.com/manusov'
-RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
-
-;---------- Resources ---------------------------------------------------------;
-
 directory    RT_VERSION , r_version_info
 resource     r_version_info, 1, LANG_NEUTRAL, version_info
 versioninfo  version_info, \ 
@@ -326,9 +288,9 @@ versioninfo  version_info, \
 'FileVersion'     , RESOURCE_VERSION     ,\
 'CompanyName'     , RESOURCE_COMPANY     ,\
 'LegalCopyright'  , RESOURCE_COPYRIGHT
-
 ;------------------------------------------------------------------------------;
+;                                                                              ;
 ;                           Relocations section.                               ;
+;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 section '.reloc' fixups data readable discardable

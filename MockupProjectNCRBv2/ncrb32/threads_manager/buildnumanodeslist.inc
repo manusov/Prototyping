@@ -28,8 +28,10 @@ jbe .withoutNuma
 
 mov eax,esp                        ; EAX = Pointer to variable 
 push eax                           ; Parm #1 = Pointer to variable
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._GetNumaHighestNodeNumber]   ; Return EAX=0 if error, EAX>0 if no errors
+
+;mov eax,[Registry]
+call [DYNA_IMPORT._GetNumaHighestNodeNumber]   ; Return EAX=0 if error, EAX>0 if no errors
+
 test eax,eax
 jz .error                ; Go if function status = error
 mov eax,[esp]            ; Get variable updated by OS API = highest node number
@@ -53,13 +55,17 @@ cmp dword [esp + 8],PG_OPTIMAL         ; dword [esp+8] = PG_OPTIMAL if
 jne .getSmallMask                      ; Processor Groups: supported and enabled              
 
 .getBigMask:
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._GetNumaNodeProcessorMaskEx]  ; Write qword to [x], [x+8], mask+group
+
+; mov eax,[Registry]
+call [DYNA_IMPORT._GetNumaNodeProcessorMaskEx]  ; Write qword to [x], [x+8], mask+group
+
 jmp .afterGetMask
 
 .getSmallMask:
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._GetNumaNodeProcessorMask]    ; Write qword to [rdx], affinity mask
+
+; mov eax,[Registry]
+call [DYNA_IMPORT._GetNumaNodeProcessorMask]    ; Write qword to [rdx], affinity mask
+
 mov [ebx + NUMACTRL.nodeGroup],0    ; Processor Group always 0 for this branch  
 
 .afterGetMask:
@@ -111,8 +117,10 @@ mov edi,ebx                     ; EDI = RBX = Base address of build nodes list
 mov ecx,NUMACTRL_SIZE / 4       ; ECX = One NUMA entry size, units = dwords
 xor eax,eax                     ; EAX = write data = 0
 rep stosd                       ; Blank entry
-mov eax,[Registry]
-mov eax,[eax + REGISTRY32.osData.systemInfo.dwActiveProcessorMask]  ; EAX = mask 
+
+; mov eax,[Registry]
+mov eax,[OS_DATA.systemInfo.dwActiveProcessorMask]  ; EAX = mask 
+
 mov [ebx + NUMACTRL.nodeAffinity],eax  ; set affinity mask = all system mask
 mov eax,1
 jmp .done

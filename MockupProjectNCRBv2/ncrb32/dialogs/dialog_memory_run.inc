@@ -1,5 +1,5 @@
 ;---------- Callback dialogue procedures for operations child windows ---------;
-;           Handler for "Run" button at "Math" screen                          ; 
+;           Handler for "Run" button at "Memory" screen                        ; 
 ;                                                                              ;
 ; INPUT:   [esp + 04] = Parm#1 = HWND = Dialog box handle                      ; 
 ;          [esp + 08] = Parm#2 = UINT = Message                                ; 
@@ -12,12 +12,17 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
-DialogProcChildMathRun:
+DialogProcChildMemoryRun:
 push ebp
 mov ebp,esp
 push ebx esi edi
-mov edi,[Registry]               ; EDI = Pointer to global registry
-add edi,REGISTRY32.appData       ; EDI = Pointer to registry.appData
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edi,[Registry]               ; EDI = Pointer to global registry
+
+; add edi,REGISTRY32.appData       ; EDI = Pointer to registry.appData
+lea edi,[APP_DATA]
+
 mov ebx,PARM_HWNDDLG             ; EBX = Window handle
 
 ;---------- Detect message type -----------------------------------------------;
@@ -33,16 +38,22 @@ je .wmclose
 xor eax,eax
 jmp .finish
 
-;--- WM_INITDIALOG handler: create child window: math performance report ------;
+;--- WM_INITDIALOG handler: create child window: memory performance report ----;
 
 .wminitdialog:                   ; Build main window 
-push [edi + APPDATA.createdIcons + MATH_ICON_NUMBER * 4]
+mov ax,BINDER_BUILD_MEMORY_RUN
+call Binder
+; ...
+mov ax,BINDER_BUILD_MEMORY_MBPS
+call Binder
+; ...
+push [edi + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 4]
 push ICON_SMALL
 push WM_SETICON 
 push PARM_HWNDDLG
 call [SendMessage]
 mov esi,[edi + APPDATA.lockedStrings]
-mov ax,STR_CHILD_MATH_REPORT
+mov ax,STR_CHILD_MEM_REPORT
 call IndexString
 push esi
 push PARM_HWNDDLG
@@ -73,4 +84,5 @@ mov eax,1
 .finish:
 pop edi esi ebx ebp
 ret 16
+
 

@@ -10,8 +10,12 @@ push rbx rsi rdi rbp r15
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-mov r15,[Registry]
-lea rbx,[r15 + REGISTRY64.scpData]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov r15,[Registry]
+
+; lea rbx,[r15 + REGISTRY64.scpData]
+lea rbx,[SCP_DATA]
 
 ;---------- Initializing data structure ---------------------------------------;
 
@@ -20,13 +24,15 @@ mov rdi,rbx
 mov ecx,sizeof.SCPDATA
 mov al,0
 rep stosb
-mov rax,[r15 + REGISTRY64.allocatorTempBuffer.objectStart]
+lea rax,[TEMP_BUFFER]
 mov [rbx + SCPDATA.drvPath],rax
 mov [rbx + SCPDATA.driver],INVALID_HANDLE_VALUE
 
 ;---------- Initializing full path to driver file -----------------------------;
 
-mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+mov rsi,[APP_DATA.lockedStrings]
+
 mov ax,STR_NAME_KMD64
 call IndexString
 mov rcx,rsi                    ; RCX = Parm#1 = Pointer to file name
@@ -50,7 +56,10 @@ mov [rbx + SCPDATA.manager],rax
 ;---------- Try Open Service, check for already exist -------------------------;
 
 push rax
-mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+
+; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+mov rsi,[APP_DATA.lockedStrings]
+
 mov ax,STR_DRV_NAME
 call IndexString
 pop rcx                           ; RCX = Parm#1 = Service handle
@@ -114,7 +123,9 @@ jz .errorStartService   ; Go if error status returned when start service
 
 ;---------- Create (open) device file -----------------------------------------;
 
-mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
+mov rsi,[APP_DATA.lockedStrings]
+
 mov ax,STR_DRV_DEVICE
 call IndexString
 
@@ -159,8 +170,12 @@ push rbx rsi rdi rbp r15
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-mov rbx,[Registry]
-add rbx,REGISTRY64.scpData
+
+;mov rbx,[Registry]
+;add rbx,REGISTRY64.scpData
+lea rbx,[SCP_DATA]
+
+
 ; xor r15d,r15d
 
 ;---------- Close device file, uninstall driver -------------------------------;
@@ -251,8 +266,10 @@ TryKernelModeDriver:
 push rbx rsi rdi rbp
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
-mov rbx,[Registry]
-add rbx,REGISTRY64.scpData
+
+;mov rbx,[Registry]
+;add rbx,REGISTRY64.scpData
+lea rbx,[SCP_DATA]
 
 ;---------- Write to device file, this is requests for driver -----------------;
 

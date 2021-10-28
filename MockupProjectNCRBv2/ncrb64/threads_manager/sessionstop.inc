@@ -30,12 +30,18 @@
 
 SessionStop:
 
-mov rax,[Registry]
-lea rdi,[rax + REGISTRY64.memIpb]   ; RDI = Pointer to IPB (benchmark scenario)
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; lea rdi,[rax + REGISTRY64.memIpb]   ; RDI = Pointer to IPB (benchmark scenario)
+lea rdi,[MEM_IPB]
 
 ;---------- Threads stop, release handles for Threads and Events --------------;
 
-lea rcx,[rax + REGISTRY64.mpe64csb.threadList]   ; RCX = Pointer to threads list
+; lea rcx,[rax + REGISTRY64.mpe64csb.threadList]   ; RCX = Pointer to threads list
+lea rcx,[THREAD_LIST]
+
+
 mov edx,[rdi + MEMIPB.updatedThreads]            ; EDX = Threads count
 call ReleaseThreadsList
 mov al,1                             ; AL = error status, valid if CF=1 only
@@ -43,8 +49,12 @@ jc .exit                             ; Go if error
 
 ;---------- NUMA-aware or unaware memory release ------------------------------;
 
-mov rax,[Registry]
-lea rcx,[rax + REGISTRY64.mpe64csb.numaNodeList]  ; RCX = Pointer to NUMA nodes list
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; lea rcx,[rax + REGISTRY64.mpe64csb.numaNodeList]  ; RCX = Pointer to NUMA nodes list
+lea rcx,[NUMA_LIST]
+
 mov edx,[rdi + MEMIPB.domainsCount]               ; EDX = NUMA domains count
 call MemReleaseNuma
 mov al,1                             ; AL = error status, valid if CF=1 only

@@ -1,5 +1,5 @@
 ;---------- Callback dialogue procedures for operations child windows ---------;
-;           Handler for "Draw" button at "Math" screen                         ; 
+;           Handler for "Run" button at "Memory" screen                        ; 
 ;                                                                              ;
 ; INPUT:   RCX = Parm#1 = HWND = Dialog box handle                             ; 
 ;          RDX = Parm#2 = UINT = Message                                       ; 
@@ -12,7 +12,7 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
-DialogProcChildMathDraw:
+DialogProcChildMemoryRun:
 cld
 push rbp rbx rsi rdi r15
 mov rbp,rsp
@@ -22,8 +22,11 @@ mov PARM_HWNDDLG,rcx           ; Save input parameters to shadow
 mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
-mov r15,[Registry]
-add r15,REGISTRY64.appData
+mov rbx,rcx                    ; RBX = Window handle
+
+;mov r15,[Registry]
+;add r15,REGISTRY64.appData     ; R15 = Pointer to application data in registry
+lea r15,[APP_DATA]
 
 ;---------- Detect message type -----------------------------------------------;
 
@@ -40,16 +43,22 @@ je .wmclose                    ; Go if window close message
 xor eax,eax
 jmp .finish                    ; Go exit if unknown event
 
-;--- WM_INITDIALOG handler: create child window: math performance draw --------; 
+;--- WM_INITDIALOG handler: create child window: memory performance report ----; 
 
 .wminitdialog: 
-mov r9,[r15 + APPDATA.createdIcons + MATH_ICON_NUMBER * 8] 
+mov ax,BINDER_BUILD_MEMORY_RUN
+call Binder
+; ...
+mov ax,BINDER_BUILD_MEMORY_MBPS
+call Binder
+; ...
+mov r9,[r15 + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 8] 
 mov r8d,ICON_SMALL 
 mov edx,WM_SETICON 
 mov rcx,PARM_HWNDDLG
 call [SendMessage]
 mov rsi,[r15 + APPDATA.lockedStrings]
-mov ax,STR_CHILD_MATH_DRAW
+mov ax,STR_CHILD_MEM_REPORT
 call IndexString
 mov rdx,rsi
 mov rcx,PARM_HWNDDLG

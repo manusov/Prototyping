@@ -49,4 +49,5 @@ include 'info_acpi.inc'
 include 'info_affinized_cpuid.inc'
 include 'info_kernel_mode.inc'
 
+include 'create_bindlist.inc'
 

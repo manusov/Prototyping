@@ -37,13 +37,26 @@
 ;                                                                                                         ;
 ;=========================================================================================================;
 
-format PE GUI 4.0 DLL
+;------------------------------------------------------------------------------;
+;                                                                              ;
+;                        FASM and NCRB definitions.                            ;        
+;                                                                              ;
+;------------------------------------------------------------------------------;
 include 'win32a.inc'
-include 'global\definitions.inc'
+include 'data\data.inc'
+;---------- Global application and version description definitions ------------;
+RESOURCE_DESCRIPTION  EQU  'NCRB universal resource library for Win32 and Win64'
+RESOURCE_VERSION      EQU  '0.0.0.1'
+RESOURCE_COMPANY      EQU  'https://github.com/manusov'
+RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
+;------------------------------------------------------------------------------;
+;                                                                              ;
+;                            Resources section.                                ;        
+;                                                                              ;
+;------------------------------------------------------------------------------;
+format PE GUI 4.0 DLL
 section '.rsrc' resource data readable
-
 ;---------- Root directory of resources ---------------------------------------;
-
 directory \
 RT_DIALOG     , dialogs , \ 
 RT_MENU       , menus   , \ 
@@ -51,39 +64,27 @@ RT_RCDATA     , raws    , \
 RT_ICON       , icons   , \
 RT_GROUP_ICON , gicons  , \ 
 RT_VERSION    , version
-
 ;---------- Resources directory for application main window and tabs ----------;
-
 resource dialogs,\
 IDD_MAIN               , LANG_ENGLISH + SUBLANG_DEFAULT, mainDialog       , \
 IDD_SYSINFO            , LANG_ENGLISH + SUBLANG_DEFAULT, tabSysinfo       , \
 IDD_MEMORY             , LANG_ENGLISH + SUBLANG_DEFAULT, tabMemory        , \
-IDD_MATH               , LANG_ENGLISH + SUBLANG_DEFAULT, tabMath          , \
 IDD_OS                 , LANG_ENGLISH + SUBLANG_DEFAULT, tabOs            , \
 IDD_NATIVE_OS          , LANG_ENGLISH + SUBLANG_DEFAULT, tabNativeOs      , \
-IDD_PROCESSOR          , LANG_ENGLISH + SUBLANG_DEFAULT, tabProcessor     , \
 IDD_TOPOLOGY           , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopology      , \
 IDD_TOPOLOGY_EX        , LANG_ENGLISH + SUBLANG_DEFAULT, tabTopologyEx    , \
 IDD_NUMA               , LANG_ENGLISH + SUBLANG_DEFAULT, tabNuma          , \
 IDD_PGROUPS            , LANG_ENGLISH + SUBLANG_DEFAULT, tabPgroups       , \
 IDD_ACPI               , LANG_ENGLISH + SUBLANG_DEFAULT, tabAcpi          , \
 IDD_AFF_CPUID          , LANG_ENGLISH + SUBLANG_DEFAULT, tabAffCpuid      , \
-IDD_KMD                , LANG_ENGLISH + SUBLANG_DEFAULT, tabKmd           , \
 IDD_CHILD_MEMORY_RUN   , LANG_ENGLISH + SUBLANG_DEFAULT, childMemoryRun   , \
 IDD_CHILD_MEMORY_DRAW  , LANG_ENGLISH + SUBLANG_DEFAULT, childMemoryDraw  , \
-IDD_CHILD_MATH_RUN     , LANG_ENGLISH + SUBLANG_DEFAULT, childMathRun     , \
-IDD_CHILD_MATH_DRAW    , LANG_ENGLISH + SUBLANG_DEFAULT, childMathDraw    , \
 IDD_CHILD_VECTOR_BRIEF , LANG_ENGLISH + SUBLANG_DEFAULT, childVectorBrief 
-
-
 ;---------- Application main window as tabbed sheet ---------------------------;
-
 dialog      mainDialog,        '',                      0,   0, 410, 282, DS_CENTER + WS_CAPTION + WS_SYSMENU, 0, IDR_MENU, 'Verdana', 10
 dialogitem  'SysTabControl32', '', IDC_TAB          ,   1,   1, 408,  29, WS_VISIBLE + TCS_MULTILINE
 enddialog
-
 ;---------- Tab 1 = system information ----------------------------------------;
-
 dialog      tabSysinfo    , '',                         2, 30, 403,  253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_SYSINFO         ,   2,  3, 380,   10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_VENDOR  ,   1,  17,  55,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
@@ -175,12 +176,10 @@ dialogitem  'STATIC'      , '', IDC_SYSINFO_MEM_AV  , 181, 217,  54,  10, WS_VIS
 dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG    , 238, 217,  76,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_V  , 316, 217,  32,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem  'STATIC'      , '', IDC_SYSINFO_LRPG_E  , 350, 217,  52,  10, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem  'BUTTON'      , '', IDB_SYSINFO_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_SYSINFO_VBRF    , 303, 234,  58,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_SYSINFO_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
 ;---------- Tab 2 = memory and cache benchmark --------------------------------; 
-
 dialog      tabMemory     , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_MEMORY          ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_MEMORY_FRAME_1  ,   1,  17, 400,  90, WS_VISIBLE + SS_ETCHEDFRAME
@@ -272,28 +271,7 @@ dialogitem  'BUTTON'      , '', IDB_MEMORY_RUN      , 284, 234,  38,  13, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_MEMORY_DEFAULTS , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_MEMORY_CANCEL   , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 3 = processor mathematics benchmarks --------------------------; 
-
-dialog      tabMath       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_MATH            ,   2,   3, 380,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MATH_FRAME_1    , 244, 166, 157,  65, WS_VISIBLE + SS_ETCHEDFRAME
-dialogitem  'BUTTON'      , '', IDB_MATH_BRF        , 248, 169,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP + WS_GROUP  
-dialogitem  'BUTTON'      , '', IDB_MATH_CRF        , 248, 178,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
-dialogitem  'BUTTON'      , '', IDB_MATH_BRF_A      , 248, 187,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
-dialogitem  'BUTTON'      , '', IDB_MATH_CRF_A      , 248, 196,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
-dialogitem  'BUTTON'      , '', IDB_MATH_ALL_P      , 327, 169,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP + WS_GROUP
-dialogitem  'BUTTON'      , '', IDB_MATH_X_16       , 327, 178,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
-dialogitem  'BUTTON'      , '', IDB_MATH_X_32       , 327, 187,  70,   9, WS_VISIBLE + WS_CHILD + BS_AUTORADIOBUTTON + WS_TABSTOP 
-dialogitem  'BUTTON'      , '', IDB_MATH_3D_DRAW    , 248, 214,  150,  9, WS_VISIBLE + WS_CHILD + BS_AUTOCHECKBOX + WS_TABSTOP
-dialogitem  'BUTTON'      , '', IDB_MATH_DRAW       , 245, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_MATH_RUN        , 284, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_MATH_DEFAULTS   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_MATH_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-enddialog                                   
-
-;---------- Tab 4 = operating system info -------------------------------------; 
-
+;---------- Tab 3 = operating system info -------------------------------------; 
 dialog      tabOs         , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_OS              ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_OS_UP           ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -301,9 +279,7 @@ dialogitem  'EDIT'        , '', IDE_OS_TEXT         ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_OS_REPORT       , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_OS_CANCEL       , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 5 = native os info, useable if run ncrb32 under win64 ---------;
-
+;---------- Tab 4 = native os info, useable if run ncrb32 under win64 ---------;
 dialog      tabNativeOs   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_NATIVE_OS       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_UP    ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -311,19 +287,7 @@ dialogitem  'EDIT'        , '', IDE_NATIVE_OS_TEXT  ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_REPORT   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_CANCEL   , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 6 = processor info --------------------------------------------; 
-
-dialog      tabProcessor  , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_PROCESSOR       ,   2,   3, 380,  10, WS_VISIBLE
-dialogitem  'EDIT'        , '', IDE_PROC_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_PROC_TEXT       ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_PROC_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_PROC_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-enddialog                                   
-
-;---------- Tab 7 = platform topology info by winapi --------------------------; 
-
+;---------- Tab 5 = platform topology info by winapi --------------------------; 
 dialog      tabTopology   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY        ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_1      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -333,9 +297,7 @@ dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_2    ,   3, 179, 400,  49, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_TOPOL_REPORT    , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_CANCEL    , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 8 = platform topology info by winapi (ex, extended) -----------; 
-
+;---------- Tab 6 = platform topology info by winapi (ex, extended) -----------; 
 dialog      tabTopologyEx , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_TOPOLOGY_EX     ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_1     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -345,9 +307,7 @@ dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_2   ,   3, 179, 400,  49, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 9 = platform NUMA domains list- -------------------------------; 
-
+;---------- Tab 7 = platform NUMA domains list- -------------------------------; 
 dialog      tabNuma       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_NUMA            ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NUMA_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -355,9 +315,7 @@ dialogitem  'EDIT'        , '', IDE_NUMA_TEXT       ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_NUMA_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_NUMA_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 10 = platform processor groups list ---------------------------; 
-
+;---------- Tab 8 = platform processor groups list ----------------------------; 
 dialog      tabPgroups    , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_P_GROUPS        ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_UP     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -365,9 +323,7 @@ dialogitem  'EDIT'        , '', IDE_P_GROUPS_TEXT   ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 11 = ACPI tables list -----------------------------------------; 
-
+;---------- Tab 9 = ACPI tables list ------------------------------------------; 
 dialog      tabAcpi       , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_ACPI            ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_ACPI_UP_1       ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -377,9 +333,7 @@ dialogitem  'EDIT'        , '', IDE_ACPI_TEXT_2     ,   3, 139, 400,  89, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_ACPI_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_ACPI_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 12 = affinized CPUID dump, per each logical CPU ---------------; 
-
+;---------- Tab 10 = affinized CPUID dump, per each logical CPU ---------------; 
 dialog      tabAffCpuid   , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_AFF_CPUID       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_A_CPUID_UP      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
@@ -387,67 +341,77 @@ dialogitem  'EDIT'        , '', IDE_A_CPUID_TEXT    ,   3,  30, 400, 198, WS_VIS
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
-
-;---------- Tab 13 = kernel mode driver information and probe results ---------; 
-
-dialog      tabKmd        , '',                         2,  30, 403, 253, WS_CHILD + WS_VISIBLE, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_KMD             ,   2,   3, 380,  10, WS_VISIBLE
-dialogitem  'EDIT'        , '', IDE_KMD_UP_1        ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_KMD_TEXT_1      ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'EDIT'        , '', IDE_KMD_UP_2        ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
-dialogitem  'EDIT'        , '', IDE_KMD_TEXT_2      ,   3, 139, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_KMD_REPORT      , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_KMD_CANCEL      , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-enddialog                                   
-
 ;---------- Child window = memory and cache benchmark run, text results -------; 
-
 dialog      childMemoryRun,    '',                     20,  20, 240, 295, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_MR_FIRST        ,   7,  10, 380,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_APPLICATION  ,   7,  23, 380,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_METHOD       ,   7,  32, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_WIDTH        ,   7,  41, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_THREADS      ,   7,  50, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR    ,   7,  59, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAGES  ,   7,  68, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_NUMA         ,   7,  77, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS     ,   7,  86, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ   ,   7,  95, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST    ,   7, 104, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL   ,   7, 113, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_THR ,   7, 122, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEASURE_PROF ,   7, 131, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEASURE_REP  ,   7, 140, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_FIRST        ,   7,  10, 205,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_APPLICATION  ,   7,  23,  75,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_METHOD       ,   7,  32,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_WIDTH        ,   7,  41,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_THREADS      ,   7,  50,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR    ,   7,  59,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAGES  ,   7,  68,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_NUMA         ,   7,  77,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS     ,   7,  86,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ   ,   7,  95,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST    ,   7, 104,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL   ,   7, 113,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_THR ,   7, 122,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_PROF ,   7, 131,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_REP  ,   7, 140,  75,  10, WS_VISIBLE 
 dialogitem  'STATIC'      , '', IDC_MR_MEMORY_ALLOC ,   7, 153, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1      ,   7, 166, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2      ,   7, 175, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_ALL  ,   7, 184, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_THR  ,   7, 193, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1      ,   7, 166,  95,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2      ,   7, 175,  95,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_ALL  ,   7, 184,  95,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_THR  ,   7, 193,  95,  10, WS_VISIBLE 
 dialogitem  'STATIC'      , '', IDC_MR_MEAS_RESULTS ,   7, 206, 380,  10, WS_VISIBLE  
-dialogitem  'STATIC'      , '', IDC_MR_DT_MS        ,   7, 219, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_MHZ ,   7, 228, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_CLK ,   7, 237, 380,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_LAST         ,   7, 254, 380,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DT_MS        ,   7, 219, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_MHZ ,   7, 228, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_CLK ,   7, 244, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LAST         ,   7, 260,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_APPLIC_V     ,  89,  23, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_METHOD_V     ,  89,  32, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_WIDTH_V      ,  89,  41, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_THREADS_V    ,  89,  50, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR_V  ,  89,  59, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAG_V  ,  89,  68, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_NUMA_V       ,  89,  77, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS_V   ,  89,  86, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ_V ,  89,  95, 150,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST_V  ,  89, 104, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL_V ,  89, 113, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_T_V ,  89, 122, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_P_V  ,  89, 131, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_R_V  ,  89, 140, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1_V    , 115, 166, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2_V    , 115, 175, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_A_V  , 115, 184, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_T_V  , 115, 193, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DT_MS_V      ,  76, 219, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_M_V ,  76, 228, 150,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_C_V , 135, 244,  90,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LAST_V       ,  65, 260, 150,  10, WS_VISIBLE
 dialogitem  'BUTTON'      , '', IDB_MR_OK           , 195, 275,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog
-
 ;---------- Child window = memory and cache benchmark run, draw chart ---------;
-
 dialog      childMemoryDraw,   '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+dialogitem  'STATIC'      , '', IDC_MD_ASM          ,   9, 271, 250,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_PREFETCH     , 236, 271,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_OBJECT       ,   9, 279,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_THREADS      ,  59, 279,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_REPEATS      , 118, 279,  60,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_PAGES        , 187, 279,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_NUMA         , 236, 279,  50,  10, WS_VISIBLE
+dialogitem  'BUTTON'      , '', IDB_MD_RESIZE       , 296, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_MD_SILENT       , 335, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_MD_CANCEL       , 374, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog
-
 ;---------- Child window = math benchmark run, text results -------------------;
-
 dialog      childMathRun,      '',                     40,  40, 220, 250, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
 enddialog
-
 ;---------- Child window = math benchmark run, draw chart ---------------------;
-
 dialog      childMathDraw,     '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
 enddialog
-
 ;---------- Child window = math benchmark, vector brief -----------------------;
-
 dialog      childVectorBrief,  '',                     20,  20, 405, 270, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_VB_CPU_NAME     ,   7,  10, 170,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_VB_TSC_CLK      ,   7,  19, 170,  10, WS_VISIBLE
@@ -482,25 +446,37 @@ dialogitem  'STATIC'      , '', IDC_VB_AVX512_ZMM_L , 185,  63, 190,  10, WS_VIS
 dialogitem  'STATIC'      , '', IDC_VB_AVX512_ZMM_H , 185,  72, 190,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_VB_AVX512_K     , 185,  81, 190,  10, WS_VISIBLE 
 dialogitem  'STATIC'      , '', IDC_VB_TIMINGS      , 185, 108, 210,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_VB_SSE128_READ  , 185, 126, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_SSE128_WRITE , 185, 135, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_SSE128_COPY  , 185, 144, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_AVX256_READ  , 185, 153, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_AVX256_WRITE , 185, 162, 190,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_VB_AVX256_COPY  , 185, 171, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_AVX512_READ  , 185, 180, 190,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_VB_AVX512_WRITE , 185, 189, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_AVX512_COPY  , 185, 198, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_SQRTPD_XMM   , 185, 207, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_YMM  , 185, 216, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_ZMM  , 185, 225, 190,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_VB_FCOS         , 185, 234, 190,  10, WS_VISIBLE             
-dialogitem  'STATIC'      , '', IDC_VB_FSINCOS      , 185, 243, 190,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_READ  , 185, 126,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_WRITE , 185, 135,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SSE128_COPY  , 185, 144,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_READ  , 185, 153,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_WRITE , 185, 162,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX256_COPY  , 185, 171,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_READ  , 185, 180,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_WRITE , 185, 189,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_AVX512_COPY  , 185, 198,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SQRTPD_XMM   , 185, 207,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_YMM  , 185, 216,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_VSQRTPD_ZMM  , 185, 225,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_VB_FCOS         , 185, 234,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_FSINCOS      , 185, 243,  50,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_READ128_V    , 243, 126, 150,  10, WS_VISIBLE              
+dialogitem  'STATIC'      , '', IDC_VB_WRITE128_V   , 243, 135, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_COPY128_V    , 243, 144, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_READ256_V    , 243, 153, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_WRITE256_V   , 243, 162, 150,  10, WS_VISIBLE  
+dialogitem  'STATIC'      , '', IDC_VB_COPY256_V    , 243, 171, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_READ512_V    , 243, 180, 150,  10, WS_VISIBLE  
+dialogitem  'STATIC'      , '', IDC_VB_WRITE512_V   , 243, 189, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_COPY512_V    , 243, 198, 150,  10, WS_VISIBLE                 
+dialogitem  'STATIC'      , '', IDC_VB_SQRT128_V    , 243, 207, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_SQRT256_V    , 243, 216, 150,  10, WS_VISIBLE             
+dialogitem  'STATIC'      , '', IDC_VB_SQRT512_V    , 243, 225, 150,  10, WS_VISIBLE  
+dialogitem  'STATIC'      , '', IDC_VB_FCOS_V       , 243, 234, 150,  10, WS_VISIBLE               
+dialogitem  'STATIC'      , '', IDC_VB_FSINCOS_V    , 243, 243, 150,  10, WS_VISIBLE 
 dialogitem  'BUTTON'      , '', IDB_VB_OK           , 360, 250,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog
-
 ;---------- Application main menu and service items ---------------------------; 
-
 resource menus, IDR_MENU, LANG_ENGLISH + SUBLANG_DEFAULT, mainMenu
 menu mainMenu
 menuitem '&File'        , 0 , MFR_POPUP
@@ -512,68 +488,47 @@ menuseparator
 menuitem 'E&xit'        , IDM_EXIT, MFR_END
 menuitem '&Help'        , 0 , MFR_POPUP + MFR_END
 menuitem '&About...'    , IDM_ABOUT, MFR_END
-
 ;---------- Raw resources strings and binder scripts --------------------------;
-; Note. Strings represented as raw resources (not as string resources) for
+; Note. Strings represented as raw resources ( not as string resources ) for
 ; compact encoding: 1 byte per char.  
-
 resource raws, \
 IDS_STRINGS_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , stringsPool       , \
 IDS_BINDERS_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , bindersPool       , \ 
 IDS_CPU_COMMON_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuCommonFeatures , \ 
 IDS_CPU_AVX512_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuAvx512Features , \
 IDS_OS_CONTEXT_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , osContextFeatures , \
-IDS_CPU_METHOD_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuMethodFeatures , \
 IDS_ACPI_DATA_POOL  , LANG_ENGLISH + SUBLANG_DEFAULT , acpiData          , \
 IDS_IMPORT_POOL     , LANG_ENGLISH + SUBLANG_DEFAULT , importList        , \ 
 IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList 
-
 ;---------- Raw resource for strings pool -------------------------------------;
-
 resdata stringsPool
-
 ;---------- Brief names for application sheets --------------------------------; 
-
 DB  'sysinfo'           , 0
 DB  'memory'            , 0
-DB  'math'              , 0
 DB  'operating system'  , 0
 DB  'native os'         , 0
-DB  'processor'         , 0
 DB  'topology'          , 0
 DB  'extended topology' , 0
 DB  'numa domains'      , 0
 DB  'processor groups'  , 0
 DB  'acpi'              , 0
 DB  'affinized cpuid'   , 0
-DB  'kernel mode'       , 0
-
 ;---------- Full names for application sheets --------------------------------;
-
 DB  'System summary.'                                                                          , 0
 DB  'Memory and cache benchmarks, bandwidth (megabytes per second) and latency (nanoseconds).' , 0
-DB  'Processor mathematics and load-store operations benchmarks.'                              , 0
 DB  'System information by WinAPI.'                                                            , 0
 DB  'Native OS information for ia32 application under x64 OS.'                                 , 0
-DB  'Processor memory addressing, caches and TLB information by CPUID.'                        , 0
 DB  'Platform topology by WinAPI GetLogicalProcessorInformation().'                            , 0
 DB  'Platform topology by WinAPI GetLogicalProcessorInformationEx().'                          , 0
 DB  'NUMA domains list by WinAPI GetNumaHighestNodeNumber() and other.'                        , 0
 DB  'Processor groups list by WinAPI GetActiveProcessorGroupCount() and other.'                , 0
 DB  'ACPI tables list by WinAPI EnumSystemFirmwareTables() and other.'                         , 0
 DB  'CPUID per each thread affinized by WinAPI SetThreadAffinityMask().'                       , 0
-DB  'Kernel mode driver load status and privileged resources info.'                            , 0
-
 ;---------- Title names for child windows -------------------------------------;
-
 DB  'Memory operations performance report'              , 0
 DB  'Memory operations performance = f( block size )'   , 0
-DB  'Math and load-store performance report'            , 0
-DB  'Math and load-store performance = f( block size )' , 0
 DB  'Vector brief performance report'                   , 0
-
 ;---------- CPUID names for system information --------------------------------;
-
 DB  'CPUID'     , 0
 DB  'MMX'       , 0
 DB  'SSE'       , 0
@@ -589,9 +544,7 @@ DB  'RDRAND'    , 0
 DB  'VMX'       , 0
 DB  'SVM'       , 0
 DB  'x86-64'    , 0
-
 ;---------- CPUID names for system information, AVX512 sub-sets ---------------;
-
 DB  'AVX512CD'             , 0
 DB  'AVX512PF'             , 0
 DB  'AVX512ER'             , 0
@@ -612,9 +565,7 @@ DB  'AVX512_VP2INTERSECT'  , 0
 DB  'AVX512_FP16'          , 0
 DB  'AVX512_4FMAPS'        , 0
 DB  'AVX512_4VNNIW'        , 0
-
 ;---------- XCR0 and XGETBV context components names --------------------------;
-
 DB  'XCR0'                 , 0
 DB  'XMM[0-15]'            , 0
 DB  'YMM[0-15]'            , 0
@@ -623,9 +574,7 @@ DB  'ZMM[16-31]'           , 0
 DB  'K[0-7]'               , 0
 DB  'BNDREG'               , 0
 DB  'BNDCSR'               , 0
-
 ;---------- ACPI objects visualized at system information screen --------------;
-
 DB  'ACPI'                 , 0
 DB  'MADT'                 , 0
 DB  'SRAT'                 , 0
@@ -635,17 +584,13 @@ DB  'I/O APICs = '         , 0
 DB  'Domains = '           , 0
 DB  'CPUs = '              , 0
 DB  'RAMs = '              , 0
-
 ;---------- Cache memory ------------------------------------------------------;
-
 DB  'L1 Code'              , 0
 DB  'L1 Data'              , 0
 DB  'L2 Unified'           , 0
 DB  'L3 Unified'           , 0
 DB  'L4 Unified'           , 0
-
 ;---------- Platform topology by WinAPI ---------------------------------------;
-
 DB  'Threads'                        , 0
 DB  'Cores'                          , 0
 DB  'Sockets'                        , 0
@@ -653,15 +598,12 @@ DB  'OS processors total'            , 0
 DB  'Groups'                         , 0
 DB  'OS processors in current group' , 0
 DB  'OS NUMA nodes'                  , 0
-
 ;---------- Memory information by WinAPI --------------------------------------;
-
 DB  'OS physical memory'   , 0
 DB  'Available'            , 0
 DB  'Minimum large page'   , 0
-
 ;--- Assembler instructions and modes names for memory and cache benchmarks ---;
-
+; This strings also used as sequental pool when method name visual.
 DB  'Read x86 (MOV)'                      , 0
 DB  'Write x86 (MOV)'                     , 0
 DB  'Copy x86 (MOV)'                      , 0
@@ -696,9 +638,7 @@ DB  'Latency (LCM)'                       , 0
 DB  'Latency (RDRAND)'                    , 0
 DB  'Nontemporal'                         , 0
 DB  'Force 32x2'                          , 0
-
 ;---------- Target objects names for memory and cache benchmark ---------------;  
-
 DB  'L1 cache'                 , 0
 DB  'L2 cache'                 , 0
 DB  'L3 cache'                 , 0
@@ -708,17 +648,13 @@ DB  'Custom block size'        , 0
 DB  'Memory mapped file size'  , 0 
 DB  'GPU memory block size'    , 0
 DB  'Physical map start-stop'  , 0
-
 ;---------- Memory status names -----------------------------------------------;
-
 DB  'Write back'               , 0
 DB  'Write through'            , 0
 DB  'Write combining'          , 0
 DB  'Write protected'          , 0
 DB  'Uncacheable'              , 0
-
 ;---------- Memory access and platform topology options names -----------------;
-
 DB  'Parallel threads'         , 0
 DB  'Hyper-threading'          , 0
 DB  'Processor groups'         , 0
@@ -731,18 +667,14 @@ DB  'One per 64 bytes'         , 0
 DB  'One per 4K'               , 0
 DB  'One per custom'           , 0
 DB  'Large pages'              , 0
-
 ;---------- Memory prefetch options names -------------------------------------;
-
 DB  'No soft prefetch'         , 0
 DB  'Default distance'         , 0
 DB  'Medium'                   , 0
 DB  'Long'                     , 0
 DB  'Block prefetch'           , 0
 DB  'Custom distance'          , 0
-
 ;---------- Measurement options names -----------------------------------------;
-
 DB  'Measure brief'                        , 0
 DB  'Measure carefull'                     , 0
 DB  'Brief adaptive'                       , 0
@@ -751,18 +683,15 @@ DB  'All pixels'                           , 0
 DB  'X / 16'                               , 0
 DB  'X / 32'                               , 0
 DB  'Draw 3D chart by repeat measurements' , 0
-
 ;---------- Buttons names -----------------------------------------------------;
-
-DB  'Draw'     , 0
-DB  'Run'      , 0
-DB  'Defaults' , 0
-DB  'Report'   , 0
-DB  'Exit'     , 0
-DB  'OK'       , 0
-
+DB  'Vector brief' , 0
+DB  'Draw'         , 0
+DB  'Run'          , 0
+DB  'Defaults'     , 0
+DB  'Report'       , 0
+DB  'Exit'         , 0
+DB  'OK'           , 0
 ;---------- Memory size and speed units, additional information ---------------;
-
 DB  'Bytes'         , 0
 DB  'KB'            , 0
 DB  'MB'            , 0
@@ -789,9 +718,9 @@ DB  'h'             , 0
 DB  'supported'     , 0
 DB  'not supported' , 0
 DB  'n/a'           , 0
-
+DB  'not supported by CPU' , 0
+DB  'not supported by OS'  , 0
 ;---------- Up strings for GUI tables -----------------------------------------; 
-
 DB  ' Parameter                     | Value                      | Hex'   , 0
 DB  ' Parameter                     | Value'                              , 0
 DB  ' Topology unit  | Logical CPU affinity | Comments'                   , 0
@@ -801,10 +730,7 @@ DB  ' Group  | Processors count'                                          , 0
 DB  ' Sign | OEM ID | OEM Table ID | Creator ID | OEM Rev   | Creator Rev | Rev' , 0
 DB  ' Summary'                                                            , 0
 DB  ' Thread   | Function   | EAX      | EBX      | ECX      | EDX'       , 0
-DB  ' APIC ID  | TSC(MHz)   | APERF(MHz) | MPERF(MHz) | APIC(MHz)  | CR0      | CR4' , 0 
-
 ;---------- Strings for operating system information text ---------------------;
-
 DB  'Memory load'                  , 0
 DB  'Total physical memory'        , 0
 DB  'Available physical memory'    , 0
@@ -828,9 +754,7 @@ DB  'Normal page size'             , 0
 DB  'Minimum large page size'      , 0
 DB  ' ( DISABLED )'                , 0
 DB  ' ( ENABLED )'                 , 0
-
 ;---------- Strings for topology information text -----------------------------;
-
 DB  'CPU core'     , 0
 DB  'NUMA node'    , 0
 DB  'L'            , 0
@@ -848,19 +772,13 @@ DB  'ways='        , 0
 DB  'line='        , 0
 DB  'size='        , 0
 DB  'x '           , 0
-
 ;---------- Strings for extended topology information text --------------------;
-
 DB  'Processor group' , 0
 DB  'efficiency='     , 0
 DB  'smt='            , 0
-
 ;---------- Strings for ACPI information text ---------------------------------;
-
 DB  'UNKNOWN table signature' , 0
-
 ;---------- Strings for child screen = Memory and cache performance report ----;
-
 DB  'Simple block benchmark, conditions and options settings:', 0 
 DB  'application'          , 0
 DB  'method'               , 0
@@ -887,21 +805,49 @@ DB  'dTSC/Sec (MHz)'              , 0
 DB  'dTSC/Instruction per thread (clks)' , 0
 DB  'Speed (MBPS)' , 0
 DB  'Latency (ns)' , 0
-
+DB  'ia32'                                  , 0   ; Application type
+DB  'x64'                                   , 0
+DB  'ia32 under Win64'                      , 0
+DB  'disabled by platform'                  , 0   ; Hyper-threading option strings, for simple result window
+DB  'enabled by platform, not used by test' , 0
+DB  'enabled by platform, used by test'     , 0
+DB  'not available'                         , 0   ; Large pages, for simple result window
+DB  'available, not used by test'           , 0
+DB  'available, used by test'               , 0
+DB  'not supported'                         , 0   ; NUMA option strings
+DB  'no control (under OS control)'         , 0
+DB  'force current domain only'             , 0
+DB  'force optimal (all local domains)'     , 0
+DB  'force non-optimal (remote domains)'    , 0
+DB  'not supported'                         , 0   ; PG option strings
+DB  'no control (current group only)'       , 0
+DB  'force optimal (all groups)'            , 0  
+DB  'default'                               , 0   ; Prefetch distance option strings          
+DB  'medium'                                , 0
+DB  'long'                                  , 0
+DB  'not used by this test'                 , 0
+DB  'brief'                                 , 0   ; Measurement options strings
+DB  'careful'                               , 0
+DB  'brief adaptive'                        , 0
+DB  'careful adaptive'                      , 0
+DB  '  + 1000 ms measure CPUCLK + heating'  , 0
 ;---------- Strings for child screen = Memory and cache performance draw ------;
-
-
-
-;---------- Strings for child screen = Math performance report ----------------;
-
-
-
-;---------- Strings for child screen = Math performance draw ------------------;
-
-
-
+DB  'PD default'    , 0
+DB  'PD medium'     , 0
+DB  'PD long'       , 0
+DB  ' '             , 0
+DB  'PD ?'          , 0
+DB  'Resize'        , 0
+DB  'Silent'        , 0
+DB  'Threads='      , 0
+DB  '4K pages'      , 0
+DB  'Large pages'   , 0
+DB  ' '             , 0
+DB  'NUMA unaware'  , 0
+DB  'NUMA single'   , 0
+DB  'NUMA local'    , 0
+DB  'NUMA remote'   , 0
 ;---------- Strings for child screen = Vector brief performance report --------;
-
 DB  'Processor features, detect by CPUID:'            , 0
 DB  'AVX 256-bit'                                     , 0
 DB  'AVX2 256-bit'                                    , 0
@@ -947,11 +893,9 @@ DB  'VSQRTPD ymm'    , 0
 DB  'VSQRTPD zmm'    , 0
 DB  'FCOS'           , 0             
 DB  'FSINCOS'        , 0             
-
 ;---------- Strings for fatal error messages, cannot run NCRB -----------------;
 ; This messages can be generated if resource DLL successfully loaded,
 ; see also message strings at executeble files NCRB32.ASM, NCRB64.ASM.
-
 DB  'CPUID instruction not supported or locked.'        , 0
 DB  'CPUID function 1 not supported or locked.'         , 0
 DB  'x87 Floating Point Unit not supported or locked.'  , 0
@@ -959,37 +903,26 @@ DB  'Time Stamp Counter not supported or locked.'       , 0
 DB  'Error measuring TSC frequency.'                    , 0
 DB  'Memory information API return error.'              , 0
 DB  'CPU topological information API return error.'     , 0
-
 ;---------- Strings for non-fatal warning messages ----------------------------;
-
 DB  'WARNING: system is not fully NCRB-compatible,' , 0Dh, 0Ah
 DB  'missing OS API functions list:'                , 0Dh, 0Ah, 0Dh, 0Ah, 0
 DB  'WARNING: NCRB32 runs under Win64,'             , 0Dh, 0Ah
 DB  'NCRB64 is optimal for this platform.'          , 0
-
 ;---------- Strings for runtime errors ----------------------------------------;
-
 DB  'Benchmarks buffer memory allocation error.'    , 0  
 DB  'Benchmarks buffer memory release error.'       , 0
 DB  'Benchmarks timings measurement error.'         , 0 
 DB  'Benchmarks address arithmetic error.'          , 0
-
 ;---------- Strings for Kernel Mode Driver and Service Control Program --------;
-
 DB  'KMD32.SYS'  , 0
 DB  'KMD64.SYS'  , 0
 DB  'ICR0'       , 0
 DB  '\\.\ICR0'   , 0
-
 endres
-
 ;---------- Raw resource for binders pool -------------------------------------;
-
 resdata bindersPool
-
 ;---------- GUI binder script for system information screen -------------------;
 ; This binders for build GUI objects (widgets) by data from buffer (bindlist).
-
 SET_STRING  STR_FULL_SYSINFO     , IDC_SYSINFO   
 SET_STRING  STR_CPUID            , IDC_SYSINFO_CPUID  
 SET_STRING  STR_MMX              , IDC_SYSINFO_MMX 
@@ -1051,15 +984,14 @@ SET_STRING  STR_NUMA_NODES       , IDC_SYSINFO_NUMA
 SET_STRING  STR_OS_PHYSICAL      , IDC_SYSINFO_MEM
 SET_STRING  STR_OS_AVAILABLE     , IDC_SYSINFO_MEM_A
 SET_STRING  STR_OS_MIN_LARGE     , IDC_SYSINFO_LRPG
-SET_STRING  STR_REPORT           , IDB_SYSINFO_REPORT
+SET_STRING  STR_VECTOR_BRIEF     , IDB_SYSINFO_VBRF
 SET_STRING  STR_EXIT             , IDB_SYSINFO_CANCEL
+;---------- CPU main parameters -----------------------------------------------;
 SET_PTR     BINDLIST.bindCpu.vendor , IDC_SYSINFO_VENDOR
 SET_INFO    BINDLIST.bindCpu.tfms   , IDC_SYSINFO_TFMS
 SET_PTR     BINDLIST.bindCpu.name   , IDC_SYSINFO_NAME
 SET_INFO    BINDLIST.bindCpu.tsc    , IDC_SYSINFO_TSC      
-
 ;---------- CPU common features bitmap ----------------------------------------; 
-
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 7 , 7 , IDC_SYSINFO_CPUID
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 0 , 0 , IDC_SYSINFO_MMX
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 0 , 1 , IDC_SYSINFO_SSE
@@ -1074,9 +1006,7 @@ SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 1 , IDC_SYSINFO_AVX512F
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 2 , IDC_SYSINFO_RDRAND
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 3 , IDC_SYSINFO_VMX_SVM
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 5 , IDC_SYSINFO_X8664
-
 ;---------- CPU AVX512 features bitmap ----------------------------------------;
-
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 0 , IDC_SYSINFO_A0
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 1 , IDC_SYSINFO_A1
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 2 , IDC_SYSINFO_A2
@@ -1097,9 +1027,7 @@ SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 0 , IDC_SYSINFO_D0
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 1 , IDC_SYSINFO_D1
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 2 , IDC_SYSINFO_D2
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 3 , IDC_SYSINFO_D3
-
 ;---------- OS context management features bitmap -----------------------------;
-
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 7 , 7 , IDC_SYSINFO_XCR0 
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 0 , IDC_SYSINFO_XMM015
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 1 , IDC_SYSINFO_YMM015
@@ -1108,9 +1036,7 @@ SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 3 , IDC_SYSINFO_ZMM1631
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 4 , IDC_SYSINFO_K07
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 5 , IDC_SYSINFO_BNDREG
 SET_BOOL    BINDLIST.bindCpu.osBitmap + 0 , 6 , IDC_SYSINFO_BNDCSR
-
 ;---------- ACPI tables ( MADT and SRAT ) information -------------------------;
-
 SET_BOOL    BINDLIST.acpiEnable + 0 , 0 , IDC_SYSINFO_ACPI
 SET_BOOL    BINDLIST.acpiEnable + 0 , 1 , IDC_SYSINFO_MADT
 SET_BOOL    BINDLIST.acpiEnable + 0 , 2 , IDC_SYSINFO_SRAT
@@ -1130,9 +1056,7 @@ SET_INFO    BINDLIST.bindSrat.oem       , IDC_SYSINFO_SRAT_1
 SET_INFO    BINDLIST.bindSrat.manufact  , IDC_SYSINFO_SRAT_2
 SET_INFO    BINDLIST.bindSrat.oemRev    , IDC_SYSINFO_SRAT_3
 SET_INFO    BINDLIST.bindSrat.comment   , IDC_SYSINFO_SRAT_4
-
 ;---------- Cache information -------------------------------------------------;
-
 SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 0 , IDC_SYSINFO_L1C
 SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 0 , IDC_SYSINFO_L1C_V
 SET_BOOL    BINDLIST.bindCache.cacheBitmap + 0 , 1 , IDC_SYSINFO_L1D
@@ -1148,15 +1072,11 @@ SET_INFO    BINDLIST.bindCache.l1d , IDC_SYSINFO_L1D_V
 SET_INFO    BINDLIST.bindCache.l2u , IDC_SYSINFO_L2U_V
 SET_INFO    BINDLIST.bindCache.l3u , IDC_SYSINFO_L3U_V
 SET_INFO    BINDLIST.bindCache.l4u , IDC_SYSINFO_L4U_V
-
 ;---------- Threads, Cores, Sockets information -------------------------------;
-
 SET_INFO    BINDLIST.bindTopology.threads , IDC_SYSINFO_THR_V
 SET_INFO    BINDLIST.bindTopology.cores   , IDC_SYSINFO_CORES_V
 SET_INFO    BINDLIST.bindTopology.sockets , IDC_SYSINFO_SOCK_V
-
 ;--- System info, processors, processor groups, NUMA, memory, large pahes -----;
-
 SET_INFO    BINDLIST.bindSys.procTotal   , IDC_SYSINFO_PTOT_V
 SET_INFO    BINDLIST.bindSys.groups      , IDC_SYSINFO_GRP_V
 SET_INFO    BINDLIST.bindSys.procCur     , IDC_SYSINFO_PCUR_V
@@ -1166,11 +1086,8 @@ SET_INFO    BINDLIST.bindSys.memAvail    , IDC_SYSINFO_MEM_AV
 SET_INFO    BINDLIST.bindSys.largePage   , IDC_SYSINFO_LRPG_V
 SET_INFO    BINDLIST.bindSys.largeEnable , IDC_SYSINFO_LRPG_E
 SET_INFO    BINDLIST.bindSys.masksList   , IDC_SYSINFO_NUMA_M     
-
 BIND_STOP
-
 ;---------- GUI binder script for memory and cache screen ( both ia32, x64 ) --;
-
 SET_STRING  STR_FULL_MEMORY      , IDC_MEMORY
 SET_STRING  STR_AM_06            , IDB_MEMORY_ASM_A6
 SET_STRING  STR_AM_07            , IDB_MEMORY_ASM_A7
@@ -1240,9 +1157,7 @@ SET_STRING  STR_RUN              , IDB_MEMORY_RUN
 SET_STRING  STR_DEFAULTS         , IDB_MEMORY_DEFAULTS
 SET_STRING  STR_EXIT             , IDB_MEMORY_CANCEL
 BIND_STOP        
-
 ;---------- GUI binder script for memory and cache screen ( ia32 only ) -------;
-
 SET_STRING  STR_AM_IA32_00       , IDB_MEMORY_ASM_A0
 SET_STRING  STR_AM_IA32_01       , IDB_MEMORY_ASM_A1
 SET_STRING  STR_AM_IA32_02       , IDB_MEMORY_ASM_A2
@@ -1250,9 +1165,7 @@ SET_STRING  STR_AM_IA32_03       , IDB_MEMORY_ASM_A3
 SET_STRING  STR_AM_IA32_04       , IDB_MEMORY_ASM_A4
 SET_STRING  STR_AM_IA32_05       , IDB_MEMORY_ASM_A5
 BIND_STOP        
-
 ;---------- GUI binder script for memory and cache screen ( x64 only ) --------;
-
 SET_STRING  STR_AM_X64_00        , IDB_MEMORY_ASM_A0
 SET_STRING  STR_AM_X64_01        , IDB_MEMORY_ASM_A1
 SET_STRING  STR_AM_X64_02        , IDB_MEMORY_ASM_A2
@@ -1260,26 +1173,7 @@ SET_STRING  STR_AM_X64_03        , IDB_MEMORY_ASM_A3
 SET_STRING  STR_AM_X64_04        , IDB_MEMORY_ASM_A4
 SET_STRING  STR_AM_X64_05        , IDB_MEMORY_ASM_A5
 BIND_STOP        
-
-;---------- GUI binder script for CPU mathematics screen ----------------------;
-
-SET_STRING  STR_FULL_MATH        , IDC_MATH
-SET_STRING  STR_MEASURE_BRIEF    , IDB_MATH_BRF  
-SET_STRING  STR_MEASURE_CAREF    , IDB_MATH_CRF 
-SET_STRING  STR_BRIEFF_ADAPTIVE  , IDB_MATH_BRF_A
-SET_STRING  STR_CAREF_ADAPTIVE   , IDB_MATH_CRF_A
-SET_STRING  STR_ALL_POINTS       , IDB_MATH_ALL_P
-SET_STRING  STR_X_16_POINTS      , IDB_MATH_X_16
-SET_STRING  STR_X_32_POINTS      , IDB_MATH_X_32
-SET_STRING  STR_3D_DRAW          , IDB_MATH_3D_DRAW 
-SET_STRING  STR_DRAW             , IDB_MATH_DRAW  
-SET_STRING  STR_RUN              , IDB_MATH_RUN
-SET_STRING  STR_DEFAULTS         , IDB_MATH_DEFAULTS
-SET_STRING  STR_EXIT             , IDB_MATH_CANCEL
-BIND_STOP
-
 ;---------- GUI binder script for operating system screen ---------------------;
-
 SET_STRING  STR_FULL_OS          , IDC_OS
 SET_FONT    ID_FONT_2            , IDE_OS_UP
 SET_FONT    ID_FONT_2            , IDE_OS_TEXT
@@ -1288,9 +1182,7 @@ SET_PTR     BINDLIST.viewOs      , IDE_OS_TEXT
 SET_STRING  STR_REPORT           , IDB_OS_REPORT
 SET_STRING  STR_EXIT             , IDB_OS_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for native operating system screen --------------;
-
 SET_STRING  STR_FULL_NATIVE_OS   , IDC_NATIVE_OS
 SET_FONT    ID_FONT_2            , IDE_NATIVE_OS_UP
 SET_FONT    ID_FONT_2            , IDE_NATIVE_OS_TEXT
@@ -1299,19 +1191,7 @@ SET_PTR     BINDLIST.viewNative  , IDE_NATIVE_OS_TEXT
 SET_STRING  STR_REPORT           , IDB_NAT_OS_REPORT
 SET_STRING  STR_EXIT             , IDB_NAT_OS_CANCEL
 BIND_STOP
-
-;---------- GUI binder script for processor information screen ----------------;
-
-SET_STRING  STR_FULL_PROCESSOR   , IDC_PROCESSOR
-SET_FONT    ID_FONT_2            , IDE_PROC_UP
-SET_FONT    ID_FONT_2            , IDE_PROC_TEXT
-SET_STRING  STR_PARM_VALUE       , IDE_PROC_UP
-SET_STRING  STR_REPORT           , IDB_PROC_REPORT
-SET_STRING  STR_EXIT             , IDB_PROC_CANCEL
-BIND_STOP
-
 ;---------- GUI binder script for topology screen -----------------------------;
-
 SET_STRING  STR_FULL_TOPOLOGY    , IDC_TOPOLOGY
 SET_FONT    ID_FONT_2            , IDE_TOPOL_UP_1 
 SET_FONT    ID_FONT_2            , IDE_TOPOL_TEXT_1
@@ -1324,9 +1204,7 @@ SET_PTR     BINDLIST.viewTpSum   , IDE_TOPOL_TEXT_2
 SET_STRING  STR_REPORT           , IDB_TOPOL_REPORT
 SET_STRING  STR_EXIT             , IDB_TOPOL_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for extended topology screen --------------------;
-
 SET_STRING  STR_FULL_TOPOLOGY_EX , IDC_TOPOLOGY_EX
 SET_FONT    ID_FONT_2            , IDE_TOP_EX_UP_1 
 SET_FONT    ID_FONT_2            , IDE_TOP_EX_TEXT_1
@@ -1339,9 +1217,7 @@ SET_PTR     BINDLIST.viewEtSum   , IDE_TOP_EX_TEXT_2
 SET_STRING  STR_REPORT           , IDB_TOPOL_EX_REPORT
 SET_STRING  STR_EXIT             , IDB_TOPOL_EX_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for NUMA nodes list screen ----------------------;
-
 SET_STRING  STR_FULL_NUMA        , IDC_NUMA
 SET_FONT    ID_FONT_2            , IDE_NUMA_UP 
 SET_FONT    ID_FONT_2            , IDE_NUMA_TEXT
@@ -1350,9 +1226,7 @@ SET_PTR     BINDLIST.viewNuma    , IDE_NUMA_TEXT
 SET_STRING  STR_REPORT           , IDB_NUMA_REPORT
 SET_STRING  STR_EXIT             , IDB_NUMA_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for processor groups list screen ----------------;
-
 SET_STRING  STR_FULL_P_GROUPS    , IDC_P_GROUPS
 SET_FONT    ID_FONT_2            , IDE_P_GROUPS_UP 
 SET_FONT    ID_FONT_2            , IDE_P_GROUPS_TEXT
@@ -1361,9 +1235,7 @@ SET_PTR     BINDLIST.viewGroup   , IDE_P_GROUPS_TEXT
 SET_STRING  STR_REPORT           , IDB_P_GROUPS_REPORT
 SET_STRING  STR_EXIT             , IDB_P_GROUPS_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for ACPI information screen ---------------------;
-
 SET_STRING  STR_FULL_ACPI        , IDC_ACPI
 SET_FONT    ID_FONT_2            , IDE_ACPI_UP_1 
 SET_FONT    ID_FONT_2            , IDE_ACPI_TEXT_1
@@ -1376,9 +1248,7 @@ SET_PTR     BINDLIST.viewAcpiSum , IDE_ACPI_TEXT_2
 SET_STRING  STR_REPORT           , IDB_ACPI_REPORT
 SET_STRING  STR_EXIT             , IDB_ACPI_CANCEL
 BIND_STOP
-
 ;---------- GUI binder script for affinized CPUID dump screen -----------------;
-
 SET_STRING  STR_FULL_AFF_CPUID   , IDC_AFF_CPUID
 SET_FONT    ID_FONT_2            , IDE_A_CPUID_UP 
 SET_FONT    ID_FONT_2            , IDE_A_CPUID_TEXT
@@ -1387,127 +1257,198 @@ SET_PTR     BINDLIST.viewAffCpu  , IDE_A_CPUID_TEXT
 SET_STRING  STR_REPORT           , IDB_A_CPUID_REPORT
 SET_STRING  STR_EXIT             , IDB_A_CPUID_CANCEL
 BIND_STOP
-
-;---------- GUI binder script for kernel mode driver operations screen --------;
-
-SET_STRING  STR_FULL_KMD         , IDC_KMD
-SET_FONT    ID_FONT_2            , IDE_KMD_UP_1 
-SET_FONT    ID_FONT_2            , IDE_KMD_TEXT_1
-SET_FONT    ID_FONT_2            , IDE_KMD_UP_2 
-SET_FONT    ID_FONT_2            , IDE_KMD_TEXT_2
-SET_STRING  STR_PARM_VALUE       , IDE_KMD_UP_1
-SET_STRING  STR_KMD              , IDE_KMD_UP_2
-SET_STRING  STR_REPORT           , IDB_KMD_REPORT
-SET_STRING  STR_EXIT             , IDB_KMD_CANCEL
-BIND_STOP
-
 ;--- GUI binder script for child screen = Memory and cache perf. report -------;
-
-SET_STRING  STR_MR_FIRST         , IDC_MR_FIRST
-SET_STRING  STR_MR_APPLICATION   , IDC_MR_APPLICATION
-SET_STRING  STR_MR_METHOD        , IDC_MR_METHOD 
-SET_STRING  STR_MR_WIDTH         , IDC_MR_WIDTH 
-SET_STRING  STR_MR_THREADS       , IDC_MR_THREADS 
-SET_STRING  STR_MR_HYPER_THR     , IDC_MR_HYPER_THR 
-SET_STRING  STR_MR_LARGE_PAGES   , IDC_MR_LARGE_PAGES 
-SET_STRING  STR_MR_NUMA          , IDC_MR_NUMA 
-SET_STRING  STR_MR_P_GROUPS      , IDC_MR_P_GROUPS 
-SET_STRING  STR_MR_TARGET_OBJ    , IDC_MR_TARGET_OBJ 
-SET_STRING  STR_MR_PREF_DIST     , IDC_MR_PREF_DIST 
-SET_STRING  STR_MR_SIZE_TOTAL    , IDC_MR_SIZE_TOTAL 
-SET_STRING  STR_MR_SIZE_PER_THR  , IDC_MR_SIZE_PER_THR 
-SET_STRING  STR_MR_MEASURE_PROF  , IDC_MR_MEASURE_PROF 
-SET_STRING  STR_MR_MEASURE_REP   , IDC_MR_MEASURE_REP 
-SET_STRING  STR_MR_MEMORY_ALLOC  , IDC_MR_MEMORY_ALLOC 
-SET_STRING  STR_MR_BLOCK_1       , IDC_MR_BLOCK_1 
-SET_STRING  STR_MR_BLOCK_2       , IDC_MR_BLOCK_2 
-SET_STRING  STR_MR_MEM_ALC_ALL   , IDC_MR_MEM_ALC_ALL 
-SET_STRING  STR_MR_MEM_ALC_THR   , IDC_MR_MEM_ALC_THR 
-SET_STRING  STR_MR_MEAS_RESULTS  , IDC_MR_MEAS_RESULTS 
-SET_STRING  STR_MR_DT_MS         , IDC_MR_DT_MS 
-SET_STRING  STR_MR_DTSC_SEC_MHZ  , IDC_MR_DTSC_SEC_MHZ 
-SET_STRING  STR_MR_DTSC_INS_CLK  , IDC_MR_DTSC_INS_CLK
-SET_STRING  STR_OK               , IDB_MR_OK 
+SET_STRING  STR_MR_FIRST           , IDC_MR_FIRST
+SET_STRING  STR_MR_APPLICATION     , IDC_MR_APPLICATION
+SET_STRING  STR_MR_METHOD          , IDC_MR_METHOD 
+SET_STRING  STR_MR_WIDTH           , IDC_MR_WIDTH 
+SET_STRING  STR_MR_THREADS         , IDC_MR_THREADS 
+SET_STRING  STR_MR_HYPER_THR       , IDC_MR_HYPER_THR 
+SET_STRING  STR_MR_LARGE_PAGES     , IDC_MR_LARGE_PAGES 
+SET_STRING  STR_MR_NUMA            , IDC_MR_NUMA 
+SET_STRING  STR_MR_P_GROUPS        , IDC_MR_P_GROUPS 
+SET_STRING  STR_MR_TARGET_OBJ      , IDC_MR_TARGET_OBJ 
+SET_STRING  STR_MR_PREF_DIST       , IDC_MR_PREF_DIST 
+SET_STRING  STR_MR_SIZE_TOTAL      , IDC_MR_SIZE_TOTAL 
+SET_STRING  STR_MR_SIZE_PER_THR    , IDC_MR_SIZE_PER_THR 
+SET_STRING  STR_MR_MEASURE_PROF    , IDC_MR_MEASURE_PROF 
+SET_STRING  STR_MR_MEASURE_REP     , IDC_MR_MEASURE_REP 
+SET_STRING  STR_MR_MEMORY_ALLOC    , IDC_MR_MEMORY_ALLOC 
+SET_STRING  STR_MR_BLOCK_1         , IDC_MR_BLOCK_1 
+SET_STRING  STR_MR_BLOCK_2         , IDC_MR_BLOCK_2 
+SET_STRING  STR_MR_MEM_ALC_ALL     , IDC_MR_MEM_ALC_ALL 
+SET_STRING  STR_MR_MEM_ALC_THR     , IDC_MR_MEM_ALC_THR 
+SET_STRING  STR_MR_MEAS_RESULTS    , IDC_MR_MEAS_RESULTS 
+SET_STRING  STR_MR_DT_MS           , IDC_MR_DT_MS 
+SET_STRING  STR_MR_DTSC_SEC_MHZ    , IDC_MR_DTSC_SEC_MHZ 
+SET_STRING  STR_MR_DTSC_INS_CLK    , IDC_MR_DTSC_INS_CLK
+SET_INFO    BINDLIST.mrApplication , IDC_MR_APPLIC_V
+SET_INFO    BINDLIST.mrMethod      , IDC_MR_METHOD_V
+SET_INFO    BINDLIST.mrWidth       , IDC_MR_WIDTH_V
+SET_INFO    BINDLIST.mrThreads     , IDC_MR_THREADS_V
+SET_INFO    BINDLIST.mrHyperT      , IDC_MR_HYPER_THR_V
+SET_INFO    BINDLIST.mrLargeP      , IDC_MR_LARGE_PAG_V
+SET_INFO    BINDLIST.mrNuma        , IDC_MR_NUMA_V
+SET_INFO    BINDLIST.mrGroups      , IDC_MR_P_GROUPS_V
+SET_INFO    BINDLIST.mrTarget      , IDC_MR_TARGET_OBJ_V
+SET_INFO    BINDLIST.mrDistance    , IDC_MR_PREF_DIST_V
+SET_INFO    BINDLIST.mrSizeTotal   , IDC_MR_SIZE_TOTAL_V
+SET_INFO    BINDLIST.mrSizeThread  , IDC_MR_SIZE_PER_T_V
+SET_INFO    BINDLIST.mrMeasProf    , IDC_MR_MEASURE_P_V
+SET_INFO    BINDLIST.mrMeasRep     , IDC_MR_MEASURE_R_V
+SET_INFO    BINDLIST.mrBlock1      , IDC_MR_BLOCK_1_V
+SET_INFO    BINDLIST.mrBlock2      , IDC_MR_BLOCK_2_V
+SET_INFO    BINDLIST.mrAllocAll    , IDC_MR_MEM_ALC_A_V
+SET_INFO    BINDLIST.mrAllocThr    , IDC_MR_MEM_ALC_T_V
+SET_INFO    BINDLIST.mrDtMs        , IDC_MR_DT_MS_V
+SET_INFO    BINDLIST.mrDtscSec     , IDC_MR_DTSC_SEC_M_V
+SET_INFO    BINDLIST.mrDtscIns     , IDC_MR_DTSC_INS_C_V
+SET_INFO    BINDLIST.mrLastValue   , IDC_MR_LAST_V 
+SET_STRING  STR_OK                 , IDB_MR_OK 
 BIND_STOP 
-
 ;---------- Result string for bandwidth measurement mode ----------------------;
-
-SET_STRING  STR_MR_SPEED_MBPS    , IDC_MR_LAST 
+SET_STRING  STR_MR_SPEED_MBPS      , IDC_MR_LAST 
 BIND_STOP
-
 ;---------- Result string for latency measurement mode ------------------------;
-
-SET_STRING  STR_MR_LATENCY_NS    , IDC_MR_LAST 
+SET_STRING  STR_MR_LATENCY_NS      , IDC_MR_LAST 
 BIND_STOP
-
 ;--- GUI binder script for child screen = Memory and cache performance draw ---;
-
+SET_INFO    BINDLIST.mdAsm         , IDC_MD_ASM
+SET_INFO    BINDLIST.mdPrefetch    , IDC_MD_PREFETCH
+SET_INFO    BINDLIST.mdObject      , IDC_MD_OBJECT
+SET_INFO    BINDLIST.mdThreads     , IDC_MD_THREADS
+SET_INFO    BINDLIST.mdRepeats     , IDC_MD_REPEATS
+SET_INFO    BINDLIST.mdPages       , IDC_MD_PAGES
+SET_INFO    BINDLIST.mdNuma        , IDC_MD_NUMA
+SET_STRING  STR_MD_RESIZE          , IDB_MD_RESIZE
+SET_STRING  STR_MD_SILENT          , IDB_MD_SILENT
+SET_STRING  STR_EXIT               , IDB_MD_CANCEL
 BIND_STOP
-
-;--- GUI binder script for child screen = Math performance report -------------;
-
-BIND_STOP
-
-;--- GUI binder script for child screen = Math performance draw ---------------;
-
-BIND_STOP
-
 ;--- GUI binder script for child screen = Vector brief performance report -----;
-
-SET_STRING  STR_VB_CPU_FEATURES , IDC_VB_CPU_FEATURES   
-SET_STRING  STR_VB_AVX_256      , IDC_VB_AVX_256 
-SET_STRING  STR_VB_AVX2_256     , IDC_VB_AVX2_256
-SET_STRING  STR_VB_AVX3_512     , IDC_VB_AVX3_512
-SET_STRING  STR_VB_AVX512CD     , IDC_VB_AVX512CD
-SET_STRING  STR_VB_AVX512PF     , IDC_VB_AVX512PF
-SET_STRING  STR_VB_AVX512ER     , IDC_VB_AVX512ER
-SET_STRING  STR_VB_AVX512VL     , IDC_VB_AVX512VL
-SET_STRING  STR_VB_AVX512BW     , IDC_VB_AVX512BW
-SET_STRING  STR_VB_AVX512DQ     , IDC_VB_AVX512DQ
-SET_STRING  STR_VB_AVX512_IFMA  , IDC_VB_AVX512_IFMA
-SET_STRING  STR_VB_AVX512_VBMI  , IDC_VB_AVX512_VBMI
-SET_STRING  STR_VB_AVX512_VBMI2 , IDC_VB_AVX512_VBMI2
-SET_STRING  STR_VB_AVX512_BF16  , IDC_VB_AVX512_BF16
-SET_STRING  STR_VB_AVX512_VAES  , IDC_VB_AVX512_VAES
-SET_STRING  STR_VB_AVX512_GFNI  , IDC_VB_AVX512_GFNI
-SET_STRING  STR_VB_AVX512_VNNI  , IDC_VB_AVX512_VNNI
-SET_STRING  STR_VB_AVX512_BTALG , IDC_VB_AVX512_BTALG
-SET_STRING  STR_VB_AVX512_VPOP  , IDC_VB_AVX512_VPOP
-SET_STRING  STR_VB_AVX512_VPCL  , IDC_VB_AVX512_VPCL
-SET_STRING  STR_VB_AVX512_VP2IN , IDC_VB_AVX512_VP2IN
-SET_STRING  STR_VB_AVX512_FP16  , IDC_VB_AVX512_FP16
-SET_STRING  STR_VB_AVX512_4FMAP , IDC_VB_AVX512_4FMAP
-SET_STRING  STR_VB_AVX512_4VNNI , IDC_VB_AVX512_4VNNI
-SET_STRING  STR_VB_OS_CONTEXT   , IDC_VB_OS_CONTEXT
-SET_STRING  STR_VB_SSE128_XMM   , IDC_VB_SSE128_XMM
-SET_STRING  STR_VB_AVX256_YMM   , IDC_VB_AVX256_YMM
-SET_STRING  STR_VB_AVX512_ZMM_L , IDC_VB_AVX512_ZMM_L
-SET_STRING  STR_VB_AVX512_ZMM_H , IDC_VB_AVX512_ZMM_H
-SET_STRING  STR_VB_AVX512_K     , IDC_VB_AVX512_K
-SET_STRING  STR_VB_TIMINGS      , IDC_VB_TIMINGS
-SET_STRING  STR_VB_SSE128_READ  , IDC_VB_SSE128_READ             
-SET_STRING  STR_VB_SSE128_WRITE , IDC_VB_SSE128_WRITE             
-SET_STRING  STR_VB_SSE128_COPY  , IDC_VB_SSE128_COPY             
-SET_STRING  STR_VB_AVX256_READ  , IDC_VB_AVX256_READ             
-SET_STRING  STR_VB_AVX256_WRITE , IDC_VB_AVX256_WRITE
-SET_STRING  STR_VB_AVX256_COPY  , IDC_VB_AVX256_COPY             
-SET_STRING  STR_VB_AVX512_READ  , IDC_VB_AVX512_READ
-SET_STRING  STR_VB_AVX512_WRITE , IDC_VB_AVX512_WRITE             
-SET_STRING  STR_VB_AVX512_COPY  , IDC_VB_AVX512_COPY             
-SET_STRING  STR_VB_SQRTPD_XMM   , IDC_VB_SQRTPD_XMM             
-SET_STRING  STR_VB_VSQRTPD_YMM  , IDC_VB_VSQRTPD_YMM             
-SET_STRING  STR_VB_VSQRTPD_ZMM  , IDC_VB_VSQRTPD_ZMM
-SET_STRING  STR_VB_FCOS         , IDC_VB_FCOS             
-SET_STRING  STR_VB_FSINCOS      , IDC_VB_FSINCOS
-SET_STRING  STR_OK              , IDB_VB_OK             
+SET_PTR     BINDLIST.bindCpu.name                 , IDC_VB_CPU_NAME
+SET_INFO    BINDLIST.bindCpu.tsc                  , IDC_VB_TSC_CLK
+SET_BOOL    BINDLIST.bindCpu.cpuBitmap    + 0 , 7 , IDC_VB_AVX_256 
+SET_BOOL    BINDLIST.bindCpu.cpuBitmap    + 1 , 0 , IDC_VB_AVX2_256 
+SET_BOOL    BINDLIST.bindCpu.cpuBitmap    + 1 , 1 , IDC_VB_AVX3_512 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 0 , IDC_VB_AVX512CD 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 1 , IDC_VB_AVX512PF 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 2 , IDC_VB_AVX512ER 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 3 , IDC_VB_AVX512VL 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 4 , IDC_VB_AVX512BW 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 5 , IDC_VB_AVX512DQ 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 6 , IDC_VB_AVX512_IFMA 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 7 , IDC_VB_AVX512_VBMI 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 0 , IDC_VB_AVX512_VBMI2 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 1 , IDC_VB_AVX512_BF16 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 2 , IDC_VB_AVX512_VAES 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 3 , IDC_VB_AVX512_GFNI
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 4 , IDC_VB_AVX512_VNNI
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 5 , IDC_VB_AVX512_BTALG 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 6 , IDC_VB_AVX512_VPOP 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 1 , 7 , IDC_VB_AVX512_VPCL 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 0 , IDC_VB_AVX512_VP2IN
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 1 , IDC_VB_AVX512_FP16 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 2 , IDC_VB_AVX512_4FMAP 
+SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 2 , 3 , IDC_VB_AVX512_4VNNI
+SET_BOOL    BINDLIST.bindCpu.osBitmap     + 0 , 0 , IDC_VB_SSE128_XMM 
+SET_BOOL    BINDLIST.bindCpu.osBitmap     + 0 , 1 , IDC_VB_AVX256_YMM 
+SET_BOOL    BINDLIST.bindCpu.osBitmap     + 0 , 2 , IDC_VB_AVX512_ZMM_L 
+SET_BOOL    BINDLIST.bindCpu.osBitmap     + 0 , 3 , IDC_VB_AVX512_ZMM_H 
+SET_BOOL    BINDLIST.bindCpu.osBitmap     + 0 , 4 , IDC_VB_AVX512_K
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_SSE128_READ             
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_SSE128_WRITE             
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_SSE128_COPY             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_AVX256_READ             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_AVX256_WRITE
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_AVX256_COPY             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_AVX512_READ
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_AVX512_WRITE             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_AVX512_COPY             
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 4 , IDC_VB_SQRTPD_XMM             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_VSQRTPD_YMM             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_VSQRTPD_ZMM
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 6 , IDC_VB_FCOS             
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 6 , IDC_VB_FSINCOS
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_READ128_V              
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_WRITE128_V               
+SET_BOOL    BINDLIST.setMemMethod         + 2 , 2 , IDC_VB_COPY128_V               
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_READ256_V               
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_WRITE256_V  
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_COPY256_V               
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_READ512_V  
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_WRITE512_V               
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_COPY512_V                 
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 4 , IDC_VB_SQRT128_V               
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 0 , IDC_VB_SQRT256_V             
+SET_BOOL    BINDLIST.setMemMethod         + 3 , 6 , IDC_VB_SQRT512_V  
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 6 , IDC_VB_FCOS_V               
+SET_BOOL    BINDLIST.setMemMethod         + 7 , 6 , IDC_VB_FSINCOS_V 
+SET_STRING  STR_VB_CPU_FEATURES                   , IDC_VB_CPU_FEATURES   
+SET_STRING  STR_VB_AVX_256                        , IDC_VB_AVX_256 
+SET_STRING  STR_VB_AVX2_256                       , IDC_VB_AVX2_256
+SET_STRING  STR_VB_AVX3_512                       , IDC_VB_AVX3_512
+SET_STRING  STR_VB_AVX512CD                       , IDC_VB_AVX512CD
+SET_STRING  STR_VB_AVX512PF                       , IDC_VB_AVX512PF
+SET_STRING  STR_VB_AVX512ER                       , IDC_VB_AVX512ER
+SET_STRING  STR_VB_AVX512VL                       , IDC_VB_AVX512VL
+SET_STRING  STR_VB_AVX512BW                       , IDC_VB_AVX512BW
+SET_STRING  STR_VB_AVX512DQ                       , IDC_VB_AVX512DQ
+SET_STRING  STR_VB_AVX512_IFMA                    , IDC_VB_AVX512_IFMA
+SET_STRING  STR_VB_AVX512_VBMI                    , IDC_VB_AVX512_VBMI
+SET_STRING  STR_VB_AVX512_VBMI2                   , IDC_VB_AVX512_VBMI2
+SET_STRING  STR_VB_AVX512_BF16                    , IDC_VB_AVX512_BF16
+SET_STRING  STR_VB_AVX512_VAES                    , IDC_VB_AVX512_VAES
+SET_STRING  STR_VB_AVX512_GFNI                    , IDC_VB_AVX512_GFNI
+SET_STRING  STR_VB_AVX512_VNNI                    , IDC_VB_AVX512_VNNI
+SET_STRING  STR_VB_AVX512_BTALG                   , IDC_VB_AVX512_BTALG
+SET_STRING  STR_VB_AVX512_VPOP                    , IDC_VB_AVX512_VPOP
+SET_STRING  STR_VB_AVX512_VPCL                    , IDC_VB_AVX512_VPCL
+SET_STRING  STR_VB_AVX512_VP2IN                   , IDC_VB_AVX512_VP2IN
+SET_STRING  STR_VB_AVX512_FP16                    , IDC_VB_AVX512_FP16
+SET_STRING  STR_VB_AVX512_4FMAP                   , IDC_VB_AVX512_4FMAP
+SET_STRING  STR_VB_AVX512_4VNNI                   , IDC_VB_AVX512_4VNNI
+SET_STRING  STR_VB_OS_CONTEXT                     , IDC_VB_OS_CONTEXT
+SET_STRING  STR_VB_SSE128_XMM                     , IDC_VB_SSE128_XMM
+SET_STRING  STR_VB_AVX256_YMM                     , IDC_VB_AVX256_YMM
+SET_STRING  STR_VB_AVX512_ZMM_L                   , IDC_VB_AVX512_ZMM_L
+SET_STRING  STR_VB_AVX512_ZMM_H                   , IDC_VB_AVX512_ZMM_H
+SET_STRING  STR_VB_AVX512_K                       , IDC_VB_AVX512_K
+SET_STRING  STR_VB_TIMINGS                        , IDC_VB_TIMINGS
+SET_STRING  STR_VB_SSE128_READ                    , IDC_VB_SSE128_READ             
+SET_STRING  STR_VB_SSE128_WRITE                   , IDC_VB_SSE128_WRITE             
+SET_STRING  STR_VB_SSE128_COPY                    , IDC_VB_SSE128_COPY             
+SET_STRING  STR_VB_AVX256_READ                    , IDC_VB_AVX256_READ             
+SET_STRING  STR_VB_AVX256_WRITE                   , IDC_VB_AVX256_WRITE
+SET_STRING  STR_VB_AVX256_COPY                    , IDC_VB_AVX256_COPY             
+SET_STRING  STR_VB_AVX512_READ                    , IDC_VB_AVX512_READ
+SET_STRING  STR_VB_AVX512_WRITE                   , IDC_VB_AVX512_WRITE             
+SET_STRING  STR_VB_AVX512_COPY                    , IDC_VB_AVX512_COPY             
+SET_STRING  STR_VB_SQRTPD_XMM                     , IDC_VB_SQRTPD_XMM             
+SET_STRING  STR_VB_VSQRTPD_YMM                    , IDC_VB_VSQRTPD_YMM             
+SET_STRING  STR_VB_VSQRTPD_ZMM                    , IDC_VB_VSQRTPD_ZMM
+SET_STRING  STR_VB_FCOS                           , IDC_VB_FCOS             
+SET_STRING  STR_VB_FSINCOS                        , IDC_VB_FSINCOS
+SET_INFO    BINDLIST.vbSse128read                 , IDC_VB_READ128_V              
+SET_INFO    BINDLIST.vbSse128write                , IDC_VB_WRITE128_V               
+SET_INFO    BINDLIST.vbSse128copy                 , IDC_VB_COPY128_V               
+SET_INFO    BINDLIST.vbAvx256read                 , IDC_VB_READ256_V               
+SET_INFO    BINDLIST.vbAvx256write                , IDC_VB_WRITE256_V  
+SET_INFO    BINDLIST.vbAvx256copy                 , IDC_VB_COPY256_V               
+SET_INFO    BINDLIST.vbAvx512read                 , IDC_VB_READ512_V  
+SET_INFO    BINDLIST.vbAvx512write                , IDC_VB_WRITE512_V               
+SET_INFO    BINDLIST.vbAvx512copy                 , IDC_VB_COPY512_V                 
+SET_INFO    BINDLIST.vbSse128sqrt                 , IDC_VB_SQRT128_V               
+SET_INFO    BINDLIST.vbAvx256sqrt                 , IDC_VB_SQRT256_V             
+SET_INFO    BINDLIST.vbAvx512sqrt                 , IDC_VB_SQRT512_V  
+SET_INFO    BINDLIST.vbX87cos                     , IDC_VB_FCOS_V               
+SET_INFO    BINDLIST.vbX87sincos                  , IDC_VB_FSINCOS_V 
+SET_STRING  STR_OK                                , IDB_VB_OK             
 BIND_STOP
-
 ;---------- Continue, binders numbers for GUI scripts -------------------------;
 ; This binders for set GUI objects (widgets) state by data from buffer
 ; (bindlist), separate from build objects, because required set by
 ; system configuration detection results and by "Set defaults" button.
 ; Set widgets states for memory and cache benchmark settings by system info.
-
 SET_SWITCH  BINDLIST.setMemMethod + 0 , 0 , IDB_MEMORY_ASM_A0
 SET_SWITCH  BINDLIST.setMemMethod + 0 , 2 , IDB_MEMORY_ASM_A1
 SET_SWITCH  BINDLIST.setMemMethod + 0 , 4 , IDB_MEMORY_ASM_A2
@@ -1590,16 +1531,9 @@ SET_HEX64   BINDLIST.setBlkStop           , IDE_MEMORY_M_STOP
 SET_DEC32   BINDLIST.setBlkStep           , IDE_MEMORY_SK_SIZE
 SET_DEC32   BINDLIST.setBlkDist           , IDE_MEMORY_PF_SIZE
 BIND_STOP
-
-; Set widgets states for math benchmark settings by system info.
-
-; ...
-BIND_STOP
-
 ;---------- Continue, binders for GUI scripts ---------------------------------;
 ; This binders for read data from GUI objects (widgets) to buffer (bindlist).
 ; Get widgets states from memory and cache benchmark settings screen.
-
 GET_SWITCH  IDB_MEMORY_ASM_A0   , BINDLIST.getMemMethod + 0 , 0
 GET_SWITCH  IDB_MEMORY_ASM_A1   , BINDLIST.getMemMethod + 0 , 1
 GET_SWITCH  IDB_MEMORY_ASM_A2   , BINDLIST.getMemMethod + 0 , 2
@@ -1676,16 +1610,8 @@ GET_HEX64   IDE_MEMORY_M_STOP   , BINDLIST.getBlkStop
 GET_DEC32   IDE_MEMORY_SK_SIZE  , BINDLIST.getBlkStep
 GET_DEC32   IDE_MEMORY_PF_SIZE  , BINDLIST.getBlkDist
 BIND_STOP
-
-;---------- Get widgets states from math benchmark settings screen ------------;
-
-
-BIND_STOP
-
 endres
-
 ;---------- CPU common features bitmap builder script -------------------------;
-
 resdata cpuCommonFeatures
 ENTRY_CPUID    00000001h             , R_EDX , 23   ; MMX
 ENTRY_CPUID    00000001h             , R_EDX , 25   ; SSE  
@@ -1703,11 +1629,10 @@ ENTRY_CPUID    80000001h             , R_ECX , 02   ; SVM
 ENTRY_CPUID    80000001h             , R_EDX , 29   ; x86-64
 ENTRY_CPUID    00000001h             , R_ECX , 12   ; FMA 256
 ENTRY_CPUID    80000008h             , R_EBX , 0    ; CLZERO
+ENTRY_CPUID    00000001h             , R_EDX , 0    ; x87 (redundant by run criteria)
 ENTRY_STOP
 endres  
-
 ;---------- CPU AVX512 features bitmap builder script -------------------------;
-
 resdata cpuAvx512Features
 ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 28   ; AVX512CD
 ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 26   ; AVX512PF
@@ -1731,9 +1656,7 @@ ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 03   ; AVX512_4FMAPS
 ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 02   ; AVX512_4VNNIW
 ENTRY_STOP
 endres  
-
 ;---------- OS context features bitmap builder script -------------------------;
-
 resdata osContextFeatures
 ENTRY_XCR0     01   ; XMM[0-15]  
 ENTRY_XCR0     02   ; YMM[0-15] 
@@ -1744,15 +1667,7 @@ ENTRY_XCR0     03   ; BNDREGS
 ENTRY_XCR0     04   ; BNDCSR
 ENTRY_STOP
 endres  
-
-;---------- CPU instruction-based methods bitmap builder script ---------------;
-
-resdata cpuMethodFeatures
-; TODO.
-endres  
-
 ;---------- Raw resource for dynamical imported functions list ----------------;
-
 resdata importList
 DB  'IsWow64Process'               , 0      ; This functions from KERNEL32.DLL
 DB  'GlobalMemoryStatusEx'         , 0          
@@ -1776,15 +1691,11 @@ DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL
 DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list
 DB  0                                       ; Third zero means end of list                  
 endres
-
 ;---------- Raw resource for dynamical created fonts list ---------------------;
-
 resdata fontList
-
 ; parameters sequence:
 ; cHeight, cWidth, cWeight, iCharset, iOutPrecision,
 ; iClipPrecision, iQuality, iPitchAndFamily  
-
 DW  17 , 10 , FW_DONTCARE , DEFAULT_CHARSET
 DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
 DB  'Verdana' , 0
@@ -1793,9 +1704,7 @@ DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
 DB  'System monospace' , 0
 DW  0
 endres
-
 ;---------- ACPI tables data base ---------------------------------------------; 
-
 resdata acpiData
 DB  'AEST' , 'Arm Error Source'                                 , 0
 DB  'APIC' , 'Multiple APIC Description'                        , 0
@@ -1866,66 +1775,42 @@ DB  'XENV' , 'Xen Project'                                      , 0
 DB  'XSDT' , 'Extended System Description'                      , 0
 DB  0
 endres  
-
 ;---------- Directory of icon resources ---------------------------------------; 
-
 resource icons, \
 IDI_SYSINFO     , LANG_NEUTRAL , iSysinfo    , \
 IDI_MEMORY      , LANG_NEUTRAL , iMemory     , \
-IDI_MATH        , LANG_NEUTRAL , iMath       , \
 IDI_OS          , LANG_NEUTRAL , iOs         , \
 IDI_NATIVE_OS   , LANG_NEUTRAL , iNativeOs   , \
-IDI_PROCESSOR   , LANG_NEUTRAL , iProcessor  , \
 IDI_TOPOLOGY    , LANG_NEUTRAL , iTopology   , \
 IDI_TOPOLOGY_EX , LANG_NEUTRAL , iTopologyEx , \
 IDI_NUMA        , LANG_NEUTRAL , iNuma       , \
 IDI_P_GROUPS    , LANG_NEUTRAL , iPgroups    , \
 IDI_ACPI        , LANG_NEUTRAL , iAcpi       , \
-IDI_AFF_CPUID   , LANG_NEUTRAL , iAffCpuid   , \
-IDI_KMD         , LANG_NEUTRAL , iKmd
-
+IDI_AFF_CPUID   , LANG_NEUTRAL , iAffCpuid   ; , \
 ;---------- Directory of group icon resources ---------------------------------;
-
 resource gicons, \
 IDG_SYSINFO     , LANG_NEUTRAL , gSysinfo    , \
 IDG_MEMORY      , LANG_NEUTRAL , gMemory     , \
-IDG_MATH        , LANG_NEUTRAL , gMath       , \
 IDG_OS          , LANG_NEUTRAL , gOs         , \
 IDG_NATIVE_OS   , LANG_NEUTRAL , gNativeOs   , \
-IDG_PROCESSOR   , LANG_NEUTRAL , gProcessor  , \
 IDG_TOPOLOGY    , LANG_NEUTRAL , gTopology   , \
 IDG_TOPOLOGY_EX , LANG_NEUTRAL , gTopologyEx , \
 IDG_NUMA        , LANG_NEUTRAL , gNuma       , \
 IDG_P_GROUPS    , LANG_NEUTRAL , gPgroups    , \
 IDG_ACPI        , LANG_NEUTRAL , gAcpi       , \
-IDG_AFF_CPUID   , LANG_NEUTRAL , gAffCpuid   , \
-IDG_KMD         , LANG_NEUTRAL , gKmd
-
+IDG_AFF_CPUID   , LANG_NEUTRAL , gAffCpuid   ; , \
 ;---------- Icon resources ----------------------------------------------------;
-
 icon iSysinfo    , gSysinfo    , 'images\sysinfo.ico'
-icon iMath       , gMath       , 'images\math.ico'
 icon iMemory     , gMemory     , 'images\memory.ico'
 icon iOs         , gOs         , 'images\os.ico'
 icon iNativeOs   , gNativeOs   , 'images\nativeos.ico'
-icon iProcessor  , gProcessor  , 'images\processor.ico'
 icon iTopology   , gTopology   , 'images\topology.ico'
 icon iTopologyEx , gTopologyEx , 'images\topologyex.ico'
 icon iNuma       , gNuma       , 'images\numa.ico'
 icon iPgroups    , gPgroups    , 'images\pgroups.ico'
 icon iAcpi       , gAcpi       , 'images\acpi.ico'
 icon iAffCpuid   , gAffCpuid   , 'images\affcpuid.ico'
-icon iKmd        , gKmd        , 'images\kmd.ico'
-
-;---------- Equations for version resource ------------------------------------;
-
-RESOURCE_DESCRIPTION  EQU  'NCRB universal resource library for Win32 and Win64'
-RESOURCE_VERSION      EQU  '0.0.0.1'
-RESOURCE_COMPANY      EQU  'https://github.com/manusov'
-RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
-
-;---------- Resources ---------------------------------------------------------;
-
+;---------- Version resources -------------------------------------------------;
 resource     version, 1, LANG_NEUTRAL, version_info
 versioninfo  version_info, \ 
              VOS__WINDOWS32, VFT_DLL, VFT2_UNKNOWN, LANG_NEUTRAL, 0, \

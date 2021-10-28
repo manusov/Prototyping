@@ -7,6 +7,17 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+; Entries for compact encoding performance method 
+; Use 16-bit base-relative offsets instead full 64-bit offsets
+; 6 or 2 bytes per entry, compact encoding
+MACRO BANDWIDTH_NON_TEMPORAL x1, x2, x3, x4
+{
+dw  x1 - RoutinesBandwidthNonTemporal  ; Target routine entry point
+dw  x2 - RoutinesBandwidthNonTemporal  ; Dump fragment start, dump show at drawings Y=F(X)
+db  x3 - x2                            ; Dump fragment size
+db  x4                                 ; Read or Write data bytes per instruction,
+}                                      ; example YMM register op. = 32 bytes (256 bit) 
+
 ;--- List of performance patterns: bandwidth measur., non temporal access -----;
 
 align 2

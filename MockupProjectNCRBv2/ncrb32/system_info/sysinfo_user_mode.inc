@@ -21,88 +21,24 @@ SysinfoUserMode:
 push ebx esi edi ebp
 push 0                  ; Variable dword at [esp], if original ESP, no pushes
 cld
-mov esi,[Registry]      ; ESI = Registry base address
 
-;---------- Check CPUID instruction support, get 12-chars vendor string -------;
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov esi,[Registry]      ; ESI = Registry base address
 
-lea edi,[esi + REGISTRY32.cpuData.vendorString]
-call HelperCheckCpuid
+;---------- Processor information ---------------------------------------------;
+
+call InfoProcessor
 jc .error
-cmp eax,1
-jb .error
-
-;---------- Get 48-chars CPU model string -------------------------------------;
-
-call HelperGetCpuName
-
-;---------- Get CPU signature: type, family, model, stepping ------------------;
-
-mov eax,1
-cpuid
-stosd
-
-;------- Build CPU common features bitmap, for system information screen ------; 
-
-push esi
-mov ebx,esi
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataCpuCommon]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
-stosd
-mov eax,80000000h
-stosd
-
-;------- Build CPU AVX512 features bitmap, for system information screen ------;
-
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataCpuAvx512]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
-stosd
-xor eax,eax
-stosd
-
-;------- Build OS context features bitmap, for system information screen ------;
-
-xor eax,eax
-mov esi,[ebx + REGISTRY32.appData.lockedDataOsContext]
-test esi,esi
-jz @f
-call HelperBuildBitmap
-@@:
-xor edx,edx
-test eax,eax
-jz @f
-bts edx,31
-@@:
-stosd
-xchg eax,edx
-stosd
-
-;------- Build CPU methods features bitmap, for system information screen -----;
-
-; xor eax,eax    ; *** DEBUG ***
-; stosd          ; *** DEBUG ***
-; stosd          ; *** DEBUG ***
-
-pop esi
-
-;---------- Measure TSC frequency ---------------------------------------------;
-
-call HelperMeasureTsc
-; TODO. Check for errors, CF=1
 
 ;---------- Initializing dynamical import WinAPI list -------------------------;
 
 push esi
-mov ebx,[esi + REGISTRY32.appData.lockedImportList]  ; EBX = to functions names
-lea edi,[esi + REGISTRY32.dynaImport]                ; EDI = to fnc. addresses
-lea esi,[NameKernel32]      ; ESI = Pointer to libraries names array
+mov ebx,[APP_DATA.lockedImportList]  ; EBX = to functions names
+
+; lea edi,[esi + REGISTRY32.dynaImport]                ; EDI = to fnc. addresses
+lea edi,[DYNA_IMPORT]
+
+lea esi,[NAME_KERNEL32]     ; ESI = Pointer to libraries names array
 .scanLibs:
 cmp byte [esi],0
 je .doneLibs
@@ -134,8 +70,10 @@ pop esi
 
 ;---------- Check for WoW64 process: ia32 application under Win64 -------------;
 
-lea edi,[esi + REGISTRY32.osData.isWow64]
-mov ecx,[esi + REGISTRY32.dynaImport._IsWow64Process]
+lea edi,[OS_DATA.isWow64]
+
+mov ecx,[DYNA_IMPORT._IsWow64Process]
+
 jecxz .noWow64
 call [GetCurrentProcess]
 test eax,eax
@@ -151,18 +89,20 @@ mov dword [edi],0       ; Clear WoW64 flag if WoW64 not detected
 
 ;---------- Get system and memory information parameters ----------------------;
 
-lea ebx,[esi + REGISTRY32.dynaImport]
-lea edi,[esi + REGISTRY32.osData]
+; lea ebx,[esi + REGISTRY32.dynaImport]
+lea ebx,[DYNA_IMPORT]
+
+lea edi,[OS_DATA]
 mov eax,[ebx + DYNAIMPORT._GlobalMemoryStatusEx]
 test eax,eax
 jz .error
-lea ecx,[edi + OSDATA.memoryStatusEx]
+lea ecx,[OS_DATA.memoryStatusEx]
 mov [ecx + MEMORYSTATUSEX_DEF.dwLength],sizeof.MEMORYSTATUSEX_DEF
 push ecx
 call eax 
 test eax,eax
 jz .error
-lea ecx,[edi + OSDATA.systemInfo]
+lea ecx,[OS_DATA.systemInfo]
 push ecx
 call [GetSystemInfo]
 mov eax,[ebx + DYNAIMPORT._GetActiveProcessorGroupCount]
@@ -171,26 +111,26 @@ jz @f
 call eax
 movzx eax,ax
 @@:
-mov [edi + OSDATA.activeProcessorGroupCount],eax
+mov [OS_DATA.activeProcessorGroupCount],eax
 mov eax,[ebx + DYNAIMPORT._GetActiveProcessorCount]
 test eax,eax
 jz @f
 push ALL_PROCESSOR_GROUPS
 call eax
 @@:
-mov [edi + OSDATA.activeProcessorCount],eax
+mov [OS_DATA.activeProcessorCount],eax
 mov eax,[ebx + DYNAIMPORT._GetNumaHighestNodeNumber]
 test eax,eax
 jz @f
-lea ecx,[edi + OSDATA.numaNodeCount]
+lea ecx,[OS_DATA.numaNodeCount]
 push ecx
 call eax
 test eax,eax
 jz @f
-mov eax,[edi + OSDATA.numaNodeCount]
+mov eax,[OS_DATA.numaNodeCount]
 inc eax
 @@:               ; If no data, EAX=0 at this point, means no nodes found
-mov [edi + OSDATA.numaNodeCount],eax
+mov [OS_DATA.numaNodeCount],eax
 
 ;---------- Get large page size -----------------------------------------------;
 
@@ -199,19 +139,19 @@ test eax,eax
 jz @f
 call eax
 @@:
-mov [edi + OSDATA.largePageSize],eax
+mov [OS_DATA.largePageSize],eax
 
 ;---------- Get large page information: try allocation ------------------------;
 
 push esi
 sub esp,128
 xor eax,eax
-mov [edi + OSDATA.largePageEnable],eax
+mov [OS_DATA.largePageEnable],eax
 cmp [ebx + DYNAIMPORT._OpenProcessToken],eax
 je .exit
 cmp [ebx + DYNAIMPORT._AdjustTokenPrivileges],eax 
 je .exit
-cmp [edi + OSDATA.largePageSize],eax 
+cmp [OS_DATA.largePageSize],eax 
 je .exit
 call [GetCurrentProcess]
 test eax,eax
@@ -251,7 +191,7 @@ jz .exit
 mov esi,eax
 push PAGE_READWRITE
 push MEM_COMMIT + MEM_LARGE_PAGES
-push [edi + OSDATA.largePageSize]
+push [OS_DATA.largePageSize]
 push 0
 push esi
 call [VirtualAllocEx]
@@ -266,7 +206,7 @@ call [VirtualFreeEx]
 test eax,eax
 setnz al
 movzx eax,al
-mov [edi + OSDATA.largePageEnable],eax 
+mov [OS_DATA.largePageEnable],eax 
 .exit:
 add esp,128
 pop esi
@@ -276,7 +216,7 @@ pop esi
 mov eax,[ebx + DYNAIMPORT._GetNativeSystemInfo]
 test eax,eax
 jz @f
-lea ecx,[edi + OSDATA.nativeSystemInfo]
+lea ecx,[OS_DATA.nativeSystemInfo]
 push ecx
 call eax
 @@:
@@ -285,9 +225,14 @@ call eax
 ; Start operations with unformatted part of application registry,
 ; EBP = Pointer for unformatted part addressing 
 
-lea ebp,[esi + REGISTRY32.unformatted]
+; lea ebp,[esi + REGISTRY32.unformatted]
+mov ebp,[APP_MEMORY]
+
 call HelperAlignment
-mov ebx,[esi + REGISTRY32.dynaImport._GetLogicalProcessorInformation]
+
+; mov ebx,[esi + REGISTRY32.dynaImport._GetLogicalProcessorInformation]
+mov ebx,[DYNA_IMPORT._GetLogicalProcessorInformation]
+
 test ebx,ebx
 jz @f
 mov dword [esp],0            ; dword [esp]  = Buffer size variable, stack
@@ -309,16 +254,18 @@ push ebp                     ; Parm#1 = Pointer to buffer
 call ebx
 test eax,eax
 jz .error                    ; Go if unexpected error: zero-sized buffer
-mov [esi + REGISTRY32.listTopology.objectStart],ebp
+mov [DYNA_PTR.listTopology.objectStart],ebp
 add ebp,edi
-mov [esi + REGISTRY32.listTopology.objectStop],ebp
+mov [DYNA_PTR.listTopology.objectStop],ebp
 @@:
 
 ;---------- Get platform extended topology by WinAPI --------------------------;
 ; Separate get each type of information for build ordered list.
 
 call HelperAlignment
-mov ebx,[esi + REGISTRY32.dynaImport._GetLogicalProcessorInformationEx]
+
+mov ebx,[DYNA_IMPORT._GetLogicalProcessorInformationEx]
+
 test ebx,ebx
 jz @f
 xor edi,edi
@@ -338,14 +285,15 @@ mov al,4                  ; 4 = RelationGroup
 call HelperTopologyEx
 .errorTopologyEx:
 jc .error
-mov [esi + REGISTRY32.listTopologyEx.objectStart],ebp
+mov [DYNA_PTR.listTopologyEx.objectStart],ebp
 add ebp,edi
-mov [esi + REGISTRY32.listTopologyEx.objectStop],ebp
+mov [DYNA_PTR.listTopologyEx.objectStop],ebp
 @@:
 
 ;---------- Get NUMA nodes list -----------------------------------------------;
 
-mov eax,[esi + REGISTRY32.dynaImport._GetNumaHighestNodeNumber]
+mov eax,[DYNA_IMPORT._GetNumaHighestNodeNumber]
+
 test eax,eax
 jz .skipNumaList
 mov ecx,esp
@@ -355,9 +303,11 @@ test eax,eax
 jz .error              ; dword [esp] = Maximum node number
 mov edi,ebp            ; RDI = Pointer, RBP = Start
 xor ebx,ebx            ; EBX = Node number and compare pattern
-cmp [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMaskEx],ebx
+
+cmp [DYNA_IMPORT._GetNumaNodeProcessorMaskEx],ebx
+
 je .standardTry
-cmp [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNodeEx],ebx
+cmp [DYNA_IMPORT._GetNumaAvailableMemoryNodeEx],ebx
 je .standardTry
 mov eax,1         ; dword 00000001h = marker for extended topology scan results
 stosd
@@ -366,13 +316,13 @@ mov [edi],ebx
 lea eax,[edi + 4]
 push eax               ; Parm#2 = Pointer to output variable: group + mask
 push ebx               ; Parm#1 = Node 
-call [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMaskEx]
+call [DYNA_IMPORT._GetNumaNodeProcessorMaskEx]
 test eax,eax
 jz @f
 lea eax,[edi + 20]     
 push eax               ; Parm#2 = Pointer to output variable: memory size
 push ebx               ; Parm#1 = Node 
-call [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNodeEx]
+call [DYNA_IMPORT._GetNumaAvailableMemoryNodeEx]
 test eax,eax
 jz @f
 add edi,28
@@ -382,9 +332,9 @@ cmp ebx,[esp]
 jbe .extendedNumaList 
 jmp .doneNumaList
 .standardTry:
-cmp [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMask],ebx
+cmp [DYNA_IMPORT._GetNumaNodeProcessorMask],ebx
 je .skipNumaList
-cmp [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNode],ebx
+cmp [DYNA_IMPORT._GetNumaAvailableMemoryNode],ebx
 je .skipNumaList
 xor eax,eax       ; dword 00000000h = marker for standard topology scan results
 stosd
@@ -393,13 +343,13 @@ mov [edi],ebx
 lea eax,[edi + 4]
 push eax               ; Parm#2 = Pointer to output variable: mask
 push ebx               ; Parm#1 = Node 
-call [esi + REGISTRY32.dynaImport._GetNumaNodeProcessorMask]
+call [DYNA_IMPORT._GetNumaNodeProcessorMask]
 test eax,eax
 jz @f
 lea eax,[edi + 12]    
 push eax               ; Parm#2 = Pointer to output variable: memory size
 push ebx               ; Parm#1 = Node 
-call [esi + REGISTRY32.dynaImport._GetNumaAvailableMemoryNode]
+call [DYNA_IMPORT._GetNumaAvailableMemoryNode]
 test eax,eax
 jz @f
 add edi,20
@@ -408,19 +358,19 @@ inc ebx
 cmp ebx,[esp]
 jbe .standardNumaList 
 .doneNumaList:
-mov [esi + REGISTRY32.listNuma.objectStart],ebp
-mov [esi + REGISTRY32.listNuma.objectStop],edi
+mov [DYNA_PTR.listNuma.objectStart],ebp
+mov [DYNA_PTR.listNuma.objectStop],edi
 mov ebp,edi
 .skipNumaList:
 
 ;---------- Get processor groups list -----------------------------------------;
 
 xor ebx,ebx           ; EBX = Node number and compare pattern
-cmp [esi + REGISTRY32.dynaImport._GetActiveProcessorGroupCount],ebx  
+cmp [DYNA_IMPORT._GetActiveProcessorGroupCount],ebx  
 je .skipGroupList 
-cmp [esi + REGISTRY32.dynaImport._GetActiveProcessorCount],ebx       
+cmp [DYNA_IMPORT._GetActiveProcessorCount],ebx       
 je .skipGroupList
-call [esi + REGISTRY32.dynaImport._GetActiveProcessorGroupCount]
+call [DYNA_IMPORT._GetActiveProcessorGroupCount]
 test ax,ax
 jz .skipGroupList
 mov [esp],ax 
@@ -429,22 +379,25 @@ mov edi,ebp           ; EDI = Pointer, EBP = Start
 mov eax,ebx
 stosd
 push ebx              ; Parm#1 = Group number
-call [esi + REGISTRY32.dynaImport._GetActiveProcessorCount]
+call [DYNA_IMPORT._GetActiveProcessorCount]
 ; no check for EAX = 0, empty group is acceptable ?
 stosd
 inc ebx
 cmp bx,[esp]
 jb .groupList
 .doneGroupList:
-mov [esi + REGISTRY32.listGroup.objectStart],ebp
-mov [esi + REGISTRY32.listGroup.objectStop],edi
+mov [DYNA_PTR.listGroup.objectStart],ebp
+mov [DYNA_PTR.listGroup.objectStop],edi
 mov ebp,edi
 .skipGroupList:
 
 ;---------- Get ACPI tables list ----------------------------------------------;
 
 push ebx esi edi
-mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+
+; mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[BIND_LIST]
+
 lea edx,[ecx + BINDLIST.bindMadt]
 mov bl,2
 .writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
@@ -469,16 +422,16 @@ jnz .writeNotAvl
 pop edi esi ebx
 
 xor eax,eax
-cmp [esi + REGISTRY32.dynaImport._EnumSystemFirmwareTables],eax
+cmp [DYNA_IMPORT._EnumSystemFirmwareTables],eax
 je .skipAcpiList
-cmp [esi + REGISTRY32.dynaImport._GetSystemFirmwareTable],eax
+cmp [DYNA_IMPORT._GetSystemFirmwareTable],eax
 je .skipAcpiList
 call HelperAlignment
 push VALUE_BUFFER_LIMIT      ; Parm#3 = Buffer size limit
 lea eax,[ebp + 16]
 push eax                     ; Parm#2 = Pointer to buffer
 push 'IPCA'                  ; Parm#1 = Signature, select data type = ACPI
-call [esi + REGISTRY32.dynaImport._EnumSystemFirmwareTables]
+call [DYNA_IMPORT._EnumSystemFirmwareTables]
 test eax,eax
 jz .error
 cmp eax,VALUE_BUFFER_LIMIT
@@ -500,7 +453,7 @@ push VALUE_BUFFER_LIMIT      ; Parm#4 = Buffer size limit
 push edx                     ; Parm#3 = Buffer pointer
 push dword [ebx]             ; Parm#2 = Table signature
 push 'IPCA'                  ; Parm#1 = Table provider signature
-call [esi + REGISTRY32.dynaImport._GetSystemFirmwareTable]
+call [DYNA_IMPORT._GetSystemFirmwareTable]
 pop edx ecx
 test eax,eax
 jz .skipOneTable
@@ -516,7 +469,10 @@ rep movsd
 
 pop esi
 push esi edi ebx edx ebp
-mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+
+; mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[BIND_LIST]
+
 lea ebx,[ecx + BINDLIST.acpiEnable]
 or byte [ebx],00000001b
 mov ebp,[edx]
@@ -603,21 +559,21 @@ add ebx,4
 cmp ebx,ecx
 jb .scanAcpiList 
 .doneAcpiList:
-mov [esi + REGISTRY32.listAcpi.objectStart],ebp
-mov [esi + REGISTRY32.listAcpi.objectStop],edi
+mov [DYNA_PTR.listAcpi.objectStart],ebp
+mov [DYNA_PTR.listAcpi.objectStop],edi
 mov ebp,edi
 .skipAcpiList:
 
 ;---------- Get affinized CPUID dump ------------------------------------------;
 
 mov edi,ebp
-cmp [esi + REGISTRY32.dynaImport._SetThreadAffinityMask],0
+cmp [DYNA_IMPORT._SetThreadAffinityMask],0
 je .skipAffCpuid
 call [GetCurrentThread]
 test eax,eax
 jz .skipAffCpuid 
 xchg ebx,eax             ; EBX = Current thread handle
-mov ecx,[esi + REGISTRY32.osData.systemInfo.dwNumberOfProcessors]
+mov ecx,[OS_DATA.systemInfo.dwNumberOfProcessors]
 jecxz .skipAffCpuid
 cmp ecx,16              ; Yet limited for maximum 16 logical processors
 jbe @f
@@ -629,7 +585,7 @@ mov eax,1                ; EAX = Variable affinity mask for dump
 push eax ecx edx
 push eax                 ; Parm#2 = Affinity mask
 push ebx                 ; Parm#1 = Current thread handle 
-call [esi + REGISTRY32.dynaImport._SetThreadAffinityMask]
+call [DYNA_IMPORT._SetThreadAffinityMask]
 pop edx
 test edx,edx
 jnz @f
@@ -651,20 +607,20 @@ test edx,edx
 jz @f
 push edx                 ; Parm#2 = Affinity mask
 push ebx                 ; Parm#1 = Current thread handle 
-call [esi + REGISTRY32.dynaImport._SetThreadAffinityMask]
+call [DYNA_IMPORT._SetThreadAffinityMask]
 @@:
-mov [esi + REGISTRY32.listAffCpuid.objectStart],ebp
-mov [esi + REGISTRY32.listAffCpuid.objectStop],edi
+mov [DYNA_PTR.listAffCpuid.objectStart],ebp
+mov [DYNA_PTR.listAffCpuid.objectStop],edi
 mov ebp,edi
 .skipAffCpuid:
 
 ;---------- Build text block for operating system information screen ----------;
 ; Start text blocks build operations.
 
-mov [esi + REGISTRY32.textOs.objectStart],ebp
+mov [DYNA_PTR.textOs.objectStart],ebp
 mov ax,STR_OS_MEMORY_LOAD
 call HelperOsInfoString                          ; Memory load percentage
-mov eax,[esi + REGISTRY32.osData.memoryStatusEx.dwMemoryLoad]
+mov eax,[OS_DATA.memoryStatusEx.dwMemoryLoad]
 push eax
 mov bl,0
 call DecimalPrint32
@@ -717,7 +673,7 @@ mov ax,STR_OS_PROC_CURRENT                       ; Processors at currebt group
 call HelperOsInfoString
 mov al,SYSTEM_INFO.dwNumberOfProcessors
 call HelperOsInfoNumber32
-mov ecx,[esi + REGISTRY32.osData.activeProcessorCount]      ; Processors total
+mov ecx,[OS_DATA.activeProcessorCount]      ; Processors total
 jecxz @f
 push ecx
 mov ax,STR_OS_PROC_TOTAL
@@ -725,7 +681,7 @@ call HelperOsInfoString
 pop eax
 call HelperOsInfoValue32
 @@:
-mov ecx,[esi + REGISTRY32.osData.activeProcessorGroupCount] ; Processors groups
+mov ecx,[OS_DATA.activeProcessorGroupCount] ; Processors groups
 jecxz @f
 push ecx
 mov ax,STR_OS_PROC_GROUPS
@@ -733,7 +689,7 @@ call HelperOsInfoString
 pop eax
 call HelperOsInfoValue32
 @@:
-mov ecx,[esi + REGISTRY32.osData.numaNodeCount]  ; NUMA domains
+mov ecx,[OS_DATA.numaNodeCount]  ; NUMA domains
 jecxz @f
 push ecx
 mov ax,STR_OS_NUMA_DOMAINS
@@ -745,7 +701,7 @@ mov ax,STR_OS_NORMAL_PAGE                        ; Normal page size
 call HelperOsInfoString
 mov al,SYSTEM_INFO.dwPageSize
 call HelperOsInfoSizeAuto32
-mov ecx,[esi + REGISTRY32.osData.largePageSize]  ; Large page size and status
+mov ecx,[OS_DATA.largePageSize]  ; Large page size and status
 jecxz .skipLargePages
 push ecx
 mov ax,STR_OS_LARGE_PAGE
@@ -755,7 +711,7 @@ push eax ecx esi
 mov bl,0FFh
 xor edx,edx
 call SizePrint64
-cmp [esi + REGISTRY32.osData.largePageEnable],0
+cmp [OS_DATA.largePageEnable],0
 mov ax,STR_OS_DISABLED
 je @f
 mov ax,STR_OS_ENABLED
@@ -768,55 +724,57 @@ call HexPrint64
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textOs.objectStop],ebp
+mov [DYNA_PTR.textOs.objectStop],ebp
 
 ;---------- Additions for screen 0 information --------------------------------;
 
-mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+; mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[BIND_LIST]
+
 add ecx,BINDLIST.bindSys
 lea edi,[ecx + BINDSYS.procTotal]
-mov eax,[esi + REGISTRY32.osData.activeProcessorCount]      ; Processors total
+mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
 mov bl,0
 call DecimalPrint32
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.groups]
-mov eax,[esi + REGISTRY32.osData.activeProcessorGroupCount] ; Processors groups
+mov eax,[OS_DATA.activeProcessorGroupCount] ; Processors groups
 call DecimalPrint32
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.procCur]
-mov eax,[esi + REGISTRY32.osData.systemInfo.dwNumberOfProcessors]
+mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
 call DecimalPrint32
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.numaNodes]
-mov eax,[esi + REGISTRY32.osData.numaNodeCount]  ; NUMA domains
+mov eax,[OS_DATA.numaNodeCount]  ; NUMA domains
 call DecimalPrint32
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.memPhys]
-mov eax,dword [esi + REGISTRY32.osData.memoryStatusEx.ullTotalPhys + 0]
-mov edx,dword [esi + REGISTRY32.osData.memoryStatusEx.ullTotalPhys + 4]
+mov eax,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 0]
+mov edx,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 4]
 mov bl,2
 call SizePrint64
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.memAvail]
-mov eax,dword [esi + REGISTRY32.osData.memoryStatusEx.ullAvailPhys + 0]
-mov edx,dword [esi + REGISTRY32.osData.memoryStatusEx.ullAvailPhys + 4]
+mov eax,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 0]
+mov edx,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 4]
 call SizePrint64
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.largePage]
-mov eax,[esi + REGISTRY32.osData.largePageSize]
+mov eax,[OS_DATA.largePageSize]
 xor edx,edx
 mov bl,0FFh
 call SizePrint64
 mov al,0
 stosb
 lea edi,[ecx + BINDSYS.largeEnable]
-cmp [esi + REGISTRY32.osData.largePageEnable],0
+cmp [OS_DATA.largePageEnable],0
 mov ax,STR_OS_DISABLED
 je @f
 mov ax,STR_OS_ENABLED
@@ -830,13 +788,13 @@ stosb
 
 ;---------- Build text block for native operating system information screen ---;
 
-mov [esi + REGISTRY32.textNativeOs.objectStart],ebp
+mov [DYNA_PTR.textNativeOs.objectStart],ebp
 mov bh,1                                  ; BH = 1 means native system info
 call HelperSystemInfo
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textNativeOs.objectStop],ebp
+mov [DYNA_PTR.textNativeOs.objectStop],ebp
 
 ;---------- Build text block for processor details screen ---------------------;
 
@@ -851,9 +809,9 @@ TEMP_THREADS   EQU  dword [esp + 00 + 04]
 TEMP_CORES     EQU  dword [esp + 04 + 04]
 TEMP_SOCKETS   EQU  dword [esp + 08 + 04]
 
-mov [esi + REGISTRY32.textTopology1.objectStart],ebp
-mov ebx,[esi + REGISTRY32.listTopology.objectStart]
-mov eax,[esi + REGISTRY32.listTopology.objectStop]
+mov [DYNA_PTR.textTopology1.objectStart],ebp
+mov ebx,[DYNA_PTR.listTopology.objectStart]
+mov eax,[DYNA_PTR.listTopology.objectStop]
 sub eax,ebx
 mov ecx,24
 xor edx,edx
@@ -975,7 +933,7 @@ jnz .scanRelations
 ;---------- Support screen 0 threads, cores, sockets --------------------------;
 
 mov esi,[esp + 12]
-lea ebx,[esi + REGISTRY32.sysParms.summaryTopology]
+lea ebx,[SYS_PARMS.summaryTopology]
 pop dword [ebx + SUMMARYTOPOLOGY.threads]
 pop dword [ebx + SUMMARYTOPOLOGY.cores]
 pop dword [ebx + SUMMARYTOPOLOGY.sockets]
@@ -987,13 +945,16 @@ pop esi ecx ebx
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textTopology1.objectStop],ebp
+mov [DYNA_PTR.textTopology1.objectStop],ebp
 
 ;---------- Build text block for topology screen, second block = summary ------;
 
 ; TODO. OPTIMIZE BY ELIMINATE DUAL ADDRESS CALCULATION: FOR "N/A" AND FOR VALUES
 push esi ecx
-mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+
+; mov ecx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[BIND_LIST]
+
 lea edx,[ecx + BINDLIST.bindCache]
 mov ax,STR_N_A
 lea edi,[edx + BINDCACHE.l1c]
@@ -1016,7 +977,7 @@ lea edi,[edx + BINDCACHE.l4u]
 call PoolStringWrite
 pop ecx esi
 
-mov [esi + REGISTRY32.textTopology2.objectStart],ebp
+mov [DYNA_PTR.textTopology2.objectStart],ebp
 push esi
 mov edi,ebp
 mov esi,ebx
@@ -1034,13 +995,13 @@ mov al,0
 stosb
 mov ebp,edi
 pop esi
-mov [esi + REGISTRY32.textTopology2.objectStop],ebp
+mov [DYNA_PTR.textTopology2.objectStop],ebp
 
 ;--- Build text block for extended topology screen, first block = list --------;
 
-mov [esi + REGISTRY32.textTopologyEx1.objectStart],ebp
-mov ebx,[esi + REGISTRY32.listTopologyEx.objectStart]
-mov ecx,[esi + REGISTRY32.listTopologyEx.objectStop]
+mov [DYNA_PTR.textTopologyEx1.objectStart],ebp
+mov ebx,[DYNA_PTR.listTopologyEx.objectStart]
+mov ecx,[DYNA_PTR.listTopologyEx.objectStop]
 test ecx,ecx
 jz .noTopologyEx
 mov edi,ebp
@@ -1173,7 +1134,7 @@ jb .scanRelationsEx
 ;---------- Support screen 0 threads, cores, sockets ( variables ) ------------;
 
 mov esi,[esp + 12]
-lea ebx,[esi + REGISTRY32.sysParms.summaryTopology]
+lea ebx,[SYS_PARMS.summaryTopology]
 pop ecx
 jecxz @f
 mov [ebx + SUMMARYTOPOLOGY.threads],ecx
@@ -1193,15 +1154,18 @@ pop esi ecx ebx
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textTopologyEx1.objectStop],ebp
+mov [DYNA_PTR.textTopologyEx1.objectStop],ebp
 
 .noTopologyEx:
 
 ;---------- Support screen 0 threads, cores, sockets ( text ) -----------------;
 
 push ebx ecx
-mov edx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
-lea ecx,[esi + REGISTRY32.sysParms.summaryTopology]
+
+; mov edx,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edx,[BIND_LIST]
+
+lea ecx,[SYS_PARMS.summaryTopology]
 mov bl,0
 lea edi,[edx + BINDLIST.bindTopology.threads]
 mov eax,[ecx + SUMMARYTOPOLOGY.threads]
@@ -1222,7 +1186,7 @@ pop ecx ebx
 
 ;--- Build text block for extended topology screen, second block = summary ----;
 
-mov [esi + REGISTRY32.textTopologyEx2.objectStart],ebp
+mov [DYNA_PTR.textTopologyEx2.objectStart],ebp
 push esi
 mov edi,ebp
 mov esi,ebx
@@ -1240,15 +1204,15 @@ mov al,0
 stosb
 mov ebp,edi
 pop esi
-mov [esi + REGISTRY32.textTopologyEx2.objectStop],ebp
+mov [DYNA_PTR.textTopologyEx2.objectStop],ebp
 
 ;---------- Build text block for NUMA domains list screen ---------------------;
 
-mov edx,[esi + REGISTRY32.listNuma.objectStart]
-mov ecx,[esi + REGISTRY32.listNuma.objectStop]
+mov edx,[DYNA_PTR.listNuma.objectStart]
+mov ecx,[DYNA_PTR.listNuma.objectStop]
 test ecx,ecx
 jz .noNuma
-mov [esi + REGISTRY32.textNuma.objectStart],ebp
+mov [DYNA_PTR.textNuma.objectStart],ebp
 push esi
 mov esi,edx
 lodsd
@@ -1275,10 +1239,16 @@ jmp .numaStd
 mov al,0
 stosb
 push edi
-mov edx,[Registry]
-mov esi,[edx + REGISTRY32.listNuma.objectStart]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edx,[Registry]
+
+mov esi,[DYNA_PTR.listNuma.objectStart]
 lodsd  ; this for ADD ESI,4
-mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+
+; mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edi,[BIND_LIST]  ; TODO. Optimize add.
+
 add edi,BINDLIST.bindSys.masksList
 xor edx,edx
 .masksStd:
@@ -1327,10 +1297,16 @@ jmp .numaExt
 mov al,0
 stosb
 push edi
-mov edx,[Registry]
-mov esi,[edx + REGISTRY32.listNuma.objectStart]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edx,[Registry]
+
+mov esi,[DYNA_PTR.listNuma.objectStart]
 lodsd  ; this for ADD ESI,4
-mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+
+; mov edi,[edx + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edi,[BIND_LIST]  ;  TODO. Optimize add.
+
 add edi,BINDLIST.bindSys.masksList
 xor edx,edx
 .masksExt:
@@ -1364,16 +1340,16 @@ mov al,0
 stosb
 pop edi esi
 mov ebp,edi
-mov [esi + REGISTRY32.textNuma.objectStop],ebp
+mov [DYNA_PTR.textNuma.objectStop],ebp
 .noNuma:
 
 ;---------- Build text block for processor groups list screen -----------------;
 
-mov edx,[esi + REGISTRY32.listGroup.objectStart]
-mov ecx,[esi + REGISTRY32.listGroup.objectStop]
+mov edx,[DYNA_PTR.listGroup.objectStart]
+mov ecx,[DYNA_PTR.listGroup.objectStop]
 test ecx,ecx
 jz .noGroups
-mov [esi + REGISTRY32.textGroup.objectStart],ebp
+mov [DYNA_PTR.textGroup.objectStart],ebp
 push esi
 mov esi,edx
 .groupsScan:
@@ -1391,13 +1367,13 @@ pop esi
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textGroup.objectStop],ebp
+mov [DYNA_PTR.textGroup.objectStop],ebp
 .noGroups:
 
 ;---------- Build text block for ACPI screen, first block = tables list -------;
 
-mov edx,[esi + REGISTRY32.listAcpi.objectStart]
-mov ecx,[esi + REGISTRY32.listAcpi.objectStop]
+mov edx,[DYNA_PTR.listAcpi.objectStart]
+mov ecx,[DYNA_PTR.listAcpi.objectStop]
 test ecx,ecx
 jz .noAcpi
 mov ecx,[edx]
@@ -1406,7 +1382,7 @@ sub ecx,edx
 sub ecx,16
 shr ecx,2
 jecxz .noAcpi
-mov [esi + REGISTRY32.textAcpi1.objectStart],ebp
+mov [DYNA_PTR.textAcpi1.objectStart],ebp
 push esi
 mov esi,edx
 .acpiScan:
@@ -1440,16 +1416,16 @@ pop esi
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textAcpi1.objectStop],ebp
+mov [DYNA_PTR.textAcpi1.objectStop],ebp
 .noAcpi: 
 
 ;--- Build text block for ACPI screen, second block = tables detection --------;
 
-mov edx,[esi + REGISTRY32.appData.lockedDataAcpi]
+mov edx,[APP_DATA.lockedDataAcpi]
 test edx,edx
 jz .noAcpiData 
-mov eax,[esi + REGISTRY32.listAcpi.objectStart]
-mov ecx,[esi + REGISTRY32.listAcpi.objectStop]
+mov eax,[DYNA_PTR.listAcpi.objectStart]
+mov ecx,[DYNA_PTR.listAcpi.objectStop]
 jecxz .noAcpiData
 mov ecx,[eax]
 sub ecx,eax
@@ -1457,7 +1433,7 @@ sub ecx,16
 shr ecx,2
 jecxz .noAcpiData
 lea ebx,[eax + 16]
-mov [esi + REGISTRY32.textAcpi2.objectStart],ebp
+mov [DYNA_PTR.textAcpi2.objectStart],ebp
 push esi
 .acpiDataScan:
 mov edi,ebp
@@ -1501,16 +1477,16 @@ pop esi
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textAcpi2.objectStop],ebp
+mov [DYNA_PTR.textAcpi2.objectStop],ebp
 .noAcpiData:
 
 ;---------- Build text block for affinized CPUID dump -------------------------;
 
-mov edx,[esi + REGISTRY32.listAffCpuid.objectStart]
-mov ecx,[esi + REGISTRY32.listAffCpuid.objectStop]
+mov edx,[DYNA_PTR.listAffCpuid.objectStart]
+mov ecx,[DYNA_PTR.listAffCpuid.objectStop]
 test ecx,ecx
 jz .noAffCpuidData
-mov [esi + REGISTRY32.textAffCpuid.objectStart],ebp
+mov [DYNA_PTR.textAffCpuid.objectStart],ebp
 push esi
 mov esi,edx
 xor edx,edx
@@ -1565,83 +1541,24 @@ pop esi
 mov al,0
 stosb
 mov ebp,edi
-mov [esi + REGISTRY32.textAffCpuid.objectStop],ebp
+mov [DYNA_PTR.textAffCpuid.objectStop],ebp
 .noAffCpuidData:
 
 ;---------- Build bind buffer -------------------------------------------------;
-; Start operations with bind buffer part of application registry,
-; EDI = Pointer for bind buffer addressing.
-; EBP = Pointer for CPU data addressing in the application registry
+; Start operations with bind buffer part of application registry.
 
-push esi
-mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
-lea ebp,[esi + REGISTRY32.cpuData.vendorString]
-mov ebx,ebp
+; push esi
 
-;---------- CPU vendor string, 12 chars ---------------------------------------;
-
-xchg eax,ebp
-stosd
-xor eax,eax
-stosd
-
-;---------- CPU signature: type, family, model, stepping ----------------------;
-
-mov ax,STR_TFMS
-call PoolStringWrite
-mov eax,[ebx + CPUDATA.cpuSignature]
-call HexPrint32
-mov ax,STR_H
-call PoolStringWrite
-mov al,0
-stosb 
-
-;---------- CPU model string, maximum 48 chars --------------------------------;
-
-lea eax,[ebx + CPUDATA.modelString]
-stosd
-xor eax,eax
-stosd
-
-;---------- TSC frequency -----------------------------------------------------;
-
-mov ecx,32
-mov al,0
-rep stosb
-push edi ebx
-sub edi,32
-mov ax,STR_TSC
-call PoolStringWrite
-finit
-push 0 1000000
-fild qword [ebx + CPUDATA.tscClockHz] 
-fidiv dword [esp]
-fstp qword [esp]
-pop eax edx
-mov bx,0100h
-call DoublePrint
-mov ax,STR_MHZ
-call PoolStringWrite
-pop ebx edi
-
-;---------- CPU instructions and OS context management features bitmaps -------; 
-
-mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 4]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 4]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
-stosd
 
 ;---------- Skip some screen 0 information ------------------------------------;
 
-add edi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + sizeof.BINDSYS     ; RESERVED
+; add edi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + sizeof.BINDSYS     ; RESERVED
+
+; mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+
+lea edi,[BIND_LIST]  ; TODO. Optimize add. 
+
+add edi,BINDLIST.viewOs
 
 ;---------- Memory and cache benchmarks methods availability bitmap -----------;
 
@@ -1650,51 +1567,53 @@ add edi, 1 + ( sizeof.BINDACPI * 2 ) + sizeof.BINDCACHE + sizeof.BINDTOPOLOGY + 
 ; mov eax,dword [ebx + CPUDATA.extractedMethodsBitmap + 4]
 ; stosd
 
-pop esi
+; pop esi
+
+
 
 ;---------- Text blocks for viewers -------------------------------------------;
 
-mov eax,[esi + REGISTRY32.textOs.objectStart]
+mov eax,[DYNA_PTR.textOs.objectStart]
 stosd       ; Operating system information
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textNativeOs.objectStart]
+mov eax,[DYNA_PTR.textNativeOs.objectStart]
 stosd       ; Native operating system information
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textTopology1.objectStart]
+mov eax,[DYNA_PTR.textTopology1.objectStart]
 stosd       ; Topology information by operating system, text block 1, list
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textTopology2.objectStart]
+mov eax,[DYNA_PTR.textTopology2.objectStart]
 stosd       ; Topology information by operating system, text block 2, summary
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textTopologyEx1.objectStart]
+mov eax,[DYNA_PTR.textTopologyEx1.objectStart]
 stosd       ; Extended topology information by OS, text block 1, list
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textTopologyEx2.objectStart]
+mov eax,[DYNA_PTR.textTopologyEx2.objectStart]
 stosd       ; Extended topology information by OS, text block 2, summary
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textNuma.objectStart]
+mov eax,[DYNA_PTR.textNuma.objectStart]
 stosd       ; NUMA domains list by OS
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textGroup.objectStart]
+mov eax,[DYNA_PTR.textGroup.objectStart]
 stosd       ; Processor groups list by OS
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textAcpi1.objectStart]
+mov eax,[DYNA_PTR.textAcpi1.objectStart]
 stosd       ; ACPI tables, text block 1 = tables list
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textAcpi2.objectStart]
+mov eax,[DYNA_PTR.textAcpi2.objectStart]
 stosd       ; ACPI tables, text block 2 = tables detection by data base
 xor eax,eax
 stosd
-mov eax,[esi + REGISTRY32.textAffCpuid.objectStart]
+mov eax,[DYNA_PTR.textAffCpuid.objectStart]
 stosd       ; Affinized CPUID dump
 xor eax,eax
 stosd
@@ -1703,12 +1622,13 @@ stosd
 ; TODO. Move this to separate include file with subroutine.
 ; TODO. Remove "magic numbers" use names for bits positions.
 
-mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+; mov edi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
+lea edi,[BIND_LIST]
 
 ;---------- Benchmark methods based on CPU instructions -----------------------;
 
-mov eax,dword [esi + REGISTRY32.cpuData.extractedFeaturesBitmap]
-mov edx,dword [esi + REGISTRY32.cpuData.extractedContextBitmap]
+mov eax,dword [CPU_DATA.extractedFeaturesBitmap]
+mov edx,dword [CPU_DATA.extractedContextBitmap]
 mov ebx,00000555h       ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
 mov ebp,00010000h
 test al,00000001b
@@ -1751,6 +1671,15 @@ jz @f
 bts ebp,18              ; Latency by RDRAND
 @@:
 
+test al,00000100b
+jz @f
+bts ebp,28             ; SSE2 (for vector brief)
+@@:
+bt eax,16
+jnc @f
+bts ebp,30             ; x87 (for vector brief, redundant because run criteria)
+@@:
+
 mov ecx,0C0000000h
 test ebx,ecx
 jnz @f
@@ -1772,7 +1701,7 @@ mov [edi + BINDLIST.setMemMethod + 4],ebp
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
 ; Plus custom block size
 
-lea ecx,[esi + REGISTRY32.sysParms.summaryCache]
+lea ecx,[SYS_PARMS.summaryCache]
 mov ebx,010100000000b      ; Custom block, DRAM
 xor eax,eax
 cdq
@@ -1828,7 +1757,7 @@ mov dword [edi + BINDLIST.setBlkCustom + 4],edx
 
 ;---------- Benchmark options: SMP/SMT ----------------------------------------;
 
-lea ecx,[esi + REGISTRY32.sysParms.summaryTopology]
+lea ecx,[SYS_PARMS.summaryTopology]
 xor ebx,ebx
 mov eax,[ecx + SUMMARYTOPOLOGY.threads]
 cmp eax,2
@@ -1841,7 +1770,7 @@ cmp eax,[ecx + SUMMARYTOPOLOGY.cores]
 jne @f
 or bl,00000100b   ; Hyper threading (SMT)
 @@:
-lea ecx,[esi + REGISTRY32.osData]
+lea ecx,[OS_DATA]
 cmp [ecx + OSDATA.activeProcessorGroupCount],2
 jb @f
 or bl,00010000b   ; Processor groups (PG)
@@ -2331,18 +2260,21 @@ mov bl,2
 SizeHelperEntry:
 movzx eax,al
 push ecx
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 cmp bl,0FFh
 je .sysinfo
-lea ecx,[ecx + REGISTRY32.osData.memoryStatusEx]
+lea ecx,[OS_DATA.memoryStatusEx]
 jmp .done
 .sysinfo:
 test bh,bh
 jnz .nativeInfo
-lea ecx,[ecx + REGISTRY32.osData.systemInfo]
+lea ecx,[OS_DATA.systemInfo]
 jmp .done
 .nativeInfo:
-lea ecx,[ecx + REGISTRY32.osData.nativeSystemInfo]
+lea ecx,[OS_DATA.nativeSystemInfo]
 .done:
 mov edx,[ecx + eax + 4]
 mov eax,[ecx + eax + 0]
@@ -2396,13 +2328,16 @@ HelperOsInfoSizeAuto32:
 mov bl,0FFh
 movzx eax,al
 push ecx
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 test bh,bh
 jnz .nativeInfo
-mov eax,[ecx + REGISTRY32.osData.systemInfo + eax]
+mov eax,[OS_DATA.systemInfo + eax]
 jmp .doneInfo
 .nativeInfo:
-mov eax,[ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+mov eax,[OS_DATA.nativeSystemInfo + eax]
 .doneInfo:
 push eax
 xor edx,edx
@@ -2421,13 +2356,16 @@ jmp HexPrint32
 HelperOsInfoNumber32:
 movzx eax,al
 push ecx
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 test bh,bh
 jnz .nativeInfo
-mov eax,[ecx + REGISTRY32.osData.systemInfo + eax]
+mov eax,[OS_DATA.systemInfo + eax]
 jmp .doneInfo
 .nativeInfo:
-mov eax,[ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+mov eax,[OS_DATA.nativeSystemInfo + eax]
 .doneInfo:
 pop ecx
 HelperOsInfoValue32:     ; Entry point for EAX = value, EDI, ECX same usage
@@ -2449,13 +2387,16 @@ jmp HexPrint32
 HelperOsInfoNumber16:
 movzx eax,al
 push ecx
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 test bh,bh
 jnz .nativeInfo
-movzx eax,word [ecx + REGISTRY32.osData.systemInfo + eax]
+movzx eax,word [OS_DATA.systemInfo + eax]
 jmp .doneInfo
 .nativeInfo:
-movzx eax,word [ecx + REGISTRY32.osData.nativeSystemInfo + eax]
+movzx eax,word [OS_DATA.nativeSystemInfo + eax]
 .doneInfo:
 push eax
 mov bl,0
@@ -2485,10 +2426,10 @@ mov al,'-'
 stosb
 test bh,bh
 jnz .nativeInfo
-mov eax,[esi + REGISTRY32.osData.systemInfo.dwActiveProcessorMask]
+mov eax,[OS_DATA.systemInfo.dwActiveProcessorMask]
 jmp .doneInfo
 .nativeInfo:
-mov eax,[esi + REGISTRY32.osData.nativeSystemInfo.dwActiveProcessorMask]
+mov eax,[OS_DATA.nativeSystemInfo.dwActiveProcessorMask]
 .doneInfo:
 mov edi,ecx
 call HexPrint32 
@@ -2711,9 +2652,17 @@ ret
 
 HelperSummaryCache:
 push edi
-mov ebx,[Registry]
-mov ecx,[ebx + REGISTRY32.allocatorBindBuffer.objectStart]
-add ebx,REGISTRY32.sysParms.summaryCache
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ebx,[Registry]
+
+; mov ecx,[ebx + REGISTRY32.allocatorBindBuffer.objectStart]
+lea ecx,[BIND_LIST]
+
+
+; add ebx,REGISTRY32.sysParms.summaryCache
+lea ebx,[SYS_PARMS.summaryCache]
+
 add ecx,BINDLIST.bindCache
 lea esi,[ebx + SUMMARYCACHE.sizeL1C]
 lea edi,[ecx + BINDCACHE.l1c]  

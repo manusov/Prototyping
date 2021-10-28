@@ -37,22 +37,36 @@ sub rsp,32+16                  ; Build parameters shadow, 4 qwords
 
 ;---------- Setup pointers ----------------------------------------------------;
 
-mov rax,[Registry]
-lea rsi,[rax + REGISTRY64.memIpb]   ; RSI = Pointer to IPB, benchmarks scenario
-lea rdi,[rax + REGISTRY64.memOpb]   ; RDI = Pointer to OPB, benchmarks results
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; lea rsi,[rax + REGISTRY64.memIpb]   ; RSI = Pointer to IPB, benchmarks scenario
+lea rsi,[MEM_IPB]
+
+
+; lea rdi,[rax + REGISTRY64.memOpb]   ; RDI = Pointer to OPB, benchmarks results
+lea rdi,[MEM_OPB]
 
 ;---------- Pre-heat phase for result stabilization ---------------------------;
 ; Note this pre-heat for simple only, not use this for drawings
 
-mov rax,[Registry]
-lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
+lea rcx,[THREAD_LIST]
+
 mov edx,[rsi + MEMIPB.updatedThreads]
 call ThreadsReStart
 
 ;---------- Replace fill pattern to walk pattern for latency mode -------------;
 
-mov rax,[Registry]
-lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+;lea rcx,[rax + REGISTRY64.mpe64csb.threadList]
+lea rcx,[THREAD_LIST]
+
 cmp [rsi + MEMIPB.updatedAsm],LATENCY_MODE
 jb .bwmode                ; Go skip this update if not a LATENCY MEASUREMENT mode
 mov r8d,[rsi + MEMIPB.updatedThreads]   ; R8D = Threads count
@@ -67,8 +81,13 @@ call [GetSystemTimeAsFileTime]
 
 ;---------- Measurement pattern -----------------------------------------------;
 
-mov rax,[Registry]
-lea rcx,[rax + REGISTRY64.mpe64csb.threadList]  ; RCX = Pointer to threads list
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; lea rcx,[rax + REGISTRY64.mpe64csb.threadList]  ; RCX = Pointer to threads list
+lea rcx,[THREAD_LIST]
+
+
 mov edx,[rsi + MEMIPB.updatedThreads]           ; EDX = number of threads
 call ThreadsReStart
 mov al,2  ; AL = error status, valid if CF=1 only

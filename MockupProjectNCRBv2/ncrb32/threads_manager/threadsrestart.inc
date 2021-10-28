@@ -15,15 +15,24 @@
 ;---------- This entry point for return from thread subroutine ----------------;
 
 ThreadsReStartBreak:
-mov eax,[Registry]
-mov [eax + REGISTRY32.memIpb.threadStop],1
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+; mov [eax + REGISTRY32.memIpb.threadStop],1
+mov [MEM_IPB.threadStop],1
+
 jmp EntryThreadsReStart 
 
 ;---------- This entry point for measure --------------------------------------; 
 
 ThreadsReStart:
-mov eax,[Registry]
-mov [eax + REGISTRY32.memIpb.threadStop],0
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+; mov [eax + REGISTRY32.memIpb.threadStop],0
+mov [MEM_IPB.threadStop],0
 
 ;---------- Entry procedure ---------------------------------------------------;
 

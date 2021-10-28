@@ -15,8 +15,13 @@ push rbx rsi rdi rbp r12 r13 r14 r15
 mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 
-mov rdx,[Registry]
-cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rdx,[Registry]
+
+; cmp [rdx + REGISTRY64.memIpb.sseSupported],0
+cmp [MEM_IPB.sseSupported],0     ; TODO. SUPPORT THIS VARIABLE.
+ 
+
 je @f                         ; Skip this operation if SSE not supported
 sub rsp,10*16                 ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6      ; non-volatile by convention, note ALIGN16
@@ -36,7 +41,9 @@ sub rsp,32 + 8                ; Build parameters shadow, 4 qwords + alignment
 
 ;---------- Calculate thread control entry offset = f( thread id ) ------------;
 
-add rdx,REGISTRY64.mpe64csb.threadList
+; add rdx,REGISTRY64.mpe64csb.threadList
+lea rdx,[THREAD_LIST]
+
 cmp ecx,MAX_THREADS_PER_GROUP
 jb @f
 xor ecx,ecx                   ; Force thread 0 if bad thread number
@@ -55,8 +62,10 @@ mov rcx,[rbx + THCTRL.threadHandle]     ; Parm#1 = RCX = Thread handle
 mov rdx,[rbx + THCTRL.threadAffinity]   ; Parm#2 = RDX = Thread Affinity mask
 test rdx,rdx    ; Check for affinity mask = 0
 jz @f           ; Skip set affinity mask if memory allocated without NUMA
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._SetThreadAffinityMask]
+
+; mov rax,[Registry]
+call [DYNA_IMPORT._SetThreadAffinityMask]
+
 @@:
 
 ;---------- Target memory performance operation -------------------------------;
@@ -81,8 +90,12 @@ call [WaitForSingleObject]
 
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
-mov rax,[Registry]
-cmp [rax + REGISTRY64.memIpb.threadStop],0
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; cmp [rax + REGISTRY64.memIpb.threadStop],0
+cmp [MEM_IPB.threadStop],0
+
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -95,8 +108,13 @@ call [SetEvent]                    ; Call WinAPI function
 add rsp,32 + 8
 pop rax
 
-mov rdx,[Registry]
-cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rdx,[Registry]
+
+; cmp [rdx + REGISTRY64.memIpb.sseSupported],0
+cmp [MEM_IPB.sseSupported],0
+
+
 jz @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]
@@ -133,8 +151,13 @@ push rbx rsi rdi rbp r12 r13 r14 r15
 mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 
-mov rdx,[Registry]
-cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rdx,[Registry]
+
+; cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
+cmp [MEM_IPB.sseSupported],0
+
+
 je @f                         ; Skip this operation if SSE not supported
 sub rsp,10*16                 ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6      ; non-volatile by convention, note ALIGN16
@@ -154,7 +177,9 @@ sub rsp,32 + 8                ; Build parameters shadow, 4 qwords + alignment
 
 ;---------- Calculate thread control entry offset = f( thread id ) ------------; 
 
-add rdx,REGISTRY64.mpe64csb.threadList
+; add rdx,REGISTRY64.mpe64csb.threadList
+lea rdx,[THREAD_LIST]
+
 cmp ecx,MAX_THREADS
 jb @f
 xor ecx,ecx                   ; Force thread 0 if bad thread number
@@ -174,8 +199,10 @@ lea rdx,[rbx + THCTRL.threadAffinity]   ; Parm#2 = RDX = Pointer to mask + group
 lea r8,[rbx + THCTRL.origAffinity]      ; Parm#3 = R8 = Pointer to get original
 cmp qword [rdx],0    ; Check for affinity mask = 0
 je @f                ; Skip set affinity mask if memory allocated without NUMA
-mov rax,[Registry]
-call [rax + REGISTRY64.dynaImport._SetThreadGroupAffinity]  ; This changed for Processor Groups
+
+; mov rax,[Registry]
+call [DYNA_IMPORT._SetThreadGroupAffinity]  ; This changed for Processor Groups
+
 @@:
 
 ;---------- Target memory performance operation -------------------------------;
@@ -200,8 +227,12 @@ call [WaitForSingleObject]
 
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
-mov rax,[Registry]
-cmp [rax + REGISTRY64.memIpb.threadStop],0
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rax,[Registry]
+
+; cmp [rax + REGISTRY64.memIpb.threadStop],0
+cmp [MEM_IPB.threadStop],0
+
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -214,8 +245,13 @@ call [SetEvent]                    ; Call WinAPI function
 add rsp,32 + 8
 pop rax
 
-mov rdx,[Registry]
-cmp [rdx + REGISTRY64.memIpb.sseSupported],0 
+; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
+; mov rdx,[Registry]
+
+; cmp [rdx + REGISTRY64.memIpb.sseSupported],0
+cmp [MEM_IPB.sseSupported],0
+
+
 je @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]

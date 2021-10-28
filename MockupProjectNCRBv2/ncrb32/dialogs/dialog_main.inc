@@ -16,8 +16,13 @@ DialogProcMain:
 push ebp
 mov ebp,esp
 push ebx esi edi
-mov edi,[Registry]                   ; EDI = Pointer to global registry
-add edi,REGISTRY32.appData           ; EDI = Pointer to registry.appData
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edi,[Registry]                   ; EDI = Pointer to global registry
+
+; add edi,REGISTRY32.appData           ; EDI = Pointer to registry.appData
+lea edi,[APP_DATA]
+
 lea ebx,[edi + APPDATA.tabCtrlItem]  ; EBX = Pointer to tab item structure
 lea esi,[edi + APPDATA.hTabDlg]      ; ESI = Pointer to sheets handles array
 
@@ -85,8 +90,11 @@ push eax                         ; Parm#1 = Pointer to resource bits
 call [CreateIconFromResourceEx]  ; Create icon, return handle
 mov [esi + ICON_COUNT*4 - 4],eax
 push eax                         ; Parm#2 = Handle to icon
-mov ecx,[Registry]
-push [ecx + REGISTRY32.appData.hImageList]  ; Parm#1 = Handle to image list
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
+push [APP_DATA.hImageList]  ; Parm#1 = Handle to image list
 call [ImageList_AddIcon]
 dec edi
 jnz .createIcons
@@ -106,14 +114,17 @@ xor edi,edi
 ;---------- Cycle for insert items to tabbed panel ----------------------------;
 
 .insertSheets:
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 mov eax,esi
 mov [ebx + TC_ITEM.pszText],eax
 mov [ebx + TC_ITEM.iImage],edi
 push ebx                              ; Parm#4 = LPARAM = pointer to TCITEM
 push ITEM_COUNT - 1                   ; Parm#3 = WPARAM = index for new tab
 push TCM_INSERTITEM                   ; Parm#2 = Message
-push [ecx + REGISTRY32.appData.hTab]  ; Parm#1 = Container window handle
+push [APP_DATA.hTab]  ; Parm#1 = Container window handle
 call [SendMessage]                    ; Add third sheet to tabbed panel
 cld
 .skipString:
@@ -145,12 +156,15 @@ mov ecx,ITEM_COUNT
 
 .createDialogues:
 push ecx
-mov ecx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ecx,[Registry]
+
 push 0                            ; Parm#5 = Passed parameter = not used = 0
 push dword [ebx]                  ; Parm#4 = Pointer to callback procedure
 push PARM_HWNDDLG                 ; Parm#3 = Container window handle
 push esi                          ; Parm#2 = Dialog box resource id
-push [ecx + REGISTRY32.appData.hResources]   ; Parm#1 = Resource module handle
+push [APP_DATA.hResources]   ; Parm#1 = Resource module handle
 call [CreateDialogParam]          ; Set dialogue with handler for third sheet
 stosd                             ; Store third sheet handle
 inc esi
@@ -193,7 +207,7 @@ push ICON_SMALL                   ; Parm#3 = WPARAM = Icon type
 push WM_SETICON                   ; Parm#2 = Message 
 push PARM_HWNDDLG                 ; Parm#1 = Window handle
 call [SendMessage]                ; Set main window icon
-push ProgName                     ; Parm#2 = Pointer to text string
+push PROGRAM_NAME                 ; Parm#2 = Pointer to text string
 push PARM_HWNDDLG                 ; Parm#1 = Window handle
 call [SetWindowText]              ; Set main window text title
 jmp .processed
@@ -211,8 +225,8 @@ jne .noabout
 ;---------- "About" message box and wait user input ---------------------------;
 
 push MB_ICONINFORMATION   ; Parm#4 = Message box icon type = Info
-push AboutCap             ; Parm#3 = Pointer to caption
-push AboutText            ; Parm#2 = Pointer to "About" string
+push ABOUT_CAP            ; Parm#3 = Pointer to caption
+push ABOUT_NAME           ; Parm#2 = Pointer to "About" string
 push PARM_HWNDDLG         ; Parm#1 = Parent window handle
 call [MessageBoxA]
 jmp .processed

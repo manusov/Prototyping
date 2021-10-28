@@ -18,17 +18,16 @@ jmp DialogProcEntry
 DialogProcMemory:
 mov al,BINDER_BUILD_MEMORY
 jmp DialogProcEntry
-DialogProcMath:
-mov al,BINDER_BUILD_MATH
-jmp DialogProcEntry
+
+; DialogProcMath:
+; mov al,BINDER_BUILD_MATH
+; jmp DialogProcEntry
+
 DialogProcOs:
 mov al,BINDER_BUILD_OS
 jmp DialogProcEntry
 DialogProcNativeOs:
 mov al,BINDER_BUILD_NATIVE_OS
-jmp DialogProcEntry
-DialogProcProcessor:
-mov al,BINDER_BUILD_PROCESSOR
 jmp DialogProcEntry
 DialogProcTopology:
 mov al,BINDER_BUILD_TOPOLOGY
@@ -48,8 +47,6 @@ jmp DialogProcEntry
 DialogProcAffCpuid:
 mov al,BINDER_BUILD_AFF_CPUID
 jmp DialogProcEntry
-DialogProcKmd:
-mov al,BINDER_BUILD_KMD
 
 ;---------- Entry point with AL = Binder ID for required child window ---------;
 
@@ -58,8 +55,13 @@ push ebp
 mov ebp,esp
 push ebx esi edi
 movzx esi,al              ; ESI = Binder ID for this child window
-mov edi,[Registry]
-add edi,REGISTRY32.appData
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edi,[Registry]
+
+; add edi,REGISTRY32.appData
+lea edi,[APP_DATA]
+
 mov ebx,PARM_HWNDDLG      ; EBX = This window handle
 
 ;---------- Detect message type -----------------------------------------------;
@@ -105,16 +107,22 @@ cmp ax,IDB_MEMORY_RUN
 je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
-cmp ax,IDB_MATH_RUN
+
+; cmp ax,IDB_MATH_RUN
+; je .mathRun
+; cmp ax,IDB_MATH_DRAW
+; je .mathDraw
+
+cmp ax,IDB_SYSINFO_VBRF
 je .mathRun
-cmp ax,IDB_MATH_DRAW
-je .mathDraw
+
 jmp .processed
 
 .memoryRun:
 mov ax,BINDER_GET_MEMORY
 call Binder
 
+call ScenarioMemoryRun
 
 ; *** DEBUG ***
 ; mov eax,[Registry]
@@ -134,13 +142,32 @@ call [DialogBoxParam]           ; Create modal dialogue
 jmp .processed
 
 .memoryDraw:
+mov ax,BINDER_GET_MEMORY
+call Binder
+
+
+; call ScenarioMemoryDraw
+; jmp .entryDialog
+
+call DrawSessionStart
+
 push 0
 push DialogProcChildMemoryDraw
 push ebx
 push IDD_CHILD_MEMORY_DRAW
-jmp .entryDialog
+push [edi + APPDATA.hResources] ; Parm#1 = Handle of resource module
+call [DialogBoxParam]           ; Create modal dialogue 
+
+call DrawSessionStop
+
+jmp .processed
+
+
 
 .mathRun:
+
+call ScenarioVectorBrief
+
 ;---
 ; push 0
 ; push DialogProcChildMathRun
@@ -155,10 +182,17 @@ jmp .entryDialog
 jmp .entryDialog
 
 .mathDraw:
-push 0
-push DialogProcChildMathDraw
-push ebx
-push IDD_CHILD_MATH_DRAW
+
+; push 0
+; push DialogProcChildMathDraw
+; push ebx
+; push IDD_CHILD_MATH_DRAW
+
+ push 0
+ push DialogProcChildVectorBrief
+ push ebx
+ push IDD_CHILD_VECTOR_BRIEF
+
 jmp .entryDialog
 
 

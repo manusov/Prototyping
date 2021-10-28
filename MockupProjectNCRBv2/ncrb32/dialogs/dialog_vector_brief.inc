@@ -16,8 +16,13 @@ DialogProcChildVectorBrief:
 push ebp
 mov ebp,esp
 push ebx esi edi
-mov edi,[Registry]               ; EDI = Pointer to global registry
-add edi,REGISTRY32.appData       ; EDI = Pointer to registry.appData
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov edi,[Registry]               ; EDI = Pointer to global registry
+
+; add edi,REGISTRY32.appData       ; EDI = Pointer to registry.appData
+lea edi,[APP_DATA]
+
 mov ebx,PARM_HWNDDLG             ; EBX = Window handle
 
 ;---------- Detect message type -----------------------------------------------;
@@ -38,7 +43,7 @@ jmp .finish
 .wminitdialog:                   ; Build main window
 mov ax,BINDER_BUILD_VECTOR_BRIEF
 call Binder
-push [edi + APPDATA.createdIcons + MATH_ICON_NUMBER * 4]
+push [edi + APPDATA.createdIcons + VBRF_ICON_NUMBER * 4]
 push ICON_SMALL
 push WM_SETICON 
 push PARM_HWNDDLG

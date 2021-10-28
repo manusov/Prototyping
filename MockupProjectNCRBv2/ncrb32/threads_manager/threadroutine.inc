@@ -13,8 +13,11 @@ push ebx esi edi ebp          ; Note about this 16 bytes when read parameter
 
 ;---------- Calculate thread control entry offset = f( thread id ) ------------;
 
-mov edx,[Registry]
-add edx,REGISTRY32.mpe32csb.threadList
+;mov edx,[Registry]
+;add edx,REGISTRY32.mpe32csb.threadList
+lea edx,[THREAD_LIST]
+
+
 mov ecx,[esp + 4 + 16]        ; Read first parameter by IA32 convention
 cmp ecx,MAX_THREADS_PER_GROUP
 jb @f
@@ -34,8 +37,10 @@ test eax,eax    ; Check for affinity mask = 0
 jz @f           ; Skip set affinity mask if memory allocated without NUMA
 push eax                                ; Parm#2 = Thread Affinity mask
 push [ebx + THCTRL.threadHandle]        ; Parm#1 = Thread handle
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._SetThreadAffinityMask]
+
+;mov eax,[Registry]
+call [DYNA_IMPORT._SetThreadAffinityMask]
+
 @@:
 
 ;---------- Target memory performance operation -------------------------------;
@@ -62,8 +67,12 @@ call [WaitForSingleObject]
 
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
-mov eax,[Registry]
-cmp [eax + REGISTRY32.memIpb.threadStop],0
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+; cmp [eax + REGISTRY32.memIpb.threadStop],0
+cmp [MEM_IPB.threadStop],0
+
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;
@@ -92,8 +101,10 @@ push ebx esi edi ebp          ; Note about this 16 bytes when read parameter
 
 ;---------- Calculate thread control entry offset = f( thread id ) ------------;
 
-mov edx,[Registry]
-add edx,REGISTRY32.mpe32csb.threadList
+;mov edx,[Registry]
+;add edx,REGISTRY32.mpe32csb.threadList
+lea edx,[THREAD_LIST]
+
 mov ecx,[esp + 4 + 16]        ; Read first parameter by IA32 convention
 cmp ecx,MAX_THREADS_PER_GROUP
 jb @f
@@ -115,8 +126,10 @@ lea ecx,[ebx + THCTRL.origAffinity]
 push ecx                             ; Parm#3 = Pointer to get original 
 push eax                             ; Parm#2 = Pointer to mask + group
 push [ebx + THCTRL.threadHandle]     ; Parm#1 = Thread handle
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._SetThreadGroupAffinity]   ; This changed for Processor Groups
+
+;mov eax,[Registry]
+call [DYNA_IMPORT._SetThreadGroupAffinity]   ; This changed for Processor Groups
+
 @@:
 
 ;---------- Target memory performance operation -------------------------------;
@@ -143,8 +156,10 @@ call [WaitForSingleObject]
 
 ;---------- Repeat measurement iteration in this thread -----------------------;
 
-mov eax,[Registry]
-cmp [eax + REGISTRY32.memIpb.threadStop],0
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov eax,[Registry]
+
+cmp [MEM_IPB.threadStop],0
 je .threadRepeat
 
 ;---------- Signaling thread terminated ---------------------------------------;

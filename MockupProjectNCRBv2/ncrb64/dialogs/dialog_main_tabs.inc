@@ -17,17 +17,16 @@ jmp DialogProcEntry
 DialogProcMemory:
 mov al,BINDER_BUILD_MEMORY
 jmp DialogProcEntry
-DialogProcMath:
-mov al,BINDER_BUILD_MATH
-jmp DialogProcEntry
+
+; DialogProcMath:
+; mov al,BINDER_BUILD_MATH
+; jmp DialogProcEntry
+
 DialogProcOs:
 mov al,BINDER_BUILD_OS
 jmp DialogProcEntry
 DialogProcNativeOs:
 mov al,BINDER_BUILD_NATIVE_OS
-jmp DialogProcEntry
-DialogProcProcessor:
-mov al,BINDER_BUILD_PROCESSOR
 jmp DialogProcEntry
 DialogProcTopology:
 mov al,BINDER_BUILD_TOPOLOGY
@@ -47,8 +46,6 @@ jmp DialogProcEntry
 DialogProcAffCpuid:
 mov al,BINDER_BUILD_AFF_CPUID
 jmp DialogProcEntry
-DialogProcKmd:
-mov al,BINDER_BUILD_KMD
 
 ;---------- Entry point with AL = Binder ID for required child window ---------;
 
@@ -62,8 +59,11 @@ mov PARM_HWNDDLG,rcx           ; Save input parameters to shadow
 mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
-mov r15,[Registry]             ; R15 = Pointer to global registry
-add r15,REGISTRY64.appData     ; R15 = Pointer to registry.appData
+
+;mov r15,[Registry]             ; R15 = Pointer to global registry
+;add r15,REGISTRY64.appData     ; R15 = Pointer to registry.appData
+lea r15,[APP_DATA]
+
 movzx esi,al                   ; ESI = Binder ID for this child window
 mov rbx,rcx                    ; RBX = This window handle
 
@@ -116,16 +116,23 @@ cmp ax,IDB_MEMORY_RUN
 je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
-cmp ax,IDB_MATH_RUN
+
+; cmp ax,IDB_MATH_RUN
+; je .mathRun
+; cmp ax,IDB_MATH_DRAW
+; je .mathDraw
+
+cmp ax,IDB_SYSINFO_VBRF
 je .mathRun
-cmp ax,IDB_MATH_DRAW
-je .mathDraw
+
 jmp .processed
 
 .memoryRun:
+
 mov ax,BINDER_GET_MEMORY
 call Binder
 
+call ScenarioMemoryRun
 
 ; *** DEBUG ***
 ; mov rax,[Registry]
@@ -147,9 +154,10 @@ call Binder
 
 lea r9,[DialogProcChildMemoryRun]   ; R9  = Parm#4 = Pointer to dialogue proced.
 mov edx,IDD_CHILD_MEMORY_RUN        ; RDX = Parm#2 = Resource ( template ) id
+
 .entryDialog:
 push 0 0                            ; Parm#5 = Pass value, plus alignment qword
-mov r8,PARM_HWNDDLG                 ; R8  = Parm#3 = Owner window handle
+mov r8,rbx ; PARM_HWNDDLG           ; R8  = Parm#3 = Owner window handle
 mov rcx,[r15 + APPDATA.hResources]  ; RCX = Parm#1 = Handle of resource module  
 sub rsp,32                          ; Allocate parameters shadow
 call [DialogBoxParam]               ; Create modal dialogue 
@@ -157,11 +165,38 @@ add rsp,32 + 16                     ; Remove parameters shadow and 2 parameters
 jmp .processed
 
 .memoryDraw:
+mov ax,BINDER_GET_MEMORY
+call Binder
+
+; call ScenarioMemoryDraw
+
+; lea r9,[DialogProcChildMemoryDraw]
+; mov edx,IDD_CHILD_MEMORY_DRAW
+
+; jmp .entryDialog
+
+call DrawSessionStart
+
+push 0 0                            ; Parm#5 = Pass value, plus alignment qword
 lea r9,[DialogProcChildMemoryDraw]
+mov r8,rbx  ; PARM_HWNDDLG          ; R8  = Parm#3 = Owner window handle
 mov edx,IDD_CHILD_MEMORY_DRAW
-jmp .entryDialog
+mov rcx,[r15 + APPDATA.hResources]  ; RCX = Parm#1 = Handle of resource module  
+sub rsp,32                          ; Allocate parameters shadow
+call [DialogBoxParam]               ; Create modal dialogue 
+add rsp,32 + 16                     ; Remove parameters shadow and 2 parameters
+
+call DrawSessionStop
+
+jmp .processed
+
+
 
 .mathRun:
+
+call ScenarioVectorBrief
+
+
 ;---
 ; lea r9,[DialogProcChildMathRun]
 ; mov edx,IDD_CHILD_MATH_RUN
@@ -172,8 +207,13 @@ jmp .entryDialog
 jmp .entryDialog
 
 .mathDraw:
-lea r9,[DialogProcChildMathDraw]
-mov edx,IDD_CHILD_MATH_DRAW
+
+; lea r9,[DialogProcChildMathDraw]
+; mov edx,IDD_CHILD_MATH_DRAW
+
+ lea r9,[DialogProcChildVectorBrief]
+ mov edx,IDD_CHILD_VECTOR_BRIEF
+
 jmp .entryDialog
 
 ;---------- WM_CLOSE handler: close window ------------------------------------;

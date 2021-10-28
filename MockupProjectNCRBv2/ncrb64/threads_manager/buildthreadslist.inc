@@ -19,7 +19,9 @@ sub rsp,32                          ; Make parameters shadow because WinAPI call
 ;---------- Reload parameters to non-volatile registers -----------------------;
 
 mov rsi,rcx                            ; RSI  = Pointer to Threads List
+
 lea rdi,[rcx + THREAD_LIST_SIZE]       ; RDI  = Pointer to 2 x Events Lists 
+
 lea rbx,[rcx + THREAD_LIST_SIZE + EVENT_LIST_SIZE * 2]  ; RBX = NUMA nodes list  
 mov r12,rdx                            ; R12  = Pointer to Input Param. Block (IPB)
 mov r13d,[rdx + MEMIPB.updatedThreads] ; R13D = Number of threads, counter

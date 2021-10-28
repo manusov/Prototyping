@@ -53,8 +53,8 @@ push ebp                              ; Parm#4 = Allocation type (mode flags)
 push esi  			                      ; Parm#3 = Block size
 push 0                                ; Parm#2 = Base address, 0 means selected by function
 push dword [esp + 20]	                ; Parm#1 = Handle
-mov eax,[Registry]
-call [eax + REGISTRY32.dynaImport._VirtualAllocExNuma]  ; Call memory allocation WinAPI, return EAX = Pointer  
+; mov eax,[Registry]
+call [DYNA_IMPORT._VirtualAllocExNuma]  ; Call memory allocation WinAPI, return EAX = Pointer  
 test eax,eax
 jz .error                             ; Go error if returned 0
 mov [ebx + NUMACTRL.trueBase],eax     ; Store true base address, it used for release

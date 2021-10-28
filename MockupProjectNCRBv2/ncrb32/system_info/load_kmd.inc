@@ -7,31 +7,45 @@
 
 LoadKernelModeDriver:
 push ebx esi edi ebp
-mov ebx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ebx,[Registry]
 
 ;---------- Initializing data structure ---------------------------------------;
 
 cld
-lea edi,[ebx + REGISTRY32.scpData]
+
+;lea edi,[ebx + REGISTRY32.scpData]
+lea edi,[SCP_DATA]
+
 mov ecx,sizeof.SCPDATA
 mov al,0
 rep stosb
-mov eax,[ebx + REGISTRY32.allocatorTempBuffer.objectStart]
-mov [ebx + REGISTRY32.scpData.drvPath],eax
-mov [ebx + REGISTRY32.scpData.driver],INVALID_HANDLE_VALUE
+lea eax,[TEMP_BUFFER]
+
+;mov [ebx + REGISTRY32.scpData.drvPath],eax
+mov [SCP_DATA.drvPath],eax
+
+; mov [ebx + REGISTRY32.scpData.driver],INVALID_HANDLE_VALUE
+mov [SCP_DATA.driver],INVALID_HANDLE_VALUE
 
 ;---------- Initializing full path to driver file -----------------------------;
 
-mov esi,[ebx + REGISTRY32.appData.lockedStrings]
+mov esi,[APP_DATA.lockedStrings]
+
 mov ax,STR_NAME_KMD32
-cmp [ebx + REGISTRY32.osData.isWow64],0
+cmp [OS_DATA.isWow64],0
 je @f
 mov ax,STR_NAME_KMD64
 @@:
 call IndexString
-lea eax,[ebx + REGISTRY32.scpData.drvFile] 
+
+lea eax,[SCP_DATA.drvFile] 
+
 push eax                     ; Parm#4 = Pointer to pointer to updated path 
-push [ebx + REGISTRY32.scpData.drvPath]  ; Parm#3 = Pointer to buffer
+
+push [SCP_DATA.drvPath]  ; Parm#3 = Pointer to buffer
+
 push SCP_PATH_BUFFER_SIZE    ; Parm#2 = Buffer size
 push esi                     ; Parm#1 = Pointer to file name
 call [GetFullPathNameA]
@@ -46,12 +60,13 @@ push 0                      ; Parm#1 = Pointer to machine name, 0 = not used
 call [OpenSCManagerA]
 test eax,eax
 jz .errorOpenScm            ; Go if error status returned when open SCM
-mov [ebx + REGISTRY32.scpData.manager],eax 
+
+mov [SCP_DATA.manager],eax 
 
 ;---------- Try Open Service, check for already exist -------------------------;
 
 push eax
-mov esi,[ebx + REGISTRY32.appData.lockedStrings]
+mov esi,[APP_DATA.lockedStrings]
 mov ax,STR_DRV_NAME
 call IndexString
 pop eax
@@ -71,14 +86,18 @@ push eax                ; Parm#12 = Pointer to service name, 0 = default
 push eax                ; Parm#11 = Pointer to dependencies, 0 = none
 push eax                ; Parm#10 = Pointer to Tag ID, 0 = none
 push eax                ; Parm#9  = Pointer to Load Order Groups list, 0 = none
-push [ebx + REGISTRY32.scpData.drvPath]   ; Parm#8  = Pointer to driver binary file path
+
+push [SCP_DATA.drvPath]   ; Parm#8  = Pointer to driver binary file path
+
 push SERVICE_ERROR_NORMAL   ; Parm#7 = Error control option
 push SERVICE_DEMAND_START   ; Parm#6 = Service start option
 push SERVICE_KERNEL_DRIVER  ; Parm#5 = Service type
 push SERVICE_ALL_ACCESS     ; Parm#4 = Desired access
 push esi                ; Parm#3 = Pointer to display name string
 push esi                ; Parm#2 = Pointer to service name string
-push [ebx + REGISTRY32.scpData.manager]  ; Parm#1 = Handle to SCM database
+
+push [SCP_DATA.manager]  ; Parm#1 = Handle to SCM database
+
 call [CreateServiceA]
 test eax,eax
 jz .errorCreateService  ; Go if error status returned when create service
@@ -86,11 +105,12 @@ jz .errorCreateService  ; Go if error status returned when create service
 ;---------- Skip create point -------------------------------------------------;
 
 .skipCreate:
-mov [ebx + REGISTRY32.scpData.service],eax 
+mov [SCP_DATA.service],eax 
 
 ;---------- Check service status ----------------------------------------------;
 
-lea edi,[ebx + REGISTRY32.scpData.status]
+lea edi,[SCP_DATA.status]
+
 push edi                    ; Parm#2 = Pointer to status structure
 push eax                    ; Parm#1 = Handle
 call [QueryServiceStatus]
@@ -101,10 +121,13 @@ je .skipStart               ; Go if service already running
 
 ;---------- Start service -----------------------------------------------------;
 
-lea eax,[ebx + REGISTRY32.scpData.vectors]
+lea eax,[SCP_DATA.vectors]
+
 push eax                    ; Parm#3 = Pointer to arguments vectors, empty 
 push 0                      ; Parm#2 = Arguments count
-push [ebx + REGISTRY32.scpData.service]   ; Parm#1 = Handle
+
+push [SCP_DATA.service]   ; Parm#1 = Handle
+
 call [StartService]
 test eax,eax
 jz .errorStartService      ; Go if error status returned when start service
@@ -115,7 +138,7 @@ jz .errorStartService      ; Go if error status returned when start service
 
 ;---------- Create (open) device file -----------------------------------------;
 
-mov esi,[ebx + REGISTRY32.appData.lockedStrings]
+mov esi,[APP_DATA.lockedStrings]
 mov ax,STR_DRV_DEVICE
 call IndexString
 
@@ -132,7 +155,8 @@ test eax,eax
 jz .errorCreateDevice   ; Go if error status returned when create device file
 cmp eax,INVALID_HANDLE_VALUE
 je .errorCreateDevice   ; Go if invalid handle returned when create device file
-mov [ebx + REGISTRY32.scpData.driver],eax
+
+mov [SCP_DATA.driver],eax
 
 ; TODO. Errors Handling.
 .errorGetPath:
@@ -153,13 +177,16 @@ ret
 
 UnloadKernelModeDriver:
 push ebx esi edi ebp
-mov ebx,[Registry]
+
+; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
+; mov ebx,[Registry]
 
 ;---------- Close device file, uninstall driver -------------------------------; 
 ; Note close operations sequence continued even if error, but error logged
 ; at R15 if R15 = 0 (if yet no errors) TODO. CORRECT, NO R15 FOR IA32. 
 
-mov ecx,[ebx + REGISTRY32.scpData.driver]
+mov ecx,[SCP_DATA.driver]
+
 jecxz @f
 cmp ecx,INVALID_HANDLE_VALUE
 je @f
@@ -173,10 +200,11 @@ jnz @f                      ; Go if no errors
 
 ;---------- Stop service ------------------------------------------------------;
 
-mov edi,[ebx + REGISTRY32.scpData.service]
+mov edi,[SCP_DATA.service]
+
 test edi,edi 
 jz .skipStop                ; Go skip if handle = 0
-lea eax,[ebx + REGISTRY32.scpData.status]
+lea eax,[SCP_DATA.status]
 push eax                    ; Parm#3 = Pointer to status structure
 push SERVICE_CONTROL_STOP   ; Parm#2 = Control code
 push edi                    ; Parm#1 = Handle
@@ -213,7 +241,8 @@ jnz @f                      ; Go if no errors
 
 ;---------- Close manager handle ----------------------------------------------; 
 
-mov ecx,[ebx + REGISTRY32.scpData.manager]
+mov ecx,[SCP_DATA.manager]
+
 jecxz @f
 push ecx                    ; Parm#1 = Manager handle
 call [CloseServiceHandle]
@@ -234,8 +263,10 @@ ret
 
 TryKernelModeDriver:
 push ebx esi edi ebp
-mov ebx,[Registry]
-add ebx,REGISTRY32.scpData
+
+;mov ebx,[Registry]
+;add ebx,REGISTRY32.scpData
+lea ebx,[SCP_DATA]
 
 ;---------- Write to device file, this is requests for driver -----------------;
 
