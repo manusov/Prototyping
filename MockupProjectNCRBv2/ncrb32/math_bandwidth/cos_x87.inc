@@ -10,54 +10,39 @@
 ;          Registers corrupted                                                 ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Cos_X87:
 finit
 Measurement_Cos_X87:
-
 ;---------- Prepare big cycle (without tail) ----------------------------------;
-
 fld qword [esi]
 mov edx,ecx       ; EDX = Reload length
 shr edx,2         ; EDX = Block length, convert from INSTRUCTIONS to 4xINSTRUCTION units
 jz Small_Cos_X87  ; Go if Length < 4 instructions
-
-DumpStart_Cos_X87:
 Block_Cos_X87:
-
 fld st0
 fcos
 ffree st0
 fincstp
-
 fld st0
 fcos
 ffree st0
 fincstp
-
 fld st0
 fcos
 ffree st0
 fincstp
-
 fld st0
 fcos
 ffree st0
 fincstp
-
 dec edx
 jnz Block_Cos_X87         ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
-DumpStop_Cos_X87:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Cos_X87:
 mov edx,ecx
 and edx,00001111b            ; ECX = Extract tail length
 jz Measure_Cos_X87
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Cos_X87:
 fld st0
 fcos
@@ -65,9 +50,7 @@ ffree st0
 fincstp
 dec edx           
 jnz Tail_Cos_X87          ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Cos_X87:
 ffree st0
 fincstp
@@ -76,7 +59,5 @@ sbb ebx,0
 mov eax,ebp
 or eax,ebx
 jnz Measurement_Cos_X87   ; Cycle for measurement, repeat same operation
-
 finit
 ret
-

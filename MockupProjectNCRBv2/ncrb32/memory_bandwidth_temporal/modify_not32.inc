@@ -12,21 +12,15 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Modify_NOT32:
 push ebx              ; EBX = High 32 bits of measurement repeats count
-
 Measurement_Modify_NOT32:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov ebx,esi            ; EBX = Reload source address
 mov edx,ecx            ; EDX = Reload length
 shr edx,4              ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Modify_NOT32  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Modify_NOT32:
 Block_Modify_NOT32:
 not dword [ebx+04*00]
@@ -49,30 +43,23 @@ add ebx,64              ; Modify address, addend=register (not constant) for opt
 dec edx
 jnz Block_Modify_NOT32  ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Modify_NOT32:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Modify_NOT32:
 mov edx,ecx
 and edx,00001111b       ; ECX = Extract tail length
 jz Measure_Modify_NOT32
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Modify_NOT32:
 not dword [ebx+04*00]
 add ebx,4               ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Modify_NOT32   ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Modify_NOT32:
 sub ebp,1
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_Modify_NOT32   ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret

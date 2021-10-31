@@ -1,40 +1,34 @@
+;---------- Read options from GUI and setup benchmark scenario ----------------;
+;                                                                              ;
+; INPUT:   AL = mode: 0 = simple run, 1 = drawings                             ;
+;          GUI data located at BINDLIST                                        ;
+;                                                                              ;
+; OUTPUT:  None at registers                                                   ;
+;          Benchmark scenario build at IPB (Input Parameters Block)            ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 
 
-; UNDER CONSTRUCTION.
 ; TODO. Can run as simple run or helper for draw, use input flag.
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
 
 
 GuiToUserParms:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
-; mov r15,[Registry]
-
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
-; TODO. Possible make this step as subroutine: GuiToUserParms.
-
-; mov rsi,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
 lea rsi,[BIND_LIST]
-
-; lea rdi,[r15 + REGISTRY64.memUpb]
 lea rdi,[MEM_UPB]
-
-; TODO. Maks selector for use same code for simple and for draw
-; movzx eax,al
-; xor eax,eax
 movzx eax,al
-
 mov [rdi + MEMUPB.runContext],eax  ; Setup run context for memory allocation multiplication mode control  
-
-mov eax,[rsi + BINDLIST.getMemMethod]  ; TODO. Optimize offsets size by nested structures.
+;---------- Option Asm --------------------------------------------------------;
+mov eax,[rsi + BINDLIST.getMemMethod]
 bsf eax,eax
 mov [rdi + MEMUPB.optionAsm],eax 
-
+;---------- Option prefetch ---------------------------------------------------;
 movzx eax,[rsi + BINDLIST.getMemPref]
 bsf eax,eax
 mov [rdi + MEMUPB.optionDistance],eax 
-
+;---------- Options parallel --------------------------------------------------;
 mov cl,[rsi + BINDLIST.setMemSmp]
 mov ch,[rsi + BINDLIST.getMemSmp]
 xor eax,eax
@@ -46,7 +40,7 @@ jz @f
 inc eax
 @@:
 mov [rdi + MEMUPB.optionParallel],eax
-
+;---------- Option HT ---------------------------------------------------------;
 xor eax,eax
 test cl,00000100b
 jz @f
@@ -56,7 +50,7 @@ jz @f
 inc eax
 @@:
 mov [rdi + MEMUPB.optionHT],eax
-
+;---------- Option Processor Groups -------------------------------------------;
 xor eax,eax
 test cl,00010000b
 jz @f
@@ -66,7 +60,7 @@ jz @f
 inc eax
 @@:
 mov [rdi + MEMUPB.optionPG],eax
-
+;---------- Option NUMA -------------------------------------------------------;
 xor eax,eax
 test [rsi + BINDLIST.setMemNuma],00000001b
 jz @f
@@ -75,11 +69,11 @@ bsf ecx,ecx
 add eax,ecx
 @@:
 mov [rdi + MEMUPB.optionNUMA],eax 
-
+;---------- Option Object -----------------------------------------------------;
 movzx eax,[rsi + BINDLIST.getMemObject]
 bsf eax,eax
 mov [rdi + MEMUPB.optionTarget],eax 
-
+;---------- Option Large Pages ------------------------------------------------;
 mov cl,[rsi + BINDLIST.setMemLpages]  ; Optimize this, don't use CL, direct test
 mov ch,[rsi + BINDLIST.getMemLpages]
 xor eax,eax
@@ -91,73 +85,56 @@ jz @f
 inc eax
 @@:
 mov [rdi + MEMUPB.optionLP],eax
-
+;---------- Option Measurement Repeats mode -----------------------------------;
 movzx eax,[rsi + BINDLIST.getMemMeas]
 bsf eax,eax
 mov [rdi + MEMUPB.optionMeasure],eax 
-
+;---------- Option Measurement Approximation mode -----------------------------;
 movzx eax,[rsi + BINDLIST.getMemPix]
 bsf eax,eax
 mov [rdi + MEMUPB.optionApprox],eax 
-
+;---------- Option user-defined block -----------------------------------------;
 mov rax,[rsi + BINDLIST.blockSizeEdit]
 mov [rdi + MEMUPB.customBlockStart],rax
-
 ret
-
-
-
-
+;---- Execute simple run benchmark scenario and build text data for visual ----;
+;                                                                              ;
+; INPUT:   None at registers                                                   ;
+;                                                                              ;
+; OUTPUT:  None at registers                                                   ;
+;          TODO. Error handling                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 ScenarioMemoryRun:
 push rbx rsi rdi rbp r12 r13 r14 r15
 cld
-
-;---------- Get system configuration ------------------------------------------;
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
-; mov r15,[Registry]
-
+;---------- Refresh system information ----------------------------------------;
 call InfoProcessor
-
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
-; TODO. Possible make this step as subroutine: GuiToUserParms.
-
 mov al,0
 call GuiToUserParms
-
 ;---------- Build Input Parameters Block, IPB = F( UPB, System config. ) ------;
 ; TODO. Comments.
 ;---------- Initializing measurement ------------------------------------------;
 ; TODO. Comments.
-;---------- Run measurement ---------------------------------------------------;
-; TODO. Comments.
-
-; Required modification.
-; Resources (memory) must be relesed even if error detected
-
 call SessionStart
 jc .error            ; Go if error at start
-
+;---------- Run measurement ---------------------------------------------------;
+; TODO. Comments.
 call SessionProgress
 jc .error            ; Go if error at execution
-
+;---------- Stop measurement --------------------------------------------------;
+; TODO. Comments.
 call SessionStop
 jc .error            ; Go if error at termination
 
-; call routines from "Run simple" scenario
-; call ResultSimple 
+; TODO.
+; Resources (memory) must be released even if error detected
 
 ;---------- Calculating results by Output Parameters Block (OPB) --------------;
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
-; mov r15,[Registry]
-
-; mov r14,[r15 + REGISTRY64.allocatorBindBuffer.objectStart]
 lea r14,[BIND_LIST]
-
-; lea r12,[r15 + REGISTRY64.memIpb]
 lea r12,[MEM_IPB]
-
+;---------- Build application type string -------------------------------------;
 lea rdi,[r14 + BINDLIST.mrApplication]
 mov ax,STR_MR_APP_TYPE_64
 call PoolStringWrite          ; TODO. Make this 3 instructions as subroutine or complex parametrize with 2 offsets
@@ -169,81 +146,82 @@ stosb
 ; STR_AM_X64_00
 ; STR_AM_06
 
+;---------- Build Assembler method string -------------------------------------;
 lea rdi,[r14 + BINDLIST.mrMethod]
 mov eax,[r12 + MEMIPB.updatedAsm]
 add ax,STR_AM_X64_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Operand width string ----------------------------------------;
 lea rdi,[r14 + BINDLIST.mrWidth]
 mov eax,[r12 + MEMIPB.operandWidth]
 mov bl,0
 call DecimalPrint32
 mov al,0
 stosb
-
+;---------- Build Threads count string ----------------------------------------;
 lea rdi,[r14 + BINDLIST.mrThreads]
 mov eax,[r12 + MEMIPB.updatedThreads]
 call DecimalPrint32
 mov al,0
 stosb
-
+;---------- Build Hyper threading string --------------------------------------;
 lea rdi,[r14 + BINDLIST.mrHyperT]
 mov eax,[r12 + MEMIPB.updatedHT]
 add ax,STR_MR_HT_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Large pages string ------------------------------------------;
 lea rdi,[r14 + BINDLIST.mrLargeP]
 mov eax,[r12 + MEMIPB.updatedLP]
 add ax,STR_MR_LP_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build NUMA string -------------------------------------------------;
 lea rdi,[r14 + BINDLIST.mrNuma]
 mov eax,[r12 + MEMIPB.updatedNUMA]
 add ax,STR_MR_NUMA_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Processor groups string -------------------------------------;
 lea rdi,[r14 + BINDLIST.mrGroups]
 mov eax,[r12 + MEMIPB.updatedPG]
 add ax,STR_MR_PG_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Target object string ----------------------------------------;
 lea rdi,[r14 + BINDLIST.mrTarget]
 mov eax,[r12 + MEMIPB.updatedTarget]
 add ax,STR_MEMORY_L1
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Prefetch distance string ------------------------------------;
 lea rdi,[r14 + BINDLIST.mrDistance]
 mov eax,[r12 + MEMIPB.updatedDistance]
 add ax,STR_MR_PD_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Total memory string -----------------------------------------;
 lea rdi,[r14 + BINDLIST.mrSizeTotal]
-mov rax,[r12 + MEMIPB.startBlockSize]    ; memoryTotal]
+mov rax,[r12 + MEMIPB.startBlockSize]
 mov bl,0FFh
 call SizePrint64
 mov al,0
 stosb
-
+;---------- Build Memory per thread string ------------------------------------;
 lea rdi,[r14 + BINDLIST.mrSizeThread]
-mov rax,[r12 + MEMIPB.startBlockSize]    ; memoryPerThread]
+mov rax,[r12 + MEMIPB.startBlockSize]
 call SizePrint64
 mov al,0
 stosb
-
+;---------- Build Measurement profile string ----------------------------------;
 lea rdi,[r14 + BINDLIST.mrMeasProf]
 mov eax,[r12 + MEMIPB.updatedMeasure]
 add ax,STR_MR_MEASURE_00
@@ -251,45 +229,44 @@ call PoolStringWrite
 mov al,0
 stosb
 
-; TODO. Overflow possible, repeats can be above 32-bit value, actual for adaptive modes.
+; TODO. Overflow possible, 
+; repeats can be above 32-bit value, actual for adaptive modes.
 
+;---------- Build Measurement repeats string ----------------------------------;
 lea rdi,[r14 + BINDLIST.mrMeasRep]
 mov rax,[r12 + MEMIPB.measureRepeats]
 mov bl,0
 call DecimalPrint32
 mov al,0
 stosb
-
+;---------- Build Memory block #1 string --------------------------------------;
 lea rdi,[r14 + BINDLIST.mrBlock1]
 mov rax,[r12 + MEMIPB.allocatedBlock1]
 call HexPrint64
 mov ax,0000h + 'h'
 stosw
-
+;---------- Build Memory block #2 string --------------------------------------;
 lea rdi,[r14 + BINDLIST.mrBlock2]
 mov rax,[r12 + MEMIPB.allocatedBlock2]
 call HexPrint64
 mov ax,0000h + 'h'
 stosw
-
+;---------- Build Total memory allocated string -------------------------------;
 lea rdi,[r14 + BINDLIST.mrAllocAll]
 mov rax,[r12 + MEMIPB.memoryTotal]
 mov bl,0FFh
 call SizePrint64
 mov al,0
 stosb
-
+;---------- Build Memory per thread allocated string --------------------------;
 lea rdi,[r14 + BINDLIST.mrAllocThr]
 mov rax,[r12 + MEMIPB.memoryPerThread]
 call SizePrint64
 mov al,0
 stosb
-
+;---------- Calculate values and build Milliseconds string --------------------;
 finit
-
-; lea r12,[r15 + REGISTRY64.memOpb]
 lea r12,[MEM_OPB]
-
 lea rdi,[r14 + BINDLIST.mrDtMs]
 fild [r12 + MEMOPB.osTimerDelta]  ; st0 = delta time in 100 ns units 
 push 10000                        ; 10000 units * 100 ns = 1000000 nS = 1 ms
@@ -302,11 +279,9 @@ mov ax,STR_MR_PLUS_TIME
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Calculate values and build TSC MHz string -------------------------;
 lea rdi,[r14 + BINDLIST.mrDtscSec]
-
 mov rax,[CPU_DATA.tscClockHz]  ; optimize by x87 access
-
 push rax 1000000
 fild qword [rsp + 8]
 fidiv dword [rsp + 0]
@@ -320,14 +295,9 @@ mov ax,STR_MHZ
 call PoolStringWrite
 mov al,0
 stosb
-
-; Clocks per Instruction (clocks, CPI)
-
-; lea r11,[r15 + REGISTRY64.memIpb]
+;--- Calculate values and build Clocks per Instruction (clocks, CPI) string ---;
 lea r11,[MEM_IPB]
-
 lea rdi,[r14 + BINDLIST.mrDtscIns]
-
 mov rax,[r11 + MEMIPB.startBlockSize]  ; RAX = Block size, bytes 
 xor edx,edx
 mov ecx,[r11 + MEMIPB.operandWidth]    ; Must be not zero, otherwise divide overflow
@@ -346,12 +316,8 @@ mov bx,0300h            ; Float part is 3 digits, Integer part without template
 call DoublePrint
 mov al,0
 stosb
-
-; Branch for Bandwidth
-; Speed(MBPS)
-
+;---------- Branch for Bandwidth, Speed(MBPS) ---------------------------------;
 lea rdi,[r14 + BINDLIST.mrLastValue]
-
 mov rax,[r11 + MEMIPB.startBlockSize]    ; RAX = Operational block size, bytes 
 mov rcx,[r11 + MEMIPB.measureRepeats]    ; RCX = Repeats, iterations, note 64-bit     
 mul rcx                                  ; RAX = BlockSize * Repeats
@@ -371,13 +337,10 @@ mov bx,0200h            ; Float part is 2 digits, Integer part without template
 call DoublePrint
 mov al,0
 stosb
-
-
+;---------- Branch for Latency, Latency (ns) ----------------------------------;
 
 ; TODO.
-; Branch for Latency 
-; Latency (ns)
-;
+
 ; .L9:
 ; lea rsi,[MsgResultLatency]
 ; call StringWrite_CRLF_Equal
@@ -391,18 +354,9 @@ stosb
 ;
 ; 0 - termination can be common.
 
-
- 
-
-
-
-
 ; TODO. Error handling.
 
 .error:
 
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
-
-
-

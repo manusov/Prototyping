@@ -10,7 +10,6 @@
 ;                        see MSDN for status exceptions and details            ;  
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 DialogProcMain:
 cld
 push rbp rbx rsi rdi r15
@@ -21,17 +20,10 @@ mov PARM_HWNDDLG,rcx                 ; Save input parameters to shadow
 mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
-
-;mov r15,[Registry]                   ; R15 = Pointer to global registry
-;add r15,REGISTRY64.appData           ; R15 = Pointer to registry.appData
-
-lea r15,[APP_DATA] 
-
+lea r15,[APP_DATA]                   ; R15 = Pointer to application data struc. 
 lea rbx,[r15 + APPDATA.tabCtrlItem]  ; RBX = Pointer to tab item structure
 lea rsi,[r15 + APPDATA.hTabDlg]      ; RSI = Pointer to sheets handles array
-
 ;---------- Detect message type -----------------------------------------------;
-
 cmp rdx,0000FFFFh
 jae .skip
 xchg eax,edx                   ; Use EAX for compact CMP
@@ -46,9 +38,7 @@ je .tabproc                    ; Go if notification message from child window
 .skip:
 xor eax,eax
 jmp .finish                    ; Go exit if unknown event
-
 ;---------- WM_INITDIALOG handler: create main window -------------------------; 
-
 .wminitdialog: 
 mov rax,PARM_HWNDDLG
 mov [r15 + APPDATA.hMain],rax
@@ -56,18 +46,14 @@ mov edx,IDC_TAB                ; RDX = Parm#2 = Item identifier
 mov rcx,PARM_HWNDDLG           ; RCX = Parm#1 = Handle to dialog box
 call [GetDlgItem]              ; Get handle
 mov [r15 + APPDATA.hTab],rax   ; Store window handle = sheets container handle
-
 ;---------- Initializing sheet structure --------------------------------------;
-
 xor eax,eax
 mov [rbx + TC_ITEM.mask],TCIF_TEXT + TCIF_IMAGE
 mov [rbx + TC_ITEM.lpReserved1],eax
 mov [rbx + TC_ITEM.lpReserved2],eax
 mov [rbx + TC_ITEM.lParam],eax
 mov [rbx + TC_ITEM.cchTextMax],64  ; Maximum text size
-
 ;---------- Create image list for icons ---------------------------------------;
-
 push 0 0                         ; Alignment + Parm#5 = cGrow = not used
 mov r9d,ICON_COUNT               ; R9  = Parm#4 = Images count
 mov r8d,ILC_COLOR32 + ILC_MASK   ; R8  = Parm#3 = Images flags
@@ -77,15 +63,11 @@ sub rsp,32
 call [ImageList_Create]
 add rsp,32 + 16
 mov [r15 + APPDATA.hImageList],rax   ; Store image list handle 
-
 ;---------- Initialize cycle for create icons from resource -------------------;
-
 push rsi rdi
 mov edi,ICON_COUNT
 lea rsi,[r15 + APPDATA.lockedIcons]
-
 ;---------- Cycle for create icons from resource ------------------------------;
-
 .createIcons:
 lodsq
 push 0                           ; This for stack alignment
@@ -113,16 +95,12 @@ xor r8d,r8d                         ; R8  = Parm#3 = WPARAM = not used = 0
 mov edx,TCM_SETIMAGELIST            ; RDX = Parm#2 = Message
 mov rcx,[r15 + APPDATA.hTab]        ; RCX = Parm#1 = Container window handle 
 call [SendMessage]                  ; Link image list with control
-
 ;---------- Initialize cycle for insert items with strings and icons ----------;
-
 push rsi
 sub rsp,32 + 8                      ; Stack alignment and parameters shadow
 mov rsi,[r15 + APPDATA.lockedStrings]
 xor edi,edi
-
 ;---------- Cycle for insert items to tabbed panel ----------------------------;
-
 .insertSheets:
 mov rax,rsi
 mov [rbx + TC_ITEM.pszText],rax
@@ -141,25 +119,19 @@ cmp edi,ITEM_COUNT
 jb .insertSheets                 ; Cycle for insert all sheets
 add rsp,32 + 8
 pop rsi
-
 ;---------- Set item size for container ---------------------------------------;
-
 mov r9d,( 27 shl 16 + 97 )       ; R9  = Parm#4 = LPARAM = [Ysize][Xsize]
 xor r8d,r8d                      ; R8  = Parm#3 = WPARAM = not used = 0
 mov edx,TCM_SETITEMSIZE          ; RDX = Parm#2 = Message
 mov rcx,[r15 + APPDATA.hTab]     ; RCX = Parm#1 = Container window handle
 call [SendMessage]               ; Set sheets size 
-
 ;---------- Initializing cycle for create dialogues per sheets ----------------; 
-
 push rsi rsi                     ; Second push for stack alignment
 mov rdi,rsi
 mov esi,IDD_FIRST
 lea rbx,[ProcDialogs]
 mov ecx,ITEM_COUNT
-
 ;---------- Cycle for create dialogues per sheets -----------------------------;
-
 .createDialogues:
 push rcx                         ; RCX saved and stack alignment
 push 0                           ; Parm#5 = Passed parameter = not used = 0
@@ -176,9 +148,7 @@ pop rcx
 add rbx,8
 loop .createDialogues            ; Create dialogues cycle for all sheets 
 pop rsi rsi                      ; Second pop for stack alignment
-
 ;---------- Cycle for find and select active sheet dialogue window ------------;
-
 mov ecx,ITEM_COUNT
 .findActive:
 push rcx
@@ -194,18 +164,14 @@ call [ShowWindow]
 add rsp,32 + 8
 pop rcx
 loop .findActive
-
 ;---------- Select active sheet at container ----------------------------------;  
-
 xor r9d,r9d                          ; R9  = Parm#4 = LPARAM = not used = 0 
 xor r8d,r8d                          ; R8  = Parm#3 = WPARAM = index
 mov [r15 + APPDATA.selectedTab],r8d  ; Active sheet = 0
 mov edx,TCM_SETCURSEL                ; RDX = Parm#2 = Message
 mov rcx,[r15 + APPDATA.hTab]         ; RCX = Parm#1 = Container window handle 
 call [SendMessage]                   ; Set current selected sheet
-
 ;---------- Main window icon and text title -----------------------------------; 
-
 mov r9,[r15 + APPDATA.hIcon]         ; R9  = Parm#4 = LPARAM = Icon handle 
 mov r8d,ICON_SMALL                   ; R8  = Parm#3 = WPARAM = Icon type 
 mov edx,WM_SETICON                   ; RDX = Parm#2 = Message 
@@ -215,35 +181,25 @@ lea rdx,[PROGRAM_NAME]               ; RDX = Parm#2 = Pointer to text string
 mov rcx,PARM_HWNDDLG                 ; RCX = Parm#1 = Window handle
 call [SetWindowText]                 ; Set main window text title
 jmp .processed
-
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-
 .wmcommand:                       ; User input: cancel button or close window
-
 ;---------- Detect click "About" item in the main menu ------------------------;
-
 mov eax,LOW_WPARAM
 cmp ax,IDM_ABOUT
 jne .noabout
-
 ;---------- "About" message box and wait user input ---------------------------;
-
 mov r9d,MB_ICONINFORMATION   ; R9  = Parm#4 = Message box icon type = Info
 lea r8,[ABOUT_CAP]           ; R8  = Parm#3 = Pointer to caption
 lea rdx,[ABOUT_NAME]         ; RDX = Parm#2 = Pointer to "About" string
 mov rcx,PARM_HWNDDLG         ; RCX = Parm#1 = Parent window handle
 call [MessageBoxA]
 jmp .processed
-.noabout:
-
 ;---------- Detect click "Exit" item in the main menu -------------------------; 
-
+.noabout:
 cmp ax,IDM_EXIT
 je .wmclose
 jmp .processed
-
 ;---------- WM_NOTIFY handler: events from child GUI objects ------------------;
-
 .tabproc:                         ; Change sheet selection
 cmp LOW_WPARAM,IDC_TAB
 jne .skip
@@ -264,21 +220,15 @@ mov edx,SW_SHOWDEFAULT            ; RDX = Parm#2 = Window activity mode
 mov rcx,[rsi + rax*8]             ; RCX = Parm#1 = Window handle
 call [ShowWindow]                 ; Show current selected sheet
 jmp .processed
-
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-
 .wmclose:
-mov edx,1  ; xor edx,edx          ; RDX = Parm#2 = Result for return
+mov edx,1                         ; RDX = Parm#2 = Result for return
 mov rcx,PARM_HWNDDLG              ; RCX = Parm#1 = Window handle
 call [EndDialog]
-
 ;---------- Exit points -------------------------------------------------------;
-
 .processed:
 mov eax,1
 .finish:
 mov rsp,rbp
 pop r15 rdi rsi rbx rbp
 ret
-
-

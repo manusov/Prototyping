@@ -12,16 +12,14 @@
 ; 6 or 2 bytes per entry, compact encoding
 MACRO BANDWIDTH_NON_TEMPORAL x1, x2, x3, x4
 {
-dw  x1 - RoutinesBandwidthNonTemporal  ; Target routine entry point
-dw  x2 - RoutinesBandwidthNonTemporal  ; Dump fragment start, dump show at drawings Y=F(X)
-db  x3 - x2                            ; Dump fragment size
-db  x4                                 ; Read or Write data bytes per instruction,
-}                                      ; example YMM register op. = 32 bytes (256 bit) 
-
+dw  x1 - ROUTINES_BANDWIDTH_NON_TEMPORAL  ; Pointer for compact 16-bit relative offsets  ; Target routine entry point
+dw  x2 - ROUTINES_BANDWIDTH_NON_TEMPORAL  ; Dump fragment start, dump show at drawings Y=F(X)
+db  x3 - x2                               ; Dump fragment size
+db  x4                                    ; Read or Write data bytes per instruction,
+}                                         ; example YMM register op. = 32 bytes (256 bit) 
 ;--- List of performance patterns: bandwidth measur., non temporal access -----;
-
 align 2
-TableBandwidthNonTemporal:
+TABLE_BANDWIDTH_NON_TEMPORAL:
 ; Non-temporal (non-cacheable write) mode 
 BANDWIDTH_NON_TEMPORAL  Pattern_NtWrite_SSE128 , DumpStart_NtWrite_SSE128 , DumpStop_NtWrite_SSE128 , 16
 BANDWIDTH_NON_TEMPORAL  Pattern_NtCopy_SSE128  , DumpStart_NtCopy_SSE128  , DumpStop_NtCopy_SSE128  , 16    ; This duplicated 1

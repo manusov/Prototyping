@@ -13,23 +13,17 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Dot_FMA512:
 push ebx              ; EBX = High 32 bits of measurement repeats count
-
 Measurement_Dot_FMA512:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 vzeroall
 mov eax,esi          ; EAX = Reload source address
 mov ebx,edi          ; EBX = Reload destination address
 mov edx,ecx          ; EDX = Reload length
 shr edx,3            ; EDX = Block length, convert from INSTRUCTIONS to 8xINSTRUCTION units
 jz Small_Dot_FMA512  ; Go if Length < 8 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Dot_FMA512:
 Block_Dot_FMA512:
 vmovapd zmm0,[eax+64*00]
@@ -53,9 +47,7 @@ add ebx,512           ; Modify destination address
 dec edx
 jnz Block_Dot_FMA512  ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Dot_FMA512:
-
 ;---------- Horizontal additions for main part, result is vector --------------;
-
 ; 512
 vaddpd zmm4,zmm4,zmm5
 vaddpd zmm6,zmm6,zmm7
@@ -70,16 +62,12 @@ vaddpd xmm4,xmm4,xmm5
 vhaddpd xmm4,xmm4,xmm4
 vxorpd zmm0,zmm0,zmm0
 vmovsd xmm0,xmm0,xmm4
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Dot_FMA512:
 mov edx,ecx
 and edx,00000111b     ; ECX = Extract tail length
 jz Measure_Dot_FMA512
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Dot_FMA512:
 vmovapd zmm1,[eax+64*00]
 vfmadd231pd zmm0,zmm1,[ebx+64*00]
@@ -87,9 +75,7 @@ add eax,64            ; Modify source address, addend=register (not constant) fo
 add ebx,64            ; Modify destination address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Dot_FMA512   ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Horizontal additions for tail, result is scalar -------------------;
-
 vextractf64x4 ymm1,zmm0,1
 ; 256
 vhaddpd ymm0,ymm0,ymm1
@@ -98,16 +84,12 @@ vextractf128 xmm2,ymm0,1
 vaddpd xmm0,xmm0,xmm2
 ; 64
 vhaddpd xmm0,xmm0,xmm0
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Dot_FMA512:
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_Dot_FMA512  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret
-

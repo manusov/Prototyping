@@ -9,30 +9,21 @@
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft x64 calling convention.         ; 
 ;------------------------------------------------------------------------------;
-
 MemReleaseNuma:
 cld
 push rbx rsi rdi rbp r12
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h    ; Stack alignment because WinAPI call
 sub rsp,32                    ; Make parameters shadow because WinAPI call 
-
 ;---------- Reload input parameters to non-volatile registers -----------------;
-
 mov rsi,rcx                   ; RSI = Pointer to NUMA nodes list
 mov edi,edx                   ; EDI = Number of used NUMA nodes
-
 ;---------- Get current process handle ----------------------------------------;
-
 call [GetCurrentProcess]      ; Return RAX = Handle
 xchg rbx,rax                  ; Copy to non-volatile register, XCHG for compact
-
 ;---------- Set nodes list limit ----------------------------------------------;
-
 mov r12d,MAX_NODES            ; R12D = Maximum number of NUMA nodes
-
 ;---------- Cycle for release memory, allocated at all nodes ------------------;
-
 .numaRelease:
 mov rcx,rbx                        ; Parm#1 = RCX = Process Handle
 mov rdx,[rsi + NUMACTRL.trueBase]  ; Parm#2 = RDX = Address
@@ -44,17 +35,13 @@ call [VirtualFreeEx]               ; Call memory release WinAPI, return RAX = St
 test rax,rax
 jz .error                          ; Go if error detected
 .skip:
-
 ;---------- Cycle for NUMA nodes ----------------------------------------------;
-
 dec edi
 jz .done
 add rsi,NUMACTRL_SIZE              ; Select next entry                    
 dec r12
 jnz .numaRelease                   ; Cycle for all (typical 64) entries 
-
 ;---------- Exit points -------------------------------------------------------;
-
 .done:
 clc                  ; CF = 0 means status = no errors 
 .exit:

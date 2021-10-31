@@ -12,24 +12,18 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_AVX256:
 push ebx               ; EBX = High 32 bits of measurement repeats count
-
 Measurement_Copy_AVX256:
-
 ;---------- Prepare big cycle -------------------------------------------------;
 ; Set pointer to middle of 512-byte interval, +/- offsets is code size optimal,
 ; because offsets [-128...+127] encoded as one byte
-
 lea eax,[esi+256]     ; EAX = Reload source address, +256 means moddle
 lea ebx,[edi+256]     ; EBX = Reload destination address, +256 means moddle
 mov edx,ecx           ; RDX = Reload length
 shr edx,4             ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Copy_AVX256  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Copy_AVX256:
 Block_Copy_AVX256:
 vmovapd ymm0,[eax-32*08]
@@ -69,16 +63,12 @@ add ebx,512               ; Modify destination address
 dec edx
 jnz Block_Copy_AVX256     ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Copy_AVX256:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Copy_AVX256:
 mov edx,ecx
 and edx,00001111b         ; ECX = Extract tail length
 jz Measure_Copy_AVX256
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Copy_AVX256:
 vmovapd ymm0,[eax-32*08]
 vmovapd [ebx-32*08],ymm0
@@ -86,16 +76,12 @@ add eax,32                ; Modify source address, addend=register (not constant
 add ebx,32                ; Modify destination address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Copy_AVX256      ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Copy_AVX256:
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_Copy_AVX256  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret
-

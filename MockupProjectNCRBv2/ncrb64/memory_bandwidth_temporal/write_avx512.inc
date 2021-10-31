@@ -13,22 +13,16 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Write_AVX512:
 vzeroall               ; Clear ZMM0-ZMM15 for write data, note ZMM16-ZMM31 not changed by VZEROALL
-
 Measurement_Write_AVX512:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov rax,rsi            ; RAX = Reload source address
 mov rdx,rcx            ; RDX = Reload length
 shr rdx,3              ; RDX = Block length, convert from INSTRUCTIONS to 8xINSTRUCTION units
 jz Small_Write_AVX512  ; Go if Length < 8 instructions
 mov ebx,512            ; RBX = Addend, this operation also clear bits RBX[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Write_AVX512:
 Block_Write_AVX512:
 vmovapd [rax+64*00],zmm0
@@ -43,28 +37,20 @@ add rax,rbx                  ; Modify address, addend=register (not constant) fo
 dec rdx
 jnz Block_Write_AVX512       ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Write_AVX512:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Write_AVX512:
 mov edx,ecx
 and edx,00000111b            ; ECX = Extract tail length
 jz Measure_Write_AVX512
 mov ebx,64
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Write_AVX512:
 vmovapd [rax+64*00],zmm8
 add rax,rbx                  ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Write_AVX512        ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Write_AVX512:
 dec rbp
 jnz Measurement_Write_AVX512  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!
 ret
-
-

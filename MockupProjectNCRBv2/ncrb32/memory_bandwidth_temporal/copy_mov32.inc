@@ -12,23 +12,17 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_MOV32:
 push ebx                ; EBX = High 32 bits of measurement repeats count
-
 Measurement_Copy_MOV32:
 push ebp
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov eax,esi          ; EAX = Reload source address
 mov ebx,edi          ; EBX = Reload destination address
 mov edx,ecx          ; EDX = Reload length
 shr edx,4            ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Copy_MOV32  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Copy_MOV32:
 Block_Copy_MOV32:
 mov ebp,[eax+04*00]
@@ -68,16 +62,12 @@ add ebx,64                ; Modify destination address
 dec edx
 jnz Block_Copy_MOV32      ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Copy_MOV32:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Copy_MOV32:
 mov edx,ecx
 and edx,00001111b         ; ECX = Extract tail length
 jz Measure_Copy_MOV32
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Copy_MOV32:
 mov ebp,[eax+04*00] 
 mov [ebx+04*00],ebp  
@@ -85,9 +75,7 @@ add eax,4                 ; Modify source address
 add ebx,4                 ; Modify destination address
 dec edx
 jnz Tail_Copy_MOV32       ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Copy_MOV32:
 pop ebp
 sub ebp,1
@@ -95,6 +83,5 @@ sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_Copy_MOV32   ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret

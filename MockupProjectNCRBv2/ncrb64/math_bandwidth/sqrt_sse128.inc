@@ -11,20 +11,14 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Sqrt_SSE128:
 Measurement_Sqrt_SSE128:
-
 ;---------- Prepare big cycle (without tail) ----------------------------------;
-
 movapd xmm15,[r8]
 mov rdx,rcx           ; RDX = Reload length
 shr rdx,4             ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Sqrt_SSE128  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
-DumpStart_Sqrt_SSE128:
 Block_Sqrt_SSE128:
 sqrtpd xmm0,xmm15
 sqrtpd xmm1,xmm15
@@ -45,24 +39,17 @@ sqrtpd xmm0,xmm15
 addpd xmm15,xmm15
 dec rdx
 jnz Block_Sqrt_SSE128        ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
-DumpStop_Sqrt_SSE128:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Sqrt_SSE128:
 mov edx,ecx
 and edx,00001111b            ; ECX = Extract tail length
 jz Measure_Sqrt_SSE128
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Sqrt_SSE128:
 sqrtpd xmm0,xmm15
 dec edx           
 jnz Tail_Sqrt_SSE128         ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Sqrt_SSE128:
 dec rbp
 jnz Measurement_Sqrt_SSE128  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!

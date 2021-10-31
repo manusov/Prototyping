@@ -12,10 +12,8 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_MOVSD:
 push ebx                ; EBX = High 32 bits of measurement repeats count
-
 mov ebx,esi             ; EBX = Save source block base = Input ESI
 mov edx,edi             ; EDX = Save destination block base = Input EDI
 mov eax,ecx             ; EAX = Save block size = Input ECX
@@ -26,15 +24,11 @@ mov ecx,eax             ; ECX = Restore block size , units = hardware cycle iter
 DumpStart_Copy_MOVSD:
 rep movsd               ; This is target operation - hardware cycle
 DumpStop_Copy_MOVSD:
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov esi,ebp
 or esi,[esp]
 jnz Measurement_Copy_MOVSD   ; Measurement cycle
-
 pop ebx
 ret
-

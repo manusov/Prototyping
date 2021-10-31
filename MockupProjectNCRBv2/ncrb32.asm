@@ -51,7 +51,7 @@ PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win32'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
 ABOUT_TEXT_2A           EQU 'v2.00.00 for Windows ia32'
-ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0003 for Windows ia32'
+ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0004 for Windows ia32'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -1126,7 +1126,6 @@ include 'ncrb32\system_info\connect_code.inc'
 include 'ncrb32\threads_manager\connect_code.inc'
 include 'ncrb32\memory_bandwidth_temporal\connect_code.inc'
 include 'ncrb32\memory_bandwidth_non_temporal\connect_code.inc'
-include 'ncrb32\memory_bandwidth_partial\connect_code.inc'
 include 'ncrb32\memory_latency\connect_code.inc'
 include 'ncrb32\math_bandwidth\connect_code.inc'
 ;------------------------------------------------------------------------------;
@@ -1194,7 +1193,6 @@ include 'ncrb32\system_info\connect_data.inc'
 include 'ncrb32\threads_manager\connect_data.inc'
 include 'ncrb32\memory_bandwidth_temporal\connect_data.inc'
 include 'ncrb32\memory_bandwidth_non_temporal\connect_data.inc'
-include 'ncrb32\memory_bandwidth_partial\connect_data.inc'
 include 'ncrb32\memory_latency\connect_data.inc'
 include 'ncrb32\math_bandwidth\connect_data.inc'
 ;---------- Operating system definitions --------------------------------------;

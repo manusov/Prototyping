@@ -11,20 +11,14 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Sqrt_AVX256:
 Measurement_Sqrt_AVX256:
-
 ;---------- Prepare big cycle (without tail) ----------------------------------;
-
 vmovapd ymm15,[r8]
 mov rdx,rcx           ; RDX = Reload length
 shr rdx,4             ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Sqrt_AVX256  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
-DumpStart_Sqrt_AVX256:
 Block_Sqrt_AVX256:
 vsqrtpd ymm0,ymm15
 vsqrtpd ymm1,ymm15
@@ -45,24 +39,17 @@ vsqrtpd ymm0,ymm15
 vaddpd ymm15,ymm15,ymm15
 dec rdx
 jnz Block_Sqrt_AVX256        ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
-DumpStop_Sqrt_AVX256:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Sqrt_AVX256:
 mov edx,ecx
 and edx,00001111b            ; EDX = Extract tail length
 jz Measure_Sqrt_AVX256
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Sqrt_AVX256:
 vsqrtpd ymm0,ymm15
 dec edx           
 jnz Tail_Sqrt_AVX256         ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Sqrt_AVX256:
 dec rbp
 jnz Measurement_Sqrt_AVX256  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!

@@ -13,7 +13,6 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_MOVSQ:
 mov rbx,rsi                 ; RBX = Save source block base = Input RSI
 mov rdx,rdi                 ; RDX = Save destination block base = Input RDI
@@ -28,4 +27,3 @@ DumpStop_Copy_MOVSQ:
 dec rbp                     ; RBP = Measurement cycle counter
 jnz Measurement_Copy_MOVSQ  ; Measurement cycle
 ret
-

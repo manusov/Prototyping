@@ -11,7 +11,6 @@
 ;                        see MSDN for status exceptions and details            ;  
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 DialogProcChildVectorBrief:
 cld
 push rbp rbx rsi rdi r15
@@ -23,13 +22,8 @@ mov PARM_MSG,rdx
 mov PARM_WPARAM,r8
 mov PARM_LPARAM,r9
 mov rbx,rcx
-
-;mov r15,[Registry]
-;add r15,REGISTRY64.appData
-lea r15,[APP_DATA]
-
+lea r15,[APP_DATA]             ; R15 = Pointer to application data
 ;---------- Detect message type -----------------------------------------------;
-
 cmp rdx,0000FFFFh
 jae .skip
 xchg eax,edx                   ; Use EAX for compact CMP
@@ -42,9 +36,7 @@ je .wmclose                    ; Go if window close message
 .skip:
 xor eax,eax
 jmp .finish                    ; Go exit if unknown event
-
 ;--- WM_INITDIALOG handler: create child window: vector perf. brief report ----; 
-
 .wminitdialog:
 mov ax,BINDER_BUILD_VECTOR_BRIEF
 call Binder
@@ -60,31 +52,22 @@ mov rdx,rsi
 mov rcx,PARM_HWNDDLG
 call [SetWindowText]
 jmp .processed
-
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-
-.wmcommand:                    ; User input: cancel button or close window
-
+; Handler required for "OK" button
+.wmcommand:
 ;---------- Detect click "Exit" item in the main menu -------------------------; 
-
 cmp ax,IDM_EXIT
 je .wmclose
 jmp .processed
-
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-
 .wmclose:
-mov edx,1  ; xor edx,edx       ; RDX = Parm#2 = Result for return
-mov rcx,PARM_HWNDDLG           ; RCX = Parm#1 = Window handle
+mov edx,1                   ; RDX = Parm#2 = Result for return
+mov rcx,PARM_HWNDDLG        ; RCX = Parm#1 = Window handle
 call [EndDialog]
-
 ;---------- Exit points -------------------------------------------------------;
-
 .processed:
 mov eax,1
 .finish:
 mov rsp,rbp
 pop r15 rdi rsi rbx rbp
 ret
-
-

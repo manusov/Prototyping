@@ -14,40 +14,29 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Latency_RDRAND:
-
 ;---------- Initializing parameters for build linear list ---------------------; 
-
 mov rbx,rsi       ; RBX = Base address
 mov rbp,rcx       ; RBP = Length, units = CPU instructions
 mov edx,8
 xor eax,eax
-
 ;---------- Build linear list -------------------------------------------------;
-
 .BuildLinear:     ; This cycle for build sequental offsets list
 mov [rbx],rax
 add rbx,rdx
 add rax,rdx
 dec rbp
 jnz .BuildLinear
-
 ;---------- Initializing parameters for random unsorting linear list ----------; 
-
 xor r10d,r10d
 bsr rax,rcx
 inc eax
 bts r10,rax
 dec r10
-
 ;---------- Address and size --------------------------------------------------;
-
 mov rbx,rsi
 mov rbp,rcx
-
 ;---------- Random unsorting linear list --------------------------------------;
-
 .BuildRandom:     ; This cycle for build random offsets list
 rdrand rax
 jnc .BuildRandom  ; Go wait if hardware RNG is not ready
@@ -63,14 +52,10 @@ mov [rbx],r9
 add rbx,rdx
 dec rbp
 jnz .BuildRandom
-
 ;---------- Initializing parameters for build linked random offsets list ------;
-
 xor eax,eax
 mov r8,rsi 
-
 ;---------- Build linked random offsets list ----------------------------------;
-
 .BuildLinked:     ; This cycle for build linked random offsets list
 mov rbx,[rsi]
 add rbx,rdi
@@ -79,9 +64,7 @@ mov rax,rbx
 add rsi,rdx
 dec rcx
 jnz .BuildLinked 
-
 ;--- Store RAX = walk list entry point to Block#1 (original pointer RSI) ------;
-
 mov [r8],rax
 ret
 

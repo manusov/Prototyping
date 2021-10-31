@@ -14,23 +14,18 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_NtRCopy_SSE128:
 Measurement_NtRCopy_SSE128:
-
 ;---------- Prepare big cycle -------------------------------------------------;
 ; Set pointer to middle of 256-byte interval, +/- offsets is code size optimal,
 ; because offsets [-128...+127] encoded as one byte
-
 lea rax,[rsi+128]        ; RAX = Reload source address
 lea rbx,[rdi+128]        ; RBX = Reload destination address
 mov rdx,rcx              ; RDX = Reload length
 shr rdx,4                ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_NtRCopy_SSE128  ; Go if Length < 16 instructions
 mov r8d,256              ; R8 = Addend, this operation also clear bits R8[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_NtRCopy_SSE128:
 Block_NtRCopy_SSE128:
 movntdqa xmm0,[rax-16*08]
@@ -70,17 +65,13 @@ add rbx,r8                 ; Modify destination address, addend=register (not co
 dec rdx
 jnz Block_NtRCopy_SSE128   ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_NtRCopy_SSE128:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_NtRCopy_SSE128:
 mov edx,ecx
 and edx,00001111b          ; ECX = Extract tail length
 jz Measure_NtRCopy_SSE128
 mov r8d,16
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_NtRCopy_SSE128:
 movntdqa xmm0,[rax-16*08]
 movntpd [rbx-16*08],xmm0
@@ -88,9 +79,7 @@ add rax,r8                 ; Modify source address, addend=register (not constan
 add rbx,r8                 ; Modify destination address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_NtRCopy_SSE128    ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_NtRCopy_SSE128:
 dec rbp
 jnz Measurement_NtRCopy_SSE128  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!

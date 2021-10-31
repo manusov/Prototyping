@@ -12,16 +12,16 @@
 ; 6 or 2 bytes per entry, compact encoding
 MACRO BANDWIDTH_TEMPORAL x1, x2, x3, x4
 {
-dw  x1 - RoutinesBandwidthTemporal  ; Target routine entry point
-dw  x2 - RoutinesBandwidthTemporal  ; Dump fragment start, dump show at drawings Y=F(X)
-db  x3 - x2                         ; Dump fragment size
-db  x4                              ; Read or Write data bytes per instruction,
-}                                   ; example YMM register op. = 32 bytes (256 bit) 
+dw  x1 - ROUTINES_BANDWIDTH_TEMPORAL  ; Target routine entry point
+dw  x2 - ROUTINES_BANDWIDTH_TEMPORAL  ; Dump fragment start, dump show at drawings Y=F(X)
+db  x3 - x2                           ; Dump fragment size
+db  x4                                ; Read or Write data bytes per instruction,
+}                                     ; example YMM register op. = 32 bytes (256 bit) 
 
 ;--- List of performance patterns: bandwidth measurement, temporal access -----;
 
 align 2
-TableBandwidthTemporal:
+TABLE_BANDWIDTH_TEMPORAL:
 BANDWIDTH_TEMPORAL  Pattern_Read_MOV64   , DumpStart_Read_MOV64   , DumpStop_Read_MOV64   , 8
 BANDWIDTH_TEMPORAL  Pattern_Write_MOV64  , DumpStart_Write_MOV64  , DumpStop_Write_MOV64  , 8
 BANDWIDTH_TEMPORAL  Pattern_Copy_MOV64   , DumpStart_Copy_MOV64   , DumpStop_Copy_MOV64   , 8

@@ -13,22 +13,16 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_NtRCopy_AVX512:
 push ebx                 ; EBX = High 32 bits of measurement repeats count
-
 Measurement_NtRCopy_AVX512:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov eax,esi              ; EAX = Reload source address
 mov ebx,edi              ; EBX = Reload destination address
 mov edx,ecx              ; EDX = Reload length
 shr edx,3                ; EDX = Block length, convert from INSTRUCTIONS to 8xINSTRUCTION units
 jz Small_NtRCopy_AVX512  ; Go if Length < 8 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_NtRCopy_AVX512:
 Block_NtRCopy_AVX512:
 vmovntdqa zmm0,[eax+64*00]
@@ -52,16 +46,12 @@ add ebx,512                 ; Modify destination address
 dec edx
 jnz Block_NtRCopy_AVX512    ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_NtRCopy_AVX512:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_NtRCopy_AVX512:
 mov edx,ecx
 and edx,00000111b           ; ECX = Extract tail length
 jz Measure_NtRCopy_AVX512
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_NtRCopy_AVX512:
 vmovntdqa zmm0,[eax+64*00]
 vmovntpd [ebx+64*00],zmm0
@@ -69,15 +59,12 @@ add eax,64                  ; Modify source address
 add ebx,64                  ; Modify destination address
 dec edx
 jnz Tail_NtRCopy_AVX512     ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_NtRCopy_AVX512:
 sub ebp,1                   ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_NtRCopy_AVX512  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret

@@ -11,18 +11,12 @@
 ;                        see MSDN for status exceptions and details            ;  
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 DialogProcSysinfo:
 mov al,BINDER_BUILD_SYSINFO
 jmp DialogProcEntry
 DialogProcMemory:
 mov al,BINDER_BUILD_MEMORY
 jmp DialogProcEntry
-
-; DialogProcMath:
-; mov al,BINDER_BUILD_MATH
-; jmp DialogProcEntry
-
 DialogProcOs:
 mov al,BINDER_BUILD_OS
 jmp DialogProcEntry
@@ -47,25 +41,15 @@ jmp DialogProcEntry
 DialogProcAffCpuid:
 mov al,BINDER_BUILD_AFF_CPUID
 jmp DialogProcEntry
-
 ;---------- Entry point with AL = Binder ID for required child window ---------;
-
 DialogProcEntry:
 push ebp
 mov ebp,esp
 push ebx esi edi
 movzx esi,al              ; ESI = Binder ID for this child window
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; add edi,REGISTRY32.appData
-lea edi,[APP_DATA]
-
+lea edi,[APP_DATA]        ; EDI = Pointer to application data
 mov ebx,PARM_HWNDDLG      ; EBX = This window handle
-
 ;---------- Detect message type -----------------------------------------------;
-
 mov eax,PARM_MSG
 cmp eax,WM_INITDIALOG
 je .wminitdialog
@@ -73,9 +57,7 @@ cmp eax,WM_COMMAND
 je .wmcommand
 xor eax,eax
 jmp .finish
-
 ;---------- WM_INITDIALOG handler: create sheet window ------------------------;
-
 .wminitdialog:
 mov eax,esi
 call Binder
@@ -84,21 +66,11 @@ cmp al,BINDER_BUILD_MEMORY
 jne @f
 inc eax
 call Binder
-
-; *** DEBUG ***
-; mov eax,[Registry]
-; mov eax,[eax + REGISTRY32.allocatorBindBuffer.objectStart]
-; mov [eax + BINDLIST.setMemMethod],0010b ; 0001b
-; *** DEBUG ***
-
 mov ax,BINDER_SET_MEMORY
 call Binder
-
 @@:
 jmp .processed
-
 ;---------- WM_COMMAND handler: interpreting user input -----------------------;
-
 .wmcommand:
 mov eax,PARM_WPARAM
 cmp ax,IDB_SYSINFO_CANCEL    ; Detect click "Exit" button in the child window
@@ -107,31 +79,14 @@ cmp ax,IDB_MEMORY_RUN
 je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
-
-; cmp ax,IDB_MATH_RUN
-; je .mathRun
-; cmp ax,IDB_MATH_DRAW
-; je .mathDraw
-
 cmp ax,IDB_SYSINFO_VBRF
-je .mathRun
-
+je .vbrfRun
 jmp .processed
-
+;---------- Handler for "Run" button ------------------------------------------;
 .memoryRun:
 mov ax,BINDER_GET_MEMORY
 call Binder
-
 call ScenarioMemoryRun
-
-; *** DEBUG ***
-; mov eax,[Registry]
-; mov eax,[eax + REGISTRY32.allocatorBindBuffer.objectStart]
-; mov eax,[eax + BINDLIST.getMemMethod]
-; INT3
-; *** DEBUG ***
-
-
 push 0                          ; Parm#5 = Pass value
 push DialogProcChildMemoryRun   ; Parm#4 = Pointer to dialogue procedure
 push ebx                        ; Parm#3 = Owner window handle
@@ -140,64 +95,28 @@ push IDD_CHILD_MEMORY_RUN       ; Parm#2 = Resource ( template ) id
 push [edi + APPDATA.hResources] ; Parm#1 = Handle of resource module
 call [DialogBoxParam]           ; Create modal dialogue 
 jmp .processed
-
+;---------- Handler for "Draw" button -----------------------------------------;
 .memoryDraw:
 mov ax,BINDER_GET_MEMORY
 call Binder
-
-
-; call ScenarioMemoryDraw
-; jmp .entryDialog
-
 call DrawSessionStart
-
 push 0
 push DialogProcChildMemoryDraw
 push ebx
 push IDD_CHILD_MEMORY_DRAW
 push [edi + APPDATA.hResources] ; Parm#1 = Handle of resource module
 call [DialogBoxParam]           ; Create modal dialogue 
-
 call DrawSessionStop
-
 jmp .processed
-
-
-
-.mathRun:
-
+;---------- Handler for "Vector brief" button ---------------------------------;
+.vbrfRun:
 call ScenarioVectorBrief
-
-;---
-; push 0
-; push DialogProcChildMathRun
-; push ebx
-; push IDD_CHILD_MATH_RUN
-;---
- push 0
- push DialogProcChildVectorBrief
- push ebx
- push IDD_CHILD_VECTOR_BRIEF
-;---
+push 0
+push DialogProcChildVectorBrief
+push ebx
+push IDD_CHILD_VECTOR_BRIEF
 jmp .entryDialog
-
-.mathDraw:
-
-; push 0
-; push DialogProcChildMathDraw
-; push ebx
-; push IDD_CHILD_MATH_DRAW
-
- push 0
- push DialogProcChildVectorBrief
- push ebx
- push IDD_CHILD_VECTOR_BRIEF
-
-jmp .entryDialog
-
-
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-
 .wmclose:
 mov ecx,[edi + APPDATA.hMain]
 jecxz .processed
@@ -206,9 +125,7 @@ push 0
 push WM_CLOSE
 push ecx
 call [SendMessage]
-
 ;---------- Exit points -------------------------------------------------------;
-
 .processed:
 mov eax,1
 .finish:

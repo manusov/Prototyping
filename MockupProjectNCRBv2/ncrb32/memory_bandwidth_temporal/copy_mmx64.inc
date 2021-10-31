@@ -12,22 +12,16 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_MMX64:
 push ebx                 ; EBX = High 32 bits of measurement repeats count
-
 Measurement_Copy_MMX64:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov eax,esi          ; EAX = Reload source address
 mov ebx,edi          ; EBX = Reload destination address
 mov edx,ecx          ; EDX = Reload length
 shr edx,4            ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Copy_MMX64  ; Go if Length < 16 instructions
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Copy_MMX64:
 Block_Copy_MMX64:
 movq mm0,[eax+08*00]
@@ -67,16 +61,12 @@ add ebx,128               ; Modify destination address
 dec edx
 jnz Block_Copy_MMX64      ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Copy_MMX64:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Copy_MMX64:
 mov edx,ecx
 and edx,00001111b         ; ECX = Extract tail length
 jz Measure_Copy_MMX64
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Copy_MMX64:
 movq mm0,[eax+08*00] 
 movq [ebx+08*00],mm0  
@@ -84,16 +74,13 @@ add eax,8                    ; Modify source address
 add ebx,8                    ; Modify destination address
 dec edx
 jnz Tail_Copy_MMX64          ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Copy_MMX64:
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov edx,ebp
 or edx,[esp]
 jnz Measurement_Copy_MMX64   ; Cycle for measurement, repeat same operation
-
 emms                         ; Required empty MMX state before return
 pop ebx
 ret

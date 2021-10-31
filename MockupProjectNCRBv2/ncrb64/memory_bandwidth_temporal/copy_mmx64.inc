@@ -13,21 +13,16 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Copy_MMX64:
 Measurement_Copy_MMX64:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov rax,rsi          ; RAX = Reload source address
 mov rbx,rdi          ; RBX = Reload destination address
 mov rdx,rcx          ; RDX = Reload length
 shr rdx,4            ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Copy_MMX64  ; Go if Length < 16 instructions
 mov r8d,128          ; R8 = Addend, this operation also clear bits R8[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Copy_MMX64:
 Block_Copy_MMX64:
 movq mm0,[rax+08*00]
@@ -67,17 +62,13 @@ add rbx,r8              ; Modify destination address, addend=register (not const
 dec rdx
 jnz Block_Copy_MMX64    ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Copy_MMX64:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Copy_MMX64:
 mov edx,ecx
 and edx,00001111b       ; ECX = Extract tail length
 jz Measure_Copy_MMX64
 mov r8d,8
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Copy_MMX64:
 movq mm0,[rax+08*00] 
 movq [rbx+08*00],mm0  
@@ -85,9 +76,7 @@ add rax,r8              ; Modify source address, addend=register (not constant) 
 add rbx,r8              ; Modify destination address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Copy_MMX64     ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Copy_MMX64:
 dec rbp
 jnz Measurement_Copy_MMX64   ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!

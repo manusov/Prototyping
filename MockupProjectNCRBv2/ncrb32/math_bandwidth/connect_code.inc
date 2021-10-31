@@ -13,21 +13,15 @@
 ; OUTPUT:  EBX = Subroutine entry point                                        ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 GetMathPattern:
 movzx eax,al                           ; This clears bits EAX[31-8]
-movzx eax,word [TableMath + eax*2]     ; Read 16-bit compact offset
-lea ebx,[RoutinesMath + eax]           ; Calculate 32-bit absolute address
+movzx eax,word [TABLE_MATH + eax*2]    ; Read 16-bit compact offset
+lea ebx,[ROUTINES_MATH + eax]          ; Calculate 32-bit absolute address
 ret
-
-;---------- Start offset for compact offsets encoding -------------------------;
-
-RoutinesMath:
-
 ;---------- Math performance bandwidth measurement ----------------------------;
 ; Routines for mathematics instructions bandwidth benchmarks,
 ; for register operands
-
+ROUTINES_MATH:                  ; Start offset for compact offsets encoding
 include 'sqrt_sse128.inc'       ; Square root, SSE128, 2 x double 
 include 'sqrt_avx256.inc'       ; Square root, AVX256, 4 x double
 include 'sqrt_avx512.inc'       ; Square root, AVX512, 8 x double

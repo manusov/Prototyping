@@ -14,14 +14,12 @@
 ; OUTPUT:  EBX = Subroutine entry point                                        ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 GetBandwidthTemporalPattern:
-movzx eax,al                                   ; This clears bits EAX[31-8]
-imul eax,eax,6                                 ; 6 = sizeof.BANDWIDTH_TEMPORAL
-movzx eax,word [TableBandwidthTemporal + eax]  ; Read 16-bit compact offset
-lea ebx,[RoutinesBandwidthTemporal + eax]      ; Calculate 32-bit absolute address      
+movzx eax,al                                     ; This clears bits EAX[31-8]
+imul eax,eax,6                                   ; 6 = sizeof.BANDWIDTH_TEMPORAL
+movzx eax,word [TABLE_BANDWIDTH_TEMPORAL + eax]  ; Read 16-bit compact offset
+lea ebx,[ROUTINES_BANDWIDTH_TEMPORAL + eax]      ; Calculate 32-bit absolute address      
 ret
-
 ;---------- Get pointer to performance pattern cycle body for dump by ID ------;
 ;    Also returns used instruction operand width, bits                         ;
 ;                                                                              ;
@@ -32,25 +30,18 @@ ret
 ;          ECX = Used instruction operand width, bits                          ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 GetBandwidthTemporalDump:
 movzx eax,al
 imul eax,eax,6   ; 6 = sizeof.BANDWIDTH_TEMPORAL
-movzx ecx,byte [TableBandwidthTemporal + eax + 5]
-movzx edx,byte [TableBandwidthTemporal + eax + 4]
-movzx eax,word [TableBandwidthTemporal + eax + 2]
-add eax,RoutinesBandwidthTemporal
+movzx ecx,byte [TABLE_BANDWIDTH_TEMPORAL + eax + 5]
+movzx edx,byte [TABLE_BANDWIDTH_TEMPORAL + eax + 4]
+movzx eax,word [TABLE_BANDWIDTH_TEMPORAL + eax + 2]
+add eax,ROUTINES_BANDWIDTH_TEMPORAL
 ret
-
-;---------- Pointer for compact 16-bit relative offsets -----------------------;
-
-RoutinesBandwidthTemporal:
-
 ;---------- Include files connect for performance patterns --------------------;
+ROUTINES_BANDWIDTH_TEMPORAL:  ; Pointer for compact 16-bit relative offsets
 ; Temporal ( cacheable read and write ) mode, 
 ; temporal is default cacheable memory access
-
-
 include 'read_mov32.inc'       ; Read by MOV (32 bit)
 include 'write_mov32.inc'      ; Write by MOV (32 bit) 
 include 'copy_mov32.inc'       ; Copy by MOV + MOV (32 bit)

@@ -6,7 +6,6 @@
 ;------------------------------------------------------------------------------;
 
 ;---------- Pointers to dialogues callbacks procedures, per each tab sheet ----;
-
 ProcDialogs   DD  DialogProcSysinfo
               DD  DialogProcMemory
               DD  DialogProcOs
@@ -17,16 +16,12 @@ ProcDialogs   DD  DialogProcSysinfo
               DD  DialogProcGroups
               DD  DialogProcAcpi
               DD  DialogProcAffCpuid
-
 ;---------- Data for Vector Brief test scenario -------------------------------;
-; TODO. PORT COMMENTS FROM NCRB V1.
-
 ; id = routine ID at bits [6-0], bit 7 : 0 = BandwidthTemporalPattern, 1 = Math pattern
 ; count = instruction count per work cycle = per 4KB block, power of 2
 ; repeats = measurement cycle count, required * REPEATS_SCALE 
 ; cpuValid = bit number at CPUDATA.extractedFeaturesBitmap, 0FFh means don't check (x87 check is redundant, because run criteria)
 ; osValid  = bit mask at CPUDATA.extractedContextBitmap, 0FFh means don't check  (include SSE without XCR0) 
-
 MACRO VECLK id, count, repeats, cpuValid, osValid 
 {
 DB  id          ; ID of measurement routine
@@ -35,8 +30,7 @@ DB  repeats     ; Measurement cycle count, required * REPEATS_SCALE
 DB  cpuValid    ; CPU (CPUID) check criteria to run this
 DB  osValid     ; OS (XCR0) check criteria to run this
 }
-
-; Equations for performance patterns select
+;---------- Equations for performance patterns select -------------------------;
 ID_READ_SSE128   EQU 00h + 9    
 ID_WRITE_SSE128  EQU 00h + 10  
 ID_COPY_SSE128   EQU 00h + 11
@@ -51,8 +45,8 @@ ID_SQRT_AVX256   EQU 80h + 1
 ID_SQRT_AVX512   EQU 80h + 2
 ID_COS_X87       EQU 80h + 3
 ID_SINCOS_X87    EQU 80h + 4
-
-vectorBrief:
+;---------- Vector brief test scenario encoding -------------------------------;
+VECTOR_BRIEF:
 VECLK  ID_READ_SSE128  , 8 , 160 , 01 , 0FFh   ; SSE   
 VECLK  ID_WRITE_SSE128 , 8 , 160 , 01 , 0FFh   ; SSE  
 VECLK  ID_COPY_SSE128  , 7 , 160 , 01 , 0FFh   ; SSE 
@@ -67,16 +61,17 @@ VECLK  ID_SQRT_AVX256  , 8 ,  40 , 07 , 003h   ; AVX
 VECLK  ID_SQRT_AVX512  , 8 ,  40 , 09 , 01Fh   ; AVX512 
 VECLK  ID_COS_X87      , 8 ,   4 , 16 , 0FFh   ; x87     
 VECLK  ID_SINCOS_X87   , 8 ,   4 , 16 , 0FFh   ; x87  
+;---------- Vector brief test scenario constants ------------------------------;
+VECTOR_BRIEF_DATA_SIZE      =  4096     ; Part of L1 ( bytes ) used as data size
+VECTOR_BRIEF_REPEATS_SCALE  =  10000    ; Measurement repeats scale for performance patterns
 
 
-;------------------------------------------------------------------------------;
-; TODO. Port.
-; TODO. Move this to resources.
+
+;---------- TODO. MOVE THIS TO RESIURCES, NOTE U_B+ ALREADY DEFINED. ----------; 
+
 
 
 BasePointGui:
-
-
 ;------------------------------------------------------------------------------;
 ;            BITMAPINFOHEADRE descriptor structure (for Win64).                ;
 ;------------------------------------------------------------------------------;
@@ -99,7 +94,6 @@ BasePointGui:
 ;                         0 means all colors used for visualization.
 ;--------------------------------------------------------------
 BitmapInfo    BITMAPINFOHEADER 40,SUBWINX,SUBWINY,1,32,BI_RGB,0,0,0,0,0
-
 ;------------------------------------------------------------------------------;
 ;                             GUI color brushes.                               ;
 ;------------------------------------------------------------------------------;
@@ -110,7 +104,6 @@ DD  BRUSH_GRID         ; Grid with horizontal and vertical lines
 DD  BRUSH_LINE         ; Draw Line Speed = F (Block Size)
 DD  BRUSH_BACKGROUND   ; Draw window background
 DD  BRUSH_STATISTICS   ; Statistics table lines
-
 ;------------------------------------------------------------------------------;
 ;               Strings for Window 1 - benchmarks drawings.                    ; 
 ;------------------------------------------------------------------------------;
@@ -121,41 +114,32 @@ WindowTitle_Win1  DB  'Performance = F (Block Size)',0
 ; CPI = Clocks Per Instruction
 DrawTextTSC       DB  'TSC clock (MHz)  = '
 DrawValueTSC      DB  12 DUP (' '), 0
-
 MACRO SHORTPOINTER x1
 {
 DW x1 - BasePointGui
 }
-
 MACRO SHORTPOINTEREND
 {
 DW 0
 }
-
 DrawTableUp:
 SHORTPOINTER DrawTextCPI
 SHORTPOINTER DrawTextNSPI
 SHORTPOINTER DrawTextMBPS
 SHORTPOINTEREND
-
 DrawTableLeft:
 SHORTPOINTER DrawTextMinimum
 SHORTPOINTER DrawTextMaximum
 SHORTPOINTER DrawTextAverage
 SHORTPOINTER DrawTextMedian
 SHORTPOINTEREND
-
-
 DrawTextCPI       DB  'CPI',0
 DrawTextNSPI      DB  'nsPI',0
 DrawTextMBPS      DB  'MBPS',0
-
 DrawTextMinimum   DB  'minimum',0
 DrawTextMaximum   DB  'maximum',0
 DrawTextAverage   DB  'average',0
 DrawTextMedian    DB  'median',0
-
-
 ;------------------------------------------------------------------------------;
 ; Memory size and speed units.                                                 ;
 ;------------------------------------------------------------------------------;
@@ -168,5 +152,6 @@ U_MBPS         DB  'MBPS',0
 U_NS           DB  'nanoseconds',0
 
 
-;------------------------------------------------------------------------------;
+;--- END OF TODO. MOVE THIS TO RESIURCES, NOTE U_B+ ALREADY DEFINED. ----------;
+
 

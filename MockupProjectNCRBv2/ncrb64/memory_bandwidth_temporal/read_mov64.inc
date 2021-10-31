@@ -13,20 +13,15 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Read_MOV64:
 Measurement_Read_MOV64:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov rax,rsi          ; RAX = Reload source address
 mov rdx,rcx          ; RDX = Reload length
 shr rdx,4            ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Read_MOV64  ; Go if Length < 16 instructions
 mov rbx,128          ; RBX = Addend, this operation also clear bits RBX[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Read_MOV64:
 Block_Read_MOV64:
 mov r8, [rax+08*00]
@@ -49,25 +44,19 @@ add rax,rbx           ; Modify address, addend=register (not constant) for optim
 dec rdx
 jnz Block_Read_MOV64  ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Read_MOV64:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Read_MOV64:
 mov edx,ecx
 and edx,00001111b     ; ECX = Extract tail length
 jz Measure_Read_MOV64
 mov ebx,8
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Read_MOV64:
 mov r8,[rax+08*00]
 add rax,rbx           ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Read_MOV64   ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Read_MOV64:
 dec rbp
 jnz Measurement_Read_MOV64   ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!

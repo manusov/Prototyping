@@ -11,62 +11,47 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_SinCos_X87:
 finit
 Measurement_SinCos_X87:
-
 ;---------- Prepare big cycle (without tail) ----------------------------------;
-
 fld qword [r8]
 mov rdx,rcx          ; RDX = Reload length
 shr rdx,2            ; RDX = Block length, convert from INSTRUCTIONS to 4xINSTRUCTION units
 jz Small_SinCos_X87  ; Go if Length < 4 instructions
-
-DumpStart_SinCos_X87:
 Block_SinCos_X87:
-
 fld st0
 fsincos
 ffree st0
 ffree st1
 fincstp
 fincstp
-
 fld st0
 fsincos
 ffree st0
 ffree st1
 fincstp
 fincstp
-
 fld st0
 fsincos
 ffree st0
 ffree st1
 fincstp
 fincstp
-
 fld st0
 fsincos
 ffree st0
 ffree st1
 fincstp
 fincstp
-
 dec rdx
 jnz Block_SinCos_X87    ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
-DumpStop_SinCos_X87:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_SinCos_X87:
 mov edx,ecx
 and edx,00001111b       ; ECX = Extract tail length
 jz Measure_SinCos_X87
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_SinCos_X87:
 fld st0
 fsincos
@@ -76,15 +61,11 @@ fincstp
 fincstp
 dec edx           
 jnz Tail_SinCos_X87          ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_SinCos_X87:
 ffree st0
 fincstp
 dec rbp
 jnz Measurement_SinCos_X87   ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!
-
 finit
 ret
-

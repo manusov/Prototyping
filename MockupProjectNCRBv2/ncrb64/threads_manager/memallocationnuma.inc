@@ -12,44 +12,32 @@
 ; Can destroy registers, volatile by Microsoft x64 calling convention.         ; 
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 MemAllocationNuma:
 cld
 push rbx rsi rdi rbp r12 r13
 mov rbp,rsp                  ; RBP = Save RSP at procedure entry
 and rsp,0FFFFFFFFFFFFFFF0h   ; Stack alignment
 sub rsp,32                   ; Make parameters shadow because WinAPI calls
-
 ;---------- Reload parameters to non-volatile registers -----------------------;
-
 mov rbx,rcx                  ; RBX = Base address of NUMA nodes list
 mov rsi,rdx                  ; RSI = Memory block size per each NUMA node
 mov edi,r8d                  ; RDI = Number of nodes
-
 ;---------- Check for large pages ---------------------------------------------;
-
 mov r12d,MEM_RESERVE + MEM_COMMIT  ; R12 = Memory allocation flags
 cmp r9d,LP_USED              ; Check Large Pages mode, 2=supported and used
 jne .skipLP                  ; Go if Large Pages not used
 mov r12d,MEM_RESERVE + MEM_COMMIT + MEM_LARGE_PAGES  ; Memory allocation flags for Large Pages
 .skipLP:
-
 ;---------- Get current process handle ----------------------------------------;
-
 call [GetCurrentProcess]     ; Return RAX = Handle
 test rax,rax
 jz .error                    ; Go error if Handle=0
 xchg r13,rax                 ; R13 = Process Handle, XCHG for compact
-
 ;---------- Select NUMA or Non-NUMA branches, EDI = nodes count ---------------;
-
 cmp edi,1
 jbe .noNumaAlloc 
-
-
 ;---------- Branch for platform/modes with NUMA -------------------------------;
 ; Cycle for nodes, allocate memory block per each NUMA node
-
 .numaAlloc:
 mov [rbx + NUMACTRL.alignedSize],rsi  ; Store memory block size
 mov rcx,r13			                      ; Parm#1 = RCX = Handle
@@ -59,10 +47,7 @@ mov r9,r12                            ; Parm#4 = R9  = Allocation type (mode fla
 push qword [rbx + NUMACTRL.nodeID]    ; Parm#6 = NUMA node preferred
 push PAGE_READWRITE                   ; Parm#5 = Pages protection attributes = Read/Write
 sub rsp,32			                      ; Create parameters shadow
-
-;mov rax,[Registry]
 call [DYNA_IMPORT._VirtualAllocExNuma]  ; Call memory allocation WinAPI, return RAX = Pointer
-
 add rsp,32+16			                    ; Remove parameters shadow + parameters 5,6
 test rax,rax
 jz .error                             ; Go error if returned 0
@@ -71,9 +56,7 @@ mov [rbx + NUMACTRL.alignedBase],rax  ; Store aligned base address, it used for 
 add rbx,NUMACTRL_SIZE                 ; Select next entry in the nodes list 
 dec edi                               ; Nodes count -1
 jnz .numaAlloc                        ; Cycle for requested number of nodes 
-
 ;---------- Exit points -------------------------------------------------------;
-
 .done:
 clc                   ; CF = 0 means status = no errors 
 .exit:
@@ -83,10 +66,7 @@ ret
 .error:
 stc                   ; CF = 1 means status = error detected
 jmp .exit
-
-
 ;---------- Branch for platform/modes without NUMA ----------------------------;
- 
 .noNumaAlloc:
 mov [rbx + NUMACTRL.alignedSize],rsi  ; Store memory block size
 call [GetCurrentProcess]  ; RAX = Get Process Handle
@@ -101,13 +81,10 @@ push PAGE_READWRITE       ; Parm#5 = [RSP+40] = Page Attribute
 sub rsp,32                ; Create stack frame
 call [VirtualAllocEx]     ; Call memory allocation WinAPI, return RAX = Pointer
 add rsp,32+16             ; Remove stack frame
-
 ;------- Status phase, RAX = allocation result --------------------------------;
-
 .status:
 test rax,rax
 jz .error                             ; Go error if returned 0
 mov [rbx + NUMACTRL.trueBase],rax     ; Store true base address, it used for release
 mov [rbx + NUMACTRL.alignedBase],rax  ; Store aligned base address, it used for memory access
 jmp .done
-

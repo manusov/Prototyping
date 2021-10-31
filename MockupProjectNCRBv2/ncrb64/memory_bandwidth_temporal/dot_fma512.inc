@@ -14,12 +14,9 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Dot_FMA512:
 Measurement_Dot_FMA512:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 vzeroall
 mov rax,rsi          ; RAX = Reload source address
 mov rbx,rdi          ; RBX = Reload destination address
@@ -27,9 +24,7 @@ mov rdx,rcx          ; RDX = Reload length
 shr rdx,3            ; RDX = Block length, convert from INSTRUCTIONS to 8xINSTRUCTION units
 jz Small_Dot_FMA512  ; Go if Length < 8 instructions
 mov r8d,512          ; R8 = Addend, this operation also clear bits R8[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------l
-
 DumpStart_Dot_FMA512:
 Block_Dot_FMA512:
 vmovapd zmm0,[rax+64*00]
@@ -53,9 +48,7 @@ add rbx,r8            ; Modify destination address, addend=register (not constan
 dec rdx
 jnz Block_Dot_FMA512  ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Dot_FMA512:
-
 ;---------- Horizontal additions for main part, result is vector --------------;
-
 ; 512
 vaddpd zmm8,zmm8,zmm12
 vaddpd zmm9,zmm9,zmm13
@@ -73,17 +66,13 @@ vaddpd xmm0,xmm0,xmm2
 vhaddpd xmm1,xmm0,xmm0
 vxorpd zmm0,zmm0,zmm0
 vaddsd xmm0,xmm0,xmm1
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Dot_FMA512:
 mov edx,ecx
 and edx,00000111b      ; ECX = Extract tail length
 jz Measure_Dot_FMA512
 mov r8d,64
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Dot_FMA512:
 vmovapd zmm1,[rax+64*00]
 vfmadd231pd zmm0,zmm1,[rbx+64*00]
@@ -91,7 +80,6 @@ add rax,r8           ; Modify source address, addend=register (not constant) for
 add rbx,r8           ; Modify destination address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Dot_FMA512  ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Horizontal additions for tail, result is scalar -------------------;
 ; 512
 vextractf64x4 ymm1,zmm0,1
@@ -101,11 +89,8 @@ vextractf128 xmm2,ymm0,1
 ; 128
 vaddpd xmm0,xmm0,xmm2
 vhaddpd xmm0,xmm0,xmm0
-
 ;---------- Measurement cycle -------------------------------------------------l
-
 Measure_Dot_FMA512:
 dec rbp
 jnz Measurement_Dot_FMA512  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!
 ret
-

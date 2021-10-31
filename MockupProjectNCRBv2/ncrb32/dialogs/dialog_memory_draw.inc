@@ -1,12 +1,3 @@
-
-
-;
-; UNDER CONSTRUCTION.
-; OPTIMIZATION REQUIRED, REMOVE DUPLICATED "MOV REG,[REGISTRY}"
-; USE FMTDATA/UFMTDATA , FMTDATA INSTEAD FORMATTED FIELDS OF REGISTRY.
-;
-
-
 ;---------- Callback dialogue procedures for operations child windows ---------;
 ;           Handler for "Draw" button at "Memory" screen                       ; 
 ;                                                                              ;
@@ -20,60 +11,38 @@
 ;                        see MSDN for status exceptions and details            ;  
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 DialogProcChildMemoryDraw:
 push ebp
 mov ebp,esp
 push ebx esi edi
 mov ebx,PARM_HWNDDLG             ; EBX = Window handle
-
 ;---------- Detect message type -----------------------------------------------;
-
 mov eax,PARM_MSG
-
 cmp eax,WM_INITDIALOG
 je .wminitdialog
 cmp eax,WM_COMMAND
 je .wmcommand
 cmp eax,WM_CLOSE
 je .wmclose
-
 cmp eax,WM_TIMER
 je .wmtimer
 cmp eax,WM_PAINT
 je .wmpaint
-
-
+;---------- Exit points -------------------------------------------------------;
 .skip:
 xor eax,eax
 jmp .finish
-
-; TODO. Optimize jumps/linear.
-
-;---------- Exit points -------------------------------------------------------;
-
 .processed:
 mov eax,1
 .finish:
 pop edi esi ebx ebp
 ret 16
-
-
-
 ;--- WM_INITDIALOG handler: create child window: memory performance draw ------;
-
 .wminitdialog:                   ; Build main window 
 mov ax,BINDER_BUILD_MEMORY_DRAW
 call Binder 
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]               ; EDI = Pointer to global registry
-
 mov [GUI_PARMS.childWinHandle],ebx
-
-; add edi,REGISTRY32.appData       ; EDI = Pointer to registry.appData
 lea edi,[APP_DATA]
-
 push [edi + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 4]
 push ICON_SMALL
 push WM_SETICON 
@@ -85,28 +54,9 @@ call IndexString
 push esi
 push PARM_HWNDDLG
 call [SetWindowText]
-
-
-
-;------------------------------------------------------------------------------;
-; TODO. Port.
-; TODO. Optimize for compace offsets relative base, yet R15=Registry is non optimal.
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; Pre-disable silent mode
-mov [GUI_PARMS.silentMode],0
-; Initializing drawing context
-mov [DRAW_PARMS.drawPreviousY],0
-
-; Build buttons
-; lea esi,[DialogueContent_Win1]     ; ESI = Pointer to elements descriptors
-; mov edi,START_HANDLE_WIN1          ; EDI = Start handle
-; mov ebp,[Dialogue_Win1.hInstance]  ; EBP = Parent module handle = [wc.hInstance]
-; call CreateDialogueElements
-
-; Initialize graphics context
+mov [GUI_PARMS.silentMode],0         ; Pre-disable silent mode
+mov [DRAW_PARMS.drawPreviousY],0     ; Initializing drawing context
+;---------- Initialize graphics context ---------------------------------------;
 push 0                           ; Parm#1 = Handle to exist DC, 0 = Application current screen
 call [CreateCompatibleDC]        ; Create compatible Device Context for buffered video output 
 mov [GC_PARMS.handleMemDC],eax            ; Store handle
@@ -114,11 +64,7 @@ mov esi,eax                      ; ESI = Store handle for later use
 xor eax,eax                      ; EAX = 0 for compact push 0
 push eax                         ; Parm#6 = Offset in the file-mapping object, not used here
 push eax                         ; Parm#5 = Handle to file-mapping object, not used here
-
-lea eax,[GC_PARMS.bitmapPointer]
-push eax
-; push BitmapPointer               ; Parm#4 = Pointer to Bitmap Pointer variable
-
+push [GC_PARMS.bitmapPointer]    ; Parm#4 = Pointer to Bitmap Pointer variable
 push DIB_RGB_COLORS              ; Parm#3 = Type of color data
 push BitmapInfo                  ; Parm#2 = Pointer to Bitmap Descriptor
 push esi                         ; Parm#1 = Handle to a Device Context
@@ -127,11 +73,11 @@ mov [GC_PARMS.handleBitmap],eax
 push eax                         ; Parm#2 = Handle to a Bitmap
 push esi                         ; Parm#1 = Handle to a Device Context
 call [SelectObject]
-; Create brushes
+;---------- Create brushes ----------------------------------------------------;
 cld
-lea esi,[BrushesList]            ; ESI = Pointer to color data
-lea edi,[GC_PARMS.handlesBrushes]         ; EDI = Pointer for store brushes handles
-mov ebp,4                        ; EBP = Number of brushes
+lea esi,[BrushesList]             ; ESI = Pointer to color data
+lea edi,[GC_PARMS.handlesBrushes] ; EDI = Pointer for store brushes handles
+mov ebp,4                         ; EBP = Number of brushes
 @@:
 lodsd                            ; EAX = Color, RSI+4, select next color 
 push eax                         ; Parm#1 = Color
@@ -139,7 +85,7 @@ call [CreateSolidBrush]
 stosd                            ; Store brush handle, EDI+4
 dec ebp
 jnz @b                           ; Cycle for all brushes
-; Create font for texts in the drawings window
+;---------- Create font for texts in the drawings window ----------------------;
 xor eax,eax                      ; EAX = 0 for compact push 0
 push eax                         ; Parm#14 = Pointer to font typename string, here not used
 push VARIABLE_PITCH              ; Parm#13 = Font pitch and family
@@ -156,90 +102,43 @@ push eax                         ; Parm#3 = Escapment
 push eax                         ; Parm#2 = Width
 push 16                          ; Parm#1 = Height
 call [CreateFont]
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 mov [GC_PARMS.handleFont],eax 
-; Create and set timer, for benchmarks progress (but not for measure)
+;--- Create and set timer, for benchmarks progress ( but not for measure ) ----;
 push 0                      ; Parm#4 = Notify function pointer, not used here
 push TIMER_TICK_SHOW        ; Parm#3 = Timer ticks period, ms
 push 0                      ; Parm#2 = Event ID
 push ebx                    ; Parm#1 = Parent window handle
 call [SetTimer]
-
-; Wait thread started (1 of 2 waits)
+;---------- Wait thread started ( 1 of 2 waits ) ------------------------------;
 ; Wait for measurement thread run, this event at thread entry point
-
-;******************************************************************************;
-;
-; TODO. CONNECT.
-;
-push THREAD_TIME_LIMIT                     ; Parm#2 = Time limit
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
+; Note status after [WaitForSingleObject] ignored. TODO. Check it.
+push THREAD_TIME_LIMIT                ; Parm#2 = Time limit
 push [DRAW_THREAD_PARMS.eventStart]   ; Parm#1 = Handle for start event
 call [WaitForSingleObject]
-;
-
-
-;
-;******************************************************************************;
-
-; Note status after [WaitForSingleObject] ignored, better check it
-; End of initialization, enable draw counter
-
+;---------- End of initialization, enable draw counter ------------------------;
 mov [GUI_PARMS.childWinRunning],1
-
-
-;------------------------------------------------------------------------------;
-
-
 jmp .processed
-
-
-
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-
 .wmclose:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; Stop measurement thread
+;---------- Stop measurement thread -------------------------------------------;
 mov [DRAW_THREAD_PARMS.measureBreak],1
 
-;******************************************************************************;
-; TODO. ADD THIS.
-;
-; Wait thread terminated (2 of 2 waits)
+;---------- Wait thread terminated ( 2 of 2 waits ) ---------------------------; 
 ; Wait for measurement thread done, this event at thread exit point
-
 push THREAD_TIME_LIMIT                    ; Parm#2 = Time limit
 push [DRAW_THREAD_PARMS.eventDone]   ; Parm#1 = Handle for done event
 call [WaitForSingleObject]
-
-; Wait thread terminated by thread handle
-
-push THREAD_TIME_LIMIT                      ; Parm#2 = Time limit
+;---------- Wait thread terminated by thread handle ---------------------------;
+; Note status after [WaitForSingleObject] ignored. TODO. Check it.
+push THREAD_TIME_LIMIT                 ; Parm#2 = Time limit
 push [DRAW_THREAD_PARMS.threadHandle]  ; Parm#1 = Thread handle
 call [WaitForSingleObject]
-
-;
-;******************************************************************************;
-
-; Note status after [WaitForSingleObject] ignored, better check it
-; De-Initialize graphics context
-
+;---------- De-Initialize graphics context ------------------------------------;
 push [GC_PARMS.handleMemDC]
 call [DeleteDC]
-
 push [GC_PARMS.handleBitmap]
 call [DeleteObject]
-
-; Delete brushes
+;---------- Delete brushes ----------------------------------------------------;
 cld
 lea esi,[GC_PARMS.handlesBrushes]   ; ESI = Pointer for store brushes handles
 mov ebp,4                  ; EBP = Number of brushes
@@ -249,119 +148,61 @@ push eax                   ; Parm#1 = Handle
 call [DeleteObject]
 dec ebp
 jnz @b
-
-; Delete font
+;---------- Delete font -------------------------------------------------------;
 push [GC_PARMS.handleFont]
 call [DeleteObject]
-
-;--- Delete timer ---
-
+;---------- Delete timer ------------------------------------------------------;
 push 0                     ; Parm#2 = Set same as for SetTimer function
 push ebx                   ; Parm#1 = Parent window handle
 call [KillTimer]
-
-; Destroy window, disable draw counter
+;---------- Destroy window, disable draw counter ------------------------------;
 mov byte [GUI_PARMS.childWinRunning],0
-
-;******************************************************************************;
-; TODO. ADD THIS.
-;
-; Close window
-; This absent in the Window 0 handler, but it work because automatically
-; closed when exit application.
-; push 0                     ; Parm#4 = Not used = 0
-; push 0                     ; Parm#3 = Not used = 0
-; push WM_CLOSE              ; Parm#2 = Message
-; push ebx                   ; Parm#1 = Handle
-; call [SendMessage]
-;
-;******************************************************************************;
-
-; Terminate, destroy window
-; push 0                     ; Parm#1 = Exit code
-; call [PostQuitMessage]
-; xor eax,eax
-
 push 1                           ; Parm#2 = Result for return
 push ebx                         ; Parm#1 = Window handle
 call [EndDialog]
-
 jmp .processed
-
-
-
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-
 .wmcommand:                      ; User input: cancel button or close window
-
 ;---------- Detect click "Exit" item in the main menu -------------------------; 
-
 cmp ax,IDM_EXIT
 je .wmclose
 jmp .processed
-
-
 ;---------- WM_TIMER handler --------------------------------------------------;
-
 .wmtimer:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 lea ecx,[GUI_PARMS.childWinRunning]
 lea edx,[DRAW_PARMS.timerCount]    ; For two variables: COUNT, PREVIOUS Y
 xor eax,eax
-; Check session running
+;--------- Check session running ----------------------------------------------;
 cmp [ecx],al               ; 0=Stop, 1=First, 2=Progress
 je .SkipTimer              ; Skip if halted
 inc dword [edx]            ; Counter +1
-
-; Check session abort
+;---------- Check session abort -----------------------------------------------;
 cmp [DRAW_THREAD_PARMS.measureBreak],0
 je .YetNotHalt 
 mov [ecx],al               ; Running=0 means HALTED
-
-; Set revisualization request
+;---------- Set revisualization request ---------------------------------------;
 .YetNotHalt:
 push 0         ; Parm#3 = Background erase flag, 0=Background unchanged
 push 0         ; Parm#2 = Pointer to invalidated region, 0=All window
 push ebx       ; Parm#1 = Window handle
 call [InvalidateRect]      ; This cause callback WM_PAINT operation
 .SkipTimer:
-
-; jmp .WinStatus
 jmp .processed
-
-
-
 ;---------- WM_PAINT handler --------------------------------------------------;
-
-
-
 .wmpaint:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 push ebx
-; Make paint context
-
-; push PaintStruc       ; Parm#2 = Pointer to PAINTSTRUCT structure
-lea eax,[PAINT_STRUCT]
-push eax 
-
+;---------- Make paint context ------------------------------------------------;
+push PAINT_STRUCT     ; Parm#2 = Pointer to PAINTSTRUCT structure
 push ebx              ; Parm#1 = Parent window handle
 call [BeginPaint]
 mov [GC_PARMS.handleDC],eax
-; Prepare non-volatile parms, select handler = F (execution phase) 
+;---------- Prepare non-volatile parms, select handler = F (execution phase) --; 
 mov al,[GUI_PARMS.childWinRunning]
 cmp al,0                   ; 0 = Halted
 je .EndPaint
 cmp al,1                   ; 1 = First drawings (grid)
 je .FirstPaint             ; Go if this is first pass, draw axes
-
-; continue draw y=f(x), not a first pass
-; Setup drawings
+;---------- Continue draw y=f(x), not a first pass, setup drawings ------------;
 lea ecx,[DRAW_THREAD_PARMS]            ; ECX = Pointer to draw parameters block
 lea edi,[ecx + DTHP.measureArray]      ; EDI = Pointer to measure data array
 mov ebp,[ecx + DTHP.measureCounter]    ; EBP = Measure counter
@@ -374,12 +215,7 @@ mov [ecx + DTHP.visualCounter],ebp
 sub ebp,ebx       ; EBP = Required number of pixels for visual now
 jbe .EndLine      ; Go if now present data already visualized
 add ebx,GRIDBLANKX + 1 
-
-
-;------------------------------------------------------------------------------;
-
-
-; This cycle for EBP points draw per one timer tick
+;---------- This cycle for EBP points draw per one timer tick -----------------;
 .DrawLine: 
 ; Calculate EAX = F(measurement result)
 ; Remember about can use integer compare for floation point operands,
@@ -391,139 +227,73 @@ add ebx,GRIDBLANKX + 1
 ; Remove finit from body of cycle ? 
 ; Get current measurement, must be before ordering
 ; at this point FPU x87 initialized
-
 finit
-fld qword [edi]          ; ST0 = Current measured Clocks per Instruction (CPI)
-
-; Calculate average CPI, nsPI, MBPS
-push esi                          ; ESI = divisor for averaging
-fld st0                           ; ST1 = ST0 = current measured value
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
+fld qword [edi]       ; ST0 = Current measured Clocks per Instruction (CPI)
+;---------- Calculate average CPI, nsPI, MBPS ---------------------------------;
+push esi              ; ESI = divisor for averaging
+fld st0               ; ST1 = ST0 = current measured value
 fadd [DRAW_THREAD_PARMS.statCpiSum]
 fst [DRAW_THREAD_PARMS.statCpiSum]
-
-fidiv dword [esp]                 ; this access to R13 in the stack
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
+fidiv dword [esp]                        ; this access to R13 in the stack
 fst [DRAW_THREAD_PARMS.statCpiAverage]   ; store average CPI
-
 call HelperCPItoNSPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statNspiAverage]  ; store average nsPI = f (average CPI)
 call HelperNSPItoMBPS
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fadd [DRAW_THREAD_PARMS.statMbpsSum]
-fst [DRAW_THREAD_PARMS.statMbpsSum]      ; store average MBPS, averaging separately
-fidiv dword [esp]                 ; this access to ESI in the stack
+fst [DRAW_THREAD_PARMS.statMbpsSum]  ; store average MBPS, averaging separately
+fidiv dword [esp]                    ; this access to ESI in the stack
 fstp [DRAW_THREAD_PARMS.statMbpsAverage]
-
 pop esi
-
-; Median ordering, also used for min/max, ordering by "bubble" method
+;--- Median ordering, also used for min/max, ordering by "bubble" method ------;
 ; Note floating point values can be ordered by integer compare,
 ; because shifted exponent used at FP format
 push ebx edi ebp
-
 .L23:
 lea ecx,[esi - 1]
-
-; lea edx,[DrawThreadParms + DTHP.MeasureArray]
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edx,[Registry]
-
 lea edx,[DRAW_THREAD_PARMS.measureArray]
-
 mov ebx,edx                ; EBX  = Pointer to array first element, used later
 lea edi,[edx + ecx*8]      ; EDI = Pointer to array last element, used later
 jecxz .L21                 
 xor eax,eax
-
 .L20:
 mov ebp,[edx + 0 + 4]
 cmp ebp,[edx + 8 + 4]
 jb .L22
 ja .L24
-
 mov ebp,[edx + 0 + 0]
 cmp ebp,[edx + 8 + 0]
 jbe .L22
-
 .L24:
 mov ebp,[edx + 0 + 0]
 xchg ebp,[edx + 8 + 0]
 mov [edx + 0 + 0],ebp
-
 mov ebp,[edx + 0 + 4]
 xchg ebp,[edx + 8 + 4]
 mov [edx + 0 + 4],ebp
-
 mov al,1
 .L22:
-
 add edx,8
 dec ecx
 jnz .L20        ; DEC/JNZ faster then LOOP
 test eax,eax
 jnz .L23 
 .L21:
-
-; Get minimum and maximum after median ordering
+;---------- Get minimum and maximum after median ordering ---------------------;
 ; minimum time - maximum bandwidth
 fld qword [ebx]                    ; ST0 = first element, minimum CPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statCpiMin]
-
 call HelperCPItoNSPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statNspiMin]
-
 call HelperNSPItoMBPS
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fstp [DRAW_THREAD_PARMS.statMbpsMax]
-
-; maximum time - minimum bandwidth
+;---------- Maximum time - minimum bandwidth ----------------------------------;
 fld qword [edi]                   ; ST0 = last element, maximum CPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statCpiMax]
-
 call HelperCPItoNSPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statNspiMax]
 call HelperNSPItoMBPS
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fstp [DRAW_THREAD_PARMS.statMbpsMin]
-
-; Get median CPI, nsPI after median ordering, note FPU already initialized 
+;--- Get median CPI, nsPI after median ordering, note FPU already initialized -; 
 lea ecx,[esi - 1]
 shr ecx,1                     ; This branch for median ODD-sized array
 fld qword [ebx + ecx*8]       ; Get median
@@ -533,20 +303,10 @@ fld1
 fadd st0,st0
 fdivp st1,st0
 .L30:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fst [DRAW_THREAD_PARMS.statCpiMedian]
-
 call HelperCPItoNSPI
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fstp [DRAW_THREAD_PARMS.statNspiMedian]
-
-; Get median MBPS, recalculate because reciprocal restrictions
+;---------- Get median MBPS, recalculate because reciprocal restrictions ------;
 lea ecx,[esi - 1]
 shr ecx,1                      ; This branch for median ODD-sized array
 fld qword [ebx + ecx*8]        ; Get median
@@ -563,64 +323,32 @@ fld1
 fadd st0,st0
 fdivp st1,st0
 .L31:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fstp [DRAW_THREAD_PARMS.statMbpsMedian]
-
 pop ebp edi ebx
-
-; Start calculations for drawings Y = f( CPI ),
+;---------- Start calculations for drawings Y = f( CPI ) ----------------------;
 ; ST0 = current value, loaded before re-ordering
 call HelperCPItoNSPI
-
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-
-; cmp [eax + REGISTRY32.memIpb.updatedAsm],LATENCY_MODE
 cmp [MEM_IPB.updatedAsm],LATENCY_MODE
-
 jae .L50
 call HelperNSPItoMBPS
 .L50:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 fmul [DRAW_PARMS.yMultiplier]  ; ST0 = Pixel offset from BaseY=0, negative offset
-
 push eax
 fistp dword [esp]
 pop eax
-; Setup coordinates for GUI,
+;---------- Setup coordinates for GUI -----------------------------------------;
 ; note at this point can set EAX=0 for draw horizontal line DEBUG.
 add eax,SUBWINY-GRIDBLANKY - 1
 lea edx,[ebx + 1]
 lea ecx,[eax + 1]
-; Work with Y-coordinate, adjust Y-coordinates for make solid line by Y
+;--- Work with Y-coordinate, adjust Y-coordinates for make solid line by Y ----;
 push esi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
 mov esi,[DRAW_PARMS.drawPreviousY]   ; ESI = DrawPreviousY
-
 test esi,esi
 jz @f
 mov ecx,esi
 @@:
-
-; push ecx
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov ecx,[Registry]
-
 mov [DRAW_PARMS.drawPreviousY],eax   ; Set DrawPreviousY
-; pop ecx
-
 jnz @f
 inc ecx
 inc eax
@@ -639,17 +367,10 @@ jbe @f
 inc ecx           ; Make down extra-pixel for vertical line  
 @@:
 pop esi
-
-; Store coordinates for rectangle as part of line Y=F(X)
+;---------- Store coordinates for rectangle as part of line Y=F(X) ------------;
 ; Add support approximation modes
 push ebp edi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; mov ebp,[edi + REGISTRY32.memIpb.updatedApprox]
 mov ebp,[MEM_IPB.updatedApprox]
-
 test ebp,ebp
 jz .NoApproxMode
 mov edi,00001111b
@@ -665,101 +386,69 @@ add edx,2
 add ecx,2
 .NoApproxMode:
 pop edi ebp
-
-; Build RECT structure with rectangle points coordinates
-
+;---------- Build RECT structure with rectangle points coordinates ------------;
 push edi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 mov [GRAPH_RECT.left],ebx
 mov [GRAPH_RECT.top],eax
 mov [GRAPH_RECT.right],edx
 mov [GRAPH_RECT.bottom],ecx
-
-
-; Draw current point Y=F(X)
+;---------- Draw current point Y=F(X) -----------------------------------------;
 push [GC_PARMS.handlesBrushes + 04]   ; Parm#3 = Handle to a color brush
-
-;push GraphRect               ; Parm#2 = Pointer to RECT strucnure
-lea eax,[GRAPH_RECT]
-push eax
-
+push GRAPH_RECT                       ; Parm#2 = Pointer to RECT strucnure
 push [GC_PARMS.handleMemDC]           ; Parm#1 = Handle to a Device Context
 call [FillRect]
-
 pop edi
-
-; Cycle with update parameters
+;---------- Cycle with update parameters --------------------------------------;
 add edi,8      ; EDI = Pointer to measurement results array
 inc esi        ; ESI = Divisor for averaging
 inc ebx        ; EBX = X-coordinate offset by visualization position
 dec ebp        ; EBP = Number of pixels per timer tick
 jnz .DrawLine  ; This cycle for EBP points draw per one timer tick
-
-
-
-;------------------------------------------------------------------------------;
-
-
 .EndLine:
 jmp .RedrawTexts
-
-
-; This branch for first paint, draw statical elements, not changed when draw
+;--- This branch for first paint ----------------------------------------------;
+; draw statical elements, not changed when draw
 .FirstPaint:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 mov [GUI_PARMS.childWinRunning],2
 mov [DRAW_PARMS.timerCount],0
-; Draw
-push [GC_PARMS.handleFont]         ; Parm#2 = Handle to Selected Object
-push [GC_PARMS.handleMemDC]        ; Parm#1 = Handle to a Device Context
+;---------- Draw --------------------------------------------------------------;
+push [GC_PARMS.handleFont]     ; Parm#2 = Handle to Selected Object
+push [GC_PARMS.handleMemDC]    ; Parm#1 = Handle to a Device Context
 call [SelectObject]
-push COLOR_TEXT_VALUES    ; Parm#2 = RDX = Text front color value = 00bbggrrh
-push [GC_PARMS.handleMemDC]        ; Parm#1 = RCX = Handle to a Device Context
+push COLOR_TEXT_VALUES         ; Parm#2 = RDX = Text front color value = 00bbggrrh
+push [GC_PARMS.handleMemDC]    ; Parm#1 = RCX = Handle to a Device Context
 call [SetTextColor]
-push COLOR_TEXT_BACK      ; Parm#2 = Text background color value = 00bbggrrh
-push [GC_PARMS.handleMemDC]        ; Parm#1 = Handle to a Device Context
+push COLOR_TEXT_BACK           ; Parm#2 = Text background color value = 00bbggrrh
+push [GC_PARMS.handleMemDC]    ; Parm#1 = Handle to a Device Context
 call [SetBkColor]
-; Blank work field
+;---------- Blank work field --------------------------------------------------;
 xor eax,eax
 lea ebx,[GRAPH_RECT]
 mov [ebx + RECT.left],eax
 mov [ebx + RECT.top],eax
 mov [ebx + RECT.right],SUBWINX
 mov [ebx + RECT.bottom],SUBWINY
-push [GC_PARMS.handlesBrushes + 8]        ; Parm#3 = Handle to a color brush
-push ebx                         ; Parm#2 = Pointer to RECT strucnure
-push [GC_PARMS.handleMemDC]               ; Parm#1 = Handle to a Device Context
+push [GC_PARMS.handlesBrushes + 8]   ; Parm#3 = Handle to a color brush
+push ebx                             ; Parm#2 = Pointer to RECT strucnure
+push [GC_PARMS.handleMemDC]          ; Parm#1 = Handle to a Device Context
 call [FillRect]
-
-; Coordinate X-grid, vertical lines
+;---------- Coordinate X-grid, vertical lines ---------------------------------;
 mov esi,GRIDBLANKX          ; ESI = Base point, X
 mov edi,GRIDX               ; EDI = Number of lines
 .XVgrid:
-lea eax,[esi + 1]            ; Line width = 1 pixel
+lea eax,[esi + 1]           ; Line width = 1 pixel
 mov [ebx + RECT.left],esi
 mov [ebx + RECT.top],0
 mov [ebx + RECT.right],eax
 mov [ebx + RECT.bottom],SUBWINY-GRIDBLANKY
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 push [GC_PARMS.handlesBrushes + 00]  ; Parm#3 = Handle to a color brush
-push ebx                    ; Parm#2 = Pointer to RECT strucnure
+push ebx                             ; Parm#2 = Pointer to RECT strucnure
 push [GC_PARMS.handleMemDC]          ; Parm#1 = Handle to a Device Context
 call [FillRect]             ; Fill rectangle function
 add esi,GRIDSTEPX           ; Add X grid step
 dec edi                     ; Cycle for X-grid vertical lines
 jnz .XVgrid
-
-
-; Coordinate Y-grid, horizontal lines
+;---------- Coordinate Y-grid, horizontal lines -------------------------------;
 mov esi,SUBWINY-GRIDBLANKY  ; ESI = Base point, Y
 mov edi,GRIDY               ; EDI = Number of lines
 .YHgrid:
@@ -768,37 +457,26 @@ mov [ebx + RECT.left],GRIDBLANKX
 mov [ebx + RECT.top],eax
 mov [ebx + RECT.right],SUBWINX
 mov [ebx + RECT.bottom],esi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 push [GC_PARMS.handlesBrushes + 00]  ; Parm#3 = Handle to a color brush
-push ebx                    ; Parm#2 = Pointer to RECT strucnure
+push ebx                             ; Parm#2 = Pointer to RECT strucnure
 push [GC_PARMS.handleMemDC]          ; Parm#1 = Handle to a Device Context
 call [FillRect]             ; Fill rectangle function
 sub esi,GRIDSTEPY           ; Subtract Y grid step
 dec edi                     ; Cycle for Y-grid vertical lines
 jnz .YHgrid
-
-
-; Initializing values for X-grid vertical lines and Y-grid horizontal lines texts
-mov bx,200h + GRIDX     ; BH = Counter, Pass#1 = XGrid (BH=2), Pass#2 = YGrid (BH=1)
-                        ; BL = Number of lines, X
+;---------- Initializing for grid texts write ---------------------------------;
+; Initializing values for X-grid vertical lines and
+; Y-grid horizontal lines texts
+mov bx,200h + GRIDX     ; BH = Counter, Pass#1 = XGrid (BH=2), Pass#2 = YGrid (BH=1), BL = Number of lines, X
 mov esi,GRIDBLANKX      ; ESI = Base point, X
 mov edi,SUBWINY-20      ; EDI = Base point Y, 20 pixels up
 xor ebp,ebp             ; EBP = Units value, X starts from 0
-
-; This cycle both for X and Y grids texts, X/Y logic dynamically selected 
+;---------- This cycle both for X and Y grids texts ---------------------------; 
+; X/Y logic dynamically selected 
 .BothGrids:
-; Build ASCII string
+;---------- Build ASCII string ------------------------------------------------;
 push ebx edi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; lea edi,[edi + REGISTRY32.BigTexts]   ; EDI = Pointer for print decimal string as ASCII
 lea edi,[TEMP_BUFFER]
-
 mov edx,edi
 mov bl,0             ; BL = Template control for print number, 0=No template
 mov eax,ebp          ; EAX = Value for print, Bytes/KB/MB
@@ -808,18 +486,18 @@ sub ecx,edx
 mov al,0
 stosb                ; Store terminator byte = 0
 pop edi ebx
-; Calculate correction value for Y axis grid values print
+;---------- Calculate correction value for Y axis grid values print -----------;
 mov edx,9
 sub edx,ecx         ; R10 = chars positions count
 jbe .RejectAddend   ; Go skip if correction not required 
 imul edx,edx,7
-; Reject corrections if horizontal axis or overflow
+;---------- Reject corrections if horizontal axis or overflow -----------------;
 cmp bh,1            ; BH=1 means Y-mode , BH=2 means X-mode
 je .DoneAddend      ; Go with EDX = correction if branch for vertical axis text 
 .RejectAddend:
 xor edx,edx
 .DoneAddend:
-; Set region for text string write
+;---------- Set region for text string write ----------------------------------;
 lea eax,[edi + 18]    ; EAX = Y coordinate down/right corner  
 push eax              ; Parm#5 = Y coordinate down/right corner
 lea eax,[esi + edx + 65]
@@ -827,78 +505,37 @@ push eax              ; Parm#4 = X coordinate down/right corner
 push edi              ; Parm#3 = Y coordinate up/left corner
 lea eax,[esi + edx]   
 push eax              ; Parm#2 = X coordinate up/left corner
-
-; push GraphRect        ; Parm#1 = Pointer to RECT structure to store parameters
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-lea eax,[GRAPH_RECT]
-push eax
-
+push GRAPH_RECT       ; Parm#1 = Pointer to RECT structure to store parameters
 call [SetRect]        ; Set region rectangle function 
 ; Draw text
 push DT_LEFT          ; Parm#5 = Method of formatting/alignment of text string
-
-; push GraphRect        ; Parm#4 = Pointer to RECT structure, initialized by [SetRect] function
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-lea eax,[GRAPH_RECT]
-push eax
-
+push GRAPH_RECT       ; Parm#4 = Pointer to RECT structure, initialized by [SetRect] function
 push -1               ; Parm#3 = String length, -1 means NULL-terminated string
-
-; push BigTexts         ; Parm#2 = Pointer to text string
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-; lea eax,[eax + REGISTRY32.BigTexts]
-lea eax,[TEMP_BUFFER]
-
-push eax
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
+push TEMP_BUFFER      ; Parm#2 = Pointer to text string
 push [GC_PARMS.handleMemDC]    ; Parm#1 = Handle to a Device Context
-
 call [DrawText]        ; Draw text function 
-
-; Cycle for lines of selected grid
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov ecx,[Registry]
-
+;---------- Cycle for lines of selected grid ----------------------------------;
 lea ecx,[DRAW_PARMS]
 cmp bh,1                          ; BH=1 means Y-mode , BH=2 means X-mode
 je .YGrid
-; X-mode entry point
+;---------- X-mode entry point ------------------------------------------------;
 add ebp,[ecx + DRPM.valueGridX]   ; Addend per X grid
 add esi,GRIDSTEPX
 jmp .CycleGrids
-; Y-mode entry point
+;---------- Y-mode entry point ------------------------------------------------;
 .YGrid:
 add ebp,[ecx + DRPM.valueGridY]   ; Addend per Y grid
 sub edi,GRIDSTEPY
 .CycleGrids:
 dec bl
 jnz .BothGrids
-
-; Cycle for horizontal and vertical grids
-mov bl,GRIDY - 1                  ; R14D = Number of lines, Y
+;---------- Cycle for horizontal and vertical grids ---------------------------;
+mov bl,GRIDY - 1                              ; BL = Number of lines, Y
 mov esi,GRIDBLANKX - 68                       ; ESI = X coordinate
 mov edi,SUBWINY-GRIDBLANKY - GRIDSTEPY - 15   ; EDI = Y coordinate
 mov ebp,[ecx + DRPM.valueGridY]  ; EBP = Units value, Y starts with offset
 dec bh             ; BH = Counter, Pass#1 = XGrid (BH=2), Pass#2 = YGrid (BH=1)
 jnz .BothGrids
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; Prepare for X-units, here change color
 push COLOR_TEXT_UNITS     ; Parm#2 = Text front color value = 00bbggrrh
 push [GC_PARMS.handleMemDC]        ; Parm#1 = Handle to a Device Context
 call [SetTextColor]
@@ -916,47 +553,44 @@ mov ecx,SUBWINY-43        ; ECX = Y coordinate up/left corner
 mov ebx,SUBWINX-13        ; EBX = X coordinate down/right corner
 mov eax,SUBWINY-25        ; EAX = Y coordinate down/right corner
 call HelperTextConstDraw
-
-; Prepare for Y-units, use color from previous step
+;---------- Prepare for Y-units, use color from previous step -----------------;
 lea esi,[U_MBPS]             ; ESI = Pointer to text string, performance units 
 cmp [DRAW_PARMS.selectMode],0
 je @f
 lea esi,[U_NS]
 @@:
-mov edx,7                    ; EDX = X coordinate up/left corner
-mov ecx,5                    ; ECX = Y coordinate up/left corner
-mov ebx,40+7+20 + 24         ; EBX = X coordinate down/right corner
-mov eax,18+5                 ; EAX = Y coordinate down/right corner
+mov edx,7                  ; EDX = X coordinate up/left corner
+mov ecx,5                  ; ECX = Y coordinate up/left corner
+mov ebx,40+7+20 + 24       ; EBX = X coordinate down/right corner
+mov eax,18+5               ; EAX = Y coordinate down/right corner
 call HelperTextConstDraw
-
-; Print statistics table, lines and texts
-; horizontal sequence of strings:  CPI, nsPI, MBPS
-lea edi,[DrawTableUp]       ; EDI = Pointer to text strings short pointers table
-mov edx,522                 ; RDX = X coordinate up/left corner
-mov ecx,27                  ; ECX = Y coordinate up/left corner
-mov ebx,522 + 40            ; EBX = X coordinate down/right corner
-mov eax,27 + 17             ; EAX = Y coordinate down/right corner
+;---------- Print statistics table, lines and texts ---------------------------;
+; Horizontal sequence of strings:  CPI, nsPI, MBPS
+lea edi,[DrawTableUp]      ; EDI = Pointer to text strings short pointers table
+mov edx,522                ; RDX = X coordinate up/left corner
+mov ecx,27                 ; ECX = Y coordinate up/left corner
+mov ebx,522 + 40           ; EBX = X coordinate down/right corner
+mov eax,27 + 17            ; EAX = Y coordinate down/right corner
 @@:
-movzx ebp,word [edi]          ; Get 16-bit compact-encoded offset
-add edi,2                     ; Update pointer to next offset
+movzx ebp,word [edi]       ; Get 16-bit compact-encoded offset
+add edi,2                  ; Update pointer to next offset
 test ebp,ebp
 jz @f                         ; Go exit if terminator (0) detected
 lea esi,[ebp + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
 call HelperTextConstDraw
-add edx,64                    ; Shift 64 points right, X+64
-add ebx,64                    ; Shift 64 points right, X+64
-jmp @b                        ; cycle for: CPI, nsPI, MBPS 
+add edx,64                 ; Shift 64 points right, X+64
+add ebx,64                 ; Shift 64 points right, X+64
+jmp @b                     ; cycle for: CPI, nsPI, MBPS 
 @@:
-
-; vertical sequence of strings:  maximum, minimum, average, median
-lea edi,[DrawTableLeft]       ; EDI = Pointer to text strings short pointers table
-mov edx,458                   ; RDX = X coordinate up/left corner
-mov ecx,27 + 19               ; ECX = Y coordinate up/left corner
-mov ebx,458 + 60              ; EBX = X coordinate down/right corner
-mov eax,27 + 19 + 17          ; EAX = Y coordinate down/right corner
+;---------- Vertical sequence of strings:  maximum, minimum, average, median --;
+lea edi,[DrawTableLeft]    ; EDI = Pointer to text strings short pointers table
+mov edx,458                ; RDX = X coordinate up/left corner
+mov ecx,27 + 19            ; ECX = Y coordinate up/left corner
+mov ebx,458 + 60           ; EBX = X coordinate down/right corner
+mov eax,27 + 19 + 17       ; EAX = Y coordinate down/right corner
 @@:
-movzx ebp,word [edi]          ; Get 16-bit compact-encoded offset
-add edi,2                     ; Update pointer to next offset
+movzx ebp,word [edi]       ; Get 16-bit compact-encoded offset
+add edi,2                  ; Update pointer to next offset
 test ebp,ebp
 jz @f                         ; Go exit if terminator (0) detected
 lea esi,[ebp + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
@@ -965,82 +599,56 @@ add ecx,15                    ; Shift 15 points down, Y+15
 add eax,15                    ; Shift 15 points down, Y+15
 jmp @b                        ; cycle for: maximum, minimum, average, median
 @@:
-
-; lines of table, up horizontal line and left vertical line
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
+;---------- lines of table, up horizontal line and left vertical line ---------;
 lea ebx,[GRAPH_RECT]
 mov [ebx + RECT.left],519
 mov [ebx + RECT.top],27 + 17
 mov [ebx + RECT.right],519 + 240
 mov [ebx + RECT.bottom],27 + 17 + 2
 push [GC_PARMS.handlesBrushes + 12]    ; Parm#3 = Handle to a color brush
-push ebx                      ; Parm#2 = Pointer to RECT strucnure
+push ebx                               ; Parm#2 = Pointer to RECT strucnure
 push [GC_PARMS.handleMemDC]            ; Parm#1 = Handle to a Device Context
-call [FillRect]               ; Fill rectangle function, up horizontal line
+call [FillRect]                 ; Fill rectangle function, up horizontal line
 mov [ebx + RECT.left],518
 mov [ebx + RECT.top],27 + 19
 mov [ebx + RECT.right],518 + 2
 mov [ebx + RECT.bottom],27 + 19 + 17*4
 push [GC_PARMS.handlesBrushes + 12]    ; Parm#3 = Handle to a color brush
-push ebx                      ; Parm#2 = Pointer to RECT strucnure
+push ebx                               ; Parm#2 = Pointer to RECT strucnure
 push [GC_PARMS.handleMemDC]            ; Parm#1 = Handle to a Device Context
-call [FillRect]               ; Fill rectangle function, left vertical line
-
-; Target method CPU instructions dump
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
-; lea esi,[esi + REGISTRY32.memIpb]  ; InputParms]
+call [FillRect]                 ; Fill rectangle function, left vertical line
+;---------- Target method CPU instructions dump -------------------------------;
 lea esi,[MEM_IPB]
-
 mov ebp,[esi + MEMIPB.dumpMethodLength]
 mov esi,[esi + MEMIPB.dumpMethodStart]
-
 test ebp,ebp
 jz .skipAsmDump
-
 cmp ebp,128
 jbe @f
 mov ebp,128
 @@:
-push COLOR_TEXT_DUMP      ; Parm#2 = Text front color value = 00bbggrrh
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-push [GC_PARMS.handleMemDC]        ; Parm#1 = Handle to a Device Context
-
+push COLOR_TEXT_DUMP         ; Parm#2 = Text front color value = 00bbggrrh
+push [GC_PARMS.handleMemDC]  ; Parm#1 = Handle to a Device Context
 call [SetTextColor]
-
 xor eax,eax
 .AsmDump:
-; Write string for one hex byte
+;---------- Write string for one hex byte -------------------------------------;
 push eax
 push eax
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; lea edi,[edi + REGISTRY32.BigTexts]
 lea edi,[TEMP_BUFFER]
-
 lodsb
 call HexPrint8
 mov al,0
 stosb
 pop eax
-; Set coordinates
+;---------- Set coordinates ---------------------------------------------------;
 push esi
 mov esi,eax                 ; EAX = counter, ESI = counter temporary copy #1
 mov edx,SUBWINX - 250 + 64  ; EDX = X coordinate, up left corner
 mov ecx,95 + 48             ; ECX = Y coordinate up/left corner
 mov ebx,SUBWINX - 005 + 64  ; EBX = X coordinate down/right corner
 mov eax,95 + 18 + 48        ; EAX = Y coordinate down/right corner 
-; Adjust coordinates
+;---------- Adjust coordinates ------------------------------------------------;
 push esi
 and esi,07h                 ; Bits 0-2 used for X-positioning
 imul esi,esi,21             ; X scale = 21 pixels per char
@@ -1052,37 +660,19 @@ and esi,0Fh                 ; Bits 3-6 used for Y-positioning
 imul esi,esi,18             ; Y scale = 18 pixels per char 
 add ecx,esi                 ; Add offset to Y-start
 add eax,esi                 ; Add offset to Y-end
-; Draw one hex byte
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
-; lea esi,[esi + REGISTRY32.BigTexts]
+;---------- Draw one hex byte -------------------------------------------------;
 lea esi,[TEMP_BUFFER]
-
 call HelperTextConstDraw
 pop esi eax
 inc eax
 dec ebp
 jnz .AsmDump 
-
 .skipAsmDump:
-
-
-; TSC clock frequency
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
-
+;---------- TSC clock frequency -----------------------------------------------;
 lea edi,[DrawValueTSC]
-mov word [edi],0000h + '?'      ; This char '?' used if error
-
-; mov eax,dword [OutputParms + OPB.TSCfrequencyMHz + 0]  ; EAX = TSC Frequency, MHz
-; mov edx,dword [OutputParms + OPB.TSCfrequencyMHz + 4]
-mov eax,dword [MEM_OPB.tscFrequencyMHz + 0]  ; EAX = TSC Frequency, MHz
+mov word [edi],0000h + '?'                   ; This char '?' used if error
+mov eax,dword [MEM_OPB.tscFrequencyMHz + 0]  ; EDX:EAX = TSC Frequency, MHz
 mov edx,dword [MEM_OPB.tscFrequencyMHz + 4]
-
 mov ecx,eax
 or ecx,edx                  ; Frequency = 0 means error
 jz @f                       ; Go skip value write if error
@@ -1100,222 +690,139 @@ mov ebx,SUBWINX - 5         ; EBX = X coordinate down/right corner
 mov eax,6+18                ; EAX = Y coordinate down/right corner
 lea esi,[DrawTextTSC]       ; ESI = Pointer to text string
 call HelperTextConstDraw
-
-
-; This text strings must be updated at each visualization tick
+;---------- This text strings must be updated at each visualization tick ------;
 .RedrawTexts:
-
-; Initializing parameters for benchmark statistics, bandwidth and timings
+;--- Initializing parameters for benchmark statistics, bandwidth and timings --;
 mov ebp,0300h
-
-; Print timings statistics, CPI minimum, maximum, average, median
+;---------- Print timings statistics, CPI minimum, maximum, average, median ---;
 ; note CPI = Clocks Per Instruction
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
 lea esi,[DRAW_THREAD_PARMS.statCpiMin]  ; ESI = variables group base
 mov edx,SUBWINX - 250
 mov ebx,SUBWINX - 190 
 call HelperWriteStatisticsYconst
-
-; Print timings statistics, nsPI minimum, maximum, average, median
+;---------- Print timings statistics, nsPI minimum, maximum, average, median --;
 ; note nsPI = nanoseconds per instruction
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
 lea esi,[DRAW_THREAD_PARMS.statNspiMin]  ; ESI = variables group base
 mov edx,SUBWINX - 250 + 64*1
 mov ebx,SUBWINX - 190 + 64*1 
 call HelperWriteStatisticsYconst
-
-; This number template for Megabytes per Second
+;---------- This number template for Megabytes per Second ---------------------;
 mov ebp,0200h
-
-; Print timings statistics, MBPS minimum, maximum, average, median
+;---------- Print timings statistics, MBPS minimum, maximum, average, median --;
 ; note MBPS = megabytes per second
 ; Note Min/Max here swapped, because min. time means max. bandwidth
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
 lea esi,[DRAW_THREAD_PARMS.statMbpsMax]  ; ESI = variables group base
 mov edx,SUBWINX - 250 + 64*2
 mov ebx,SUBWINX - 150 + 64*2 
 call HelperWriteStatisticsYconst
-
-; End of prepare, visual prepared objects
+;---------- End of prepare, visual prepared objects ---------------------------;
 .DrawVisual:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
 xor eax,eax          ; EAX = 0 for compact push 0
 push SRCCOPY         ; Parm#9 = Raster operation code
 push eax             ; Parm#8 = Y source
 push eax             ; Parm#7 = X source
-
 push [GC_PARMS.handleMemDC]   ; Parm#6 = Handle of source Device Context
-
 push SUBWINY         ; Parm#5 = Height
 push SUBWINX         ; Parm#4 = Width
 push SHIFTY          ; Parm#3 = Y destination
 push SHIFTX          ; Parm#2 = X destination
 push [GC_PARMS.handleDC]      ; Parm#1 = Handle of destination Device Context
 call [BitBlt]                       
-; Delete paint context
+;---------- Delete paint context ----------------------------------------------;
 .EndPaint:
-
-; push PaintStruc         ; Parm#2 = Pointer to PAINTSTRUCT structure
-lea eax,[PAINT_STRUCT]
-push eax
-
-push dword [esp+4]      ; Parm#1 = Parent window handle
+push PAINT_STRUCT       ; Parm#2 = Pointer to PAINTSTRUCT structure
+push dword [esp + 4]    ; Parm#1 = Parent window handle
 call [EndPaint]         ; This WinAPI returns BOOL status, but ignored
-; Paint callback handling done
+;---------- Paint callback handling done --------------------------------------;
 pop ebx
-
-; jmp .WinStatus
 jmp .processed
-
 
 ;------------------------ Helpers for calculations ----------------------------;
 
-;--- Convert CPI (Clocks per Instruction) to nsPI (nanosec. per instr.) ----;
-; INPUT:  ST0 = CPI as floating point double                                ;
-; OUTPUT: ST0 = nsPI as floating point double                               ;
-;---------------------------------------------------------------------------;
+;--- Convert CPI (Clocks per Instruction) to nsPI (nanosec. per instr.) -------;
+;                                                                              ;
+; INPUT:  ST0 = CPI as floating point double                                   ;
+;                                                                              ;
+; OUTPUT: ST0 = nsPI as floating point double                                  ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 HelperCPItoNSPI:
-
-; fmul [OutputParms.TSCperiodNs]
-; push eax
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-; fmul [eax + REGISTRY32.memOpb.tscPeriodNs]
 fmul [MEM_OPB.tscPeriodNs]
-
-; pop eax
-
 ret
-
-;--- Convert nsPI (nanosec. per instr.) to MBPS (Megabytes per Second) -----;
-; INPUT:  ST0 = nsPI as floating point double                               ;
-; OUTPUT: ST0 = MBPS  as floating point double                              ;
-;---------------------------------------------------------------------------;
+;--- Convert nsPI (nanosec. per instr.) to MBPS (Megabytes per Second) --------;
+;                                                                              ;
+; INPUT:  ST0 = nsPI as floating point double                                  ;
+;                                                                              ;
+; OUTPUT: ST0 = MBPS  as floating point double                                 ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 HelperNSPItoMBPS:
-; push ecx
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov ecx,[Registry]
-
-push NSPI_TO_MBPS                  ; This constant for decimal megabytes and ns.
-
-; mov eax,[InputParms.OperandWidth]  ; RAX = bits per instruction
-; mov eax,[ecx + REGISTRY32.memIpb.operandWidth]  ; RAX = bits per instruction
-
-mov eax,[MEM_IPB.operandWidth]  ; RAX = bits per instruction
-
-shr eax,3                          ; RAX = bytes per instruction 
+push NSPI_TO_MBPS               ; This constant for decimal megabytes and ns.
+mov eax,[MEM_IPB.operandWidth]  ; EAX = bits per instruction
+shr eax,3                       ; EAX = bytes per instruction 
 push eax
-fild dword [esp+4]   ; ST0 = 1000, f(decimal megabytes, ns), ST1 = nsPI 
-fxch st1             ; ST0 = nsPI , ST1 = 1000 
-fdivp st1,st0        ; ST0 = 1000 / nsPI = decimal megainstructions per second
-fimul dword [esp+0]  ; ST0 = decimal megabytes per second
-
-; fimul [InputParms + IPB.UpdatedThreads]  ; Multiply by number of threads
-; fimul [ecx + REGISTRY32.memIpb.updatedThreads]  ; Multiply by number of threads
+fild dword [esp + 4]  ; ST0 = 1000, f(decimal megabytes, ns), ST1 = nsPI 
+fxch st1              ; ST0 = nsPI , ST1 = 1000 
+fdivp st1,st0         ; ST0 = 1000 / nsPI = decimal megainstructions per second
+fimul dword [esp + 0] ; ST0 = decimal megabytes per second
 fimul [MEM_IPB.updatedThreads]  ; Multiply by number of threads
-
 pop eax eax
-
-; pop ecx
 ret
- 
 
 ;-------------------------- Helpers for drawings ------------------------------;
-
 ; Note about stack re-alignment when subroutines call
 
-;--- Print text string ----------------------------------------------;
-; INPUT:   ESI = Pointer to text string                              ;   
-;          EDX = xLeft                                               ; 
-;          ECX = yTop                                                ;
-;          EBX = xRight                                              ;
-;          EAX = yBottom                                             ;
-;                                                                    ;
-; OUTPUT:  None in the CPU registers                                 ;
-;          All registers (EAX, EBX, ECX, EDX, ESI, EDI, EBP)         ; 
-;          is  non volatile for this subroutine                      ;    
-;--------------------------------------------------------------------;
+;--- Print text string --------------------------------------------------------;
+;                                                                              ;
+; INPUT:   ESI = Pointer to text string                                        ;   
+;          EDX = xLeft                                                         ; 
+;          ECX = yTop                                                          ;
+;          EBX = xRight                                                        ;
+;          EAX = yBottom                                                       ;
+;                                                                              ;
+; OUTPUT:  None in the CPU registers                                           ;
+;          All registers (EAX, EBX, ECX, EDX, ESI, EDI, EBP)                   ; 
+;          is  non volatile for this subroutine                                ;    
+;                                                                              ;
+;------------------------------------------------------------------------------;
 HelperTextConstDraw:
 push eax ecx edx
-; Set region rectangle 
+;---------- Set region rectangle ----------------------------------------------; 
 push eax            ; Parm#5 = yBottom 
 push ebx            ; Parm#4 = xRight
 push ecx            ; Parm#3 = yTop   
 push edx            ; Parm#2 = xLeft                      
-
-; push GraphRect      ; Parm#1 = Pointer to RECT structure to store parameters
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-lea eax,[GRAPH_RECT]
-push eax 
-
+push GRAPH_RECT     ; Parm#1 = Pointer to RECT structure to store parameters
 call [SetRect]      ; Set region rectangle function 
-; Draw text
+;---------- Draw text ---------------------------------------------------------;
 push DT_LEFT        ; Parm#5 = Method of formatting/alignment of text string
-
-; push GraphRect      ; Parm#4 = Pointer to RECT structure, initialized by [SetRect] function
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-
-lea eax,[GRAPH_RECT]
-push eax 
-
+push GRAPH_RECT     ; Parm#4 = Pointer to RECT structure, initialized by [SetRect] function
 push -1             ; Parm#3 = String length, -1 means NULL-terminated string
 push esi            ; Parm#2 = Pointer to text string
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]  ; TODO. Optimize registers usage
-
 push [GC_PARMS.handleMemDC]  ; Parm#1 = Handle of a Device Context
-
 call [DrawText]     ; Draw text function 
-; Done
 pop edx ecx eax
 ret
-
-;--- Print floating point value, double -----------------------------;
-; INPUT:   EDX = X up left position                                  ;
-;          ECX = Y up left position                                  ; 
-;          EBX = X down right position                               ;
-;          EAX = Y down right position                               ;
-;          EBP = numeric template for floating point print           ;
-;          EDI:ESI = floating point value, double, 64-bit            ;
-;                    EDI = High32 , ESI = Low32                      ;
-;                                                                    ;
-; OUTPUT:  None in the CPU registers                                 ;
-;          All registers (EAX, EBX, ECX, EDX, ESI, EDI, EBP)         ; 
-;          is  non volatile for this subroutine                      ;    
-;--------------------------------------------------------------------;      
+;--- Print floating point value, double ---------------------------------------;
+;                                                                              ;
+; INPUT:   EDX = X up left position                                            ;
+;          ECX = Y up left position                                            ; 
+;          EBX = X down right position                                         ;
+;          EAX = Y down right position                                         ;
+;          EBP = numeric template for floating point print                     ;
+;          EDI:ESI = floating point value, double, 64-bit                      ;
+;                    EDI = High32 , ESI = Low32                                ;
+;                                                                              ;
+; OUTPUT:  None in the CPU registers                                           ;
+;          All registers (EAX, EBX, ECX, EDX, ESI, EDI, EBP)                   ; 
+;          is  non volatile for this subroutine                                ;    
+;                                                                              ;
+;------------------------------------------------------------------------------;      
 HelperTextVarDouble:
 push eax ecx edx
-; Build text string
+;---------- Build text string -------------------------------------------------;
 push eax ebx ecx edx edi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; lea edi,[edi + REGISTRY32.BigTexts]
 lea edi,[TEMP_BUFFER]
-
 mov ecx,11-3         ; 11 (not 9) for blank if variable X-size font 
 mov ax,0000h + '?'   ; Blank field with "?" means yet not determined
 stosw
@@ -1333,52 +840,35 @@ test edx,edx
 jz .L0
 .L1:
 push edi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov edi,[Registry]
-
-; lea edi,[edi + REGISTRY32.BigTexts]
 lea edi,[TEMP_BUFFER]
-
 call DoublePrint
 pop edi
 .L0:
 pop edx ecx ebx eax
-; Draw text string
+;---------- Draw text string --------------------------------------------------;
 push esi
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
-; lea esi,[esi + REGISTRY32.BigTexts]
 lea esi,[TEMP_BUFFER]
-
 call HelperTextConstDraw
 pop esi 
-; Done
 pop edx ecx eax
 ret
-
-
-;--- Print cycle for Min, Max, Average, Median ----------------------;
-; INPUT:   EDX = X up left position                                  ;
-;          ECX = Y up left position, for common entry point only     ; 
-;          EBX = X down right position                               ;
-;          EAX = Y down right position, for common entry point only  ;
-;          EBP = numeric template for floating point print           ;
-;          ESI = pointer to variables group                          ;
-;                                                                    ;
-; OUTPUT:  None in the CPU registers                                 ;
-;          RSI, EBP is non volatile for this subroutine              ;
-;--------------------------------------------------------------------;      
-
-; Entry point for Y fixed (ECX, EAX pre-defined)
-HelperWriteStatisticsYconst:
+;--- Print cycle for Min, Max, Average, Median --------------------------------;
+;                                                                              ;
+; INPUT:   EDX = X up left position                                            ;
+;          ECX = Y up left position, for common entry point only               ; 
+;          EBX = X down right position                                         ;
+;          EAX = Y down right position, for common entry point only            ;
+;          EBP = numeric template for floating point print                     ;
+;          ESI = pointer to variables group                                    ;
+;                                                                              ;
+; OUTPUT:  None in the CPU registers                                           ;
+;          RSI, EBP is non volatile for this subroutine                        ;
+;                                                                              ;
+;------------------------------------------------------------------------------;      
+HelperWriteStatisticsYconst:  ; Entry point for Y fixed (ECX, EAX pre-defined)
 mov ecx,24 + 23
 mov eax,42 + 23
-
-; Common entry point
-HelperWriteStatistics:
+HelperWriteStatistics:        ; Common entry point
 mov edi,4
 @@:
 push esi edi
@@ -1392,11 +882,3 @@ add esi,8                  ; Sequental access to Min, Max, Average, Median
 dec edi
 jnz @b
 ret
- 
-
-
-
-
-
-
-

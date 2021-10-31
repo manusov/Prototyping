@@ -12,20 +12,16 @@
 ;          Registers corrupted                                                 ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Latency_Walk_32:
-
 mov ecx,[esi]         ; qword [esi] = walk list entry point, Block #1
 WalkRepeat_32:
 mov eax,ecx
-
 DumpStart_Latency_Walk_32:
 .WalkLinked:          ; Walk linked list, use fetched data as next address
 mov eax,[eax]
 test eax,eax
 jnz .WalkLinked
 DumpStop_Latency_Walk_32:
-
 sub ebp,1
 sbb ebx,0
 mov eax,ebp

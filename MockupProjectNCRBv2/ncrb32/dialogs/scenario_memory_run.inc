@@ -1,40 +1,33 @@
+;---------- Read options from GUI and setup benchmark scenario ----------------;
+;                                                                              ;
+; INPUT:   AL = mode: 0 = simple run, 1 = drawings                             ;
+;          GUI data located at BINDLIST                                        ;
+;                                                                              ;
+; OUTPUT:  None at registers                                                   ;
+;          Benchmark scenario build at IPB (Input Parameters Block)            ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 
 
-; UNDER CONSTRUCTION.
 ; TODO. Can run as simple run or helper for draw, use input flag.
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
 
 GuiToUserParms:
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
-; TODO. Possible make this step as subroutine: GuiToUserParms.
-
-; lea edi,[esi + REGISTRY32.memUpb]
 lea edi,[MEM_UPB]
-
-
-; mov esi,[esi + REGISTRY32.allocatorBindBuffer.objectStart]
 lea esi,[BIND_LIST]
-
-; TODO. Maks selector for use same code for simple and for draw
-; movzx eax,al
-; xor eax,eax
 movzx eax,al
-
 mov [edi + MEMUPB.runContext],eax  ; Setup run context for memory allocation multiplication mode control  
-
+;---------- Option Asm --------------------------------------------------------;
 mov eax,[esi + BINDLIST.getMemMethod]  ; TODO. Optimize offsets size by nested structures.
 bsf eax,eax
 mov [edi + MEMUPB.optionAsm],eax 
-
+;---------- Option prefetch ---------------------------------------------------;
 movzx eax,[esi + BINDLIST.getMemPref]
 bsf eax,eax
 mov [edi + MEMUPB.optionDistance],eax 
-
+;---------- Options parallel --------------------------------------------------;
 mov cl,[esi + BINDLIST.setMemSmp]
 mov ch,[esi + BINDLIST.getMemSmp]
 xor eax,eax
@@ -46,7 +39,7 @@ jz @f
 inc eax
 @@:
 mov [edi + MEMUPB.optionParallel],eax
-
+;---------- Option HT ---------------------------------------------------------;
 xor eax,eax
 test cl,00000100b
 jz @f
@@ -56,7 +49,7 @@ jz @f
 inc eax
 @@:
 mov [edi + MEMUPB.optionHT],eax
-
+;---------- Option Processor Groups -------------------------------------------;
 xor eax,eax
 test cl,00010000b
 jz @f
@@ -66,7 +59,7 @@ jz @f
 inc eax
 @@:
 mov [edi + MEMUPB.optionPG],eax
-
+;---------- Option NUMA -------------------------------------------------------;
 xor eax,eax
 test [esi + BINDLIST.setMemNuma],00000001b
 jz @f
@@ -75,11 +68,11 @@ bsf ecx,ecx
 add eax,ecx
 @@:
 mov [edi + MEMUPB.optionNUMA],eax 
-
+;---------- Option Object -----------------------------------------------------;
 movzx eax,[esi + BINDLIST.getMemObject]
 bsf eax,eax
 mov [edi + MEMUPB.optionTarget],eax 
-
+;---------- Option Large Pages ------------------------------------------------;
 mov cl,[esi + BINDLIST.setMemLpages]  ; Optimize this, don't use CL, direct test
 mov ch,[esi + BINDLIST.getMemLpages]
 xor eax,eax
@@ -91,36 +84,32 @@ jz @f
 inc eax
 @@:
 mov [edi + MEMUPB.optionLP],eax
-
+;---------- Option Measurement Repeats mode -----------------------------------;
 movzx eax,[esi + BINDLIST.getMemMeas]
 bsf eax,eax
 mov [edi + MEMUPB.optionMeasure],eax 
-
+;---------- Option Measurement Approximation mode -----------------------------;
 movzx eax,[esi + BINDLIST.getMemPix]
 bsf eax,eax
 mov [edi + MEMUPB.optionApprox],eax 
-
+;---------- Option user-defined block -----------------------------------------;
 mov eax,dword [esi + BINDLIST.blockSizeEdit]
 mov [edi + MEMUPB.customBlockStart],eax
-
 ret
-
-
-
+;---- Execute simple run benchmark scenario and build text data for visual ----;
+;                                                                              ;
+; INPUT:   None at registers                                                   ;
+;                                                                              ;
+; OUTPUT:  None at registers                                                   ;
+;          TODO. Error handling                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 ScenarioMemoryRun:
 pushad
 cld
-
-;---------- Get system configuration ------------------------------------------;
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
+;---------- Refresh system information ----------------------------------------;
 call InfoProcessor
-
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
-; TODO. Possible make this step as subroutine: GuiToUserParms.
-
 mov al,0
 call GuiToUserParms
 
@@ -128,51 +117,26 @@ call GuiToUserParms
 ; TODO. Comments.
 ;---------- Initializing measurement ------------------------------------------;
 ; TODO. Comments.
-;---------- Run measurement ---------------------------------------------------;
-; TODO. Comments.
-
-; Required modification.
-; Resources (memory) must be relesed even if error detected
-
-;******************************************************************************;
-;
-; TODO. TIMEOUT ERROR AT SECOND SUBROUTINE 
-; IF TRACE THIS 3 SUBROUTINES BY OLLYDBG.
-; SAME AT NCRB V1.XX.XX.
-;
-; INT3
-;
-;******************************************************************************;
-
 call SessionStart
 jc .error            ; Go if error at start
-
-; DEBUG
-; PUSH ECX
-; MOV ECX,00000000H
-; LOOP $
-; POP ECX
-; DEBUG
-
+;---------- Run measurement ---------------------------------------------------;
+; TODO. Comments.
 call SessionProgress
 jc .error            ; Go if error at execution
-
+;---------- Stop measurement --------------------------------------------------;
+; TODO. Comments.
 call SessionStop
 jc .error            ; Go if error at termination
 
-; call routines from "Run simple" scenario
-; call ResultSimple 
+; TODO.
+; Resources (memory) must be relesed even if error detected
+; Timeout error at second subroutine if trace by OllyDbg.
 
 ;---------- Calculating results by Output Parameters Block (OPB) --------------;
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
-; mov ebp,[eax + REGISTRY32.allocatorBindBuffer.objectStart]
 lea ebp,[BIND_LIST]
-
-; lea ebx,[eax + REGISTRY32.memIpb]
 lea ebx,[MEM_IPB]
+
+;---------- Build application type string -------------------------------------;
 
 ; TODO. Differentiate ia32 and ia32 under Win64 (WoW)
 
@@ -187,6 +151,7 @@ stosb
 ; STR_AM_X64_00
 ; STR_AM_06
 
+;---------- Build Assembler method string -------------------------------------;
 lea edi,[ebp + BINDLIST.mrMethod]
 mov eax,[ebx + MEMIPB.updatedAsm]
 mov cx,STR_AM_IA32_00
@@ -198,7 +163,7 @@ add ax,cx
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Operand width string ----------------------------------------;
 lea edi,[ebp + BINDLIST.mrWidth]
 mov eax,[ebx + MEMIPB.operandWidth]
 push ebx
@@ -207,7 +172,7 @@ call DecimalPrint32
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Threads count string ----------------------------------------;
 lea edi,[ebp + BINDLIST.mrThreads]
 mov eax,[ebx + MEMIPB.updatedThreads]
 push ebx
@@ -216,51 +181,51 @@ call DecimalPrint32
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Hyper threading string --------------------------------------;
 lea edi,[ebp + BINDLIST.mrHyperT]
 mov eax,[ebx + MEMIPB.updatedHT]
 add ax,STR_MR_HT_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Large pages string ------------------------------------------;
 lea edi,[ebp + BINDLIST.mrLargeP]
 mov eax,[ebx + MEMIPB.updatedLP]
 add ax,STR_MR_LP_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build NUMA string -------------------------------------------------;
 lea edi,[ebp + BINDLIST.mrNuma]
 mov eax,[ebx + MEMIPB.updatedNUMA]
 add ax,STR_MR_NUMA_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Processor groups string -------------------------------------;
 lea edi,[ebp + BINDLIST.mrGroups]
 mov eax,[ebx + MEMIPB.updatedPG]
 add ax,STR_MR_PG_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Target object string ----------------------------------------;
 lea edi,[ebp + BINDLIST.mrTarget]
 mov eax,[ebx + MEMIPB.updatedTarget]
 add ax,STR_MEMORY_L1
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Prefetch distance string ------------------------------------;
 lea edi,[ebp + BINDLIST.mrDistance]
 mov eax,[ebx + MEMIPB.updatedDistance]
 add ax,STR_MR_PD_00
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Build Total memory string -----------------------------------------;
 lea edi,[ebp + BINDLIST.mrSizeTotal]
-mov eax,[ebx + MEMIPB.startBlockSize]    ; memoryTotal]
+mov eax,[ebx + MEMIPB.startBlockSize]
 xor edx,edx
 push ebx
 mov bl,0FFh
@@ -268,9 +233,9 @@ call SizePrint64
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Memory per thread string ------------------------------------;
 lea edi,[ebp + BINDLIST.mrSizeThread]
-mov eax,[ebx + MEMIPB.startBlockSize]    ; memoryPerThread]
+mov eax,[ebx + MEMIPB.startBlockSize]
 xor edx,edx
 push ebx
 mov bl,0FFh
@@ -278,7 +243,7 @@ call SizePrint64
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Measurement profile string ----------------------------------;
 lea edi,[ebp + BINDLIST.mrMeasProf]
 mov eax,[ebx + MEMIPB.updatedMeasure]
 add ax,STR_MR_MEASURE_00
@@ -286,8 +251,10 @@ call PoolStringWrite
 mov al,0
 stosb
 
-; TODO. Overflow possible, repeats can be above 32-bit value, actual for adaptive modes.
+; TODO. Overflow possible, 
+; repeats can be above 32-bit value, actual for adaptive modes.
 
+;---------- Build Measurement repeats string ----------------------------------;
 lea edi,[ebp + BINDLIST.mrMeasRep]
 mov eax,dword [ebx + MEMIPB.measureRepeats]
 push ebx
@@ -296,19 +263,19 @@ call DecimalPrint32
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Memory block #1 string --------------------------------------;
 lea edi,[ebp + BINDLIST.mrBlock1]
 mov eax,[ebx + MEMIPB.allocatedBlock1]
 call HexPrint32
 mov ax,0000h + 'h'
 stosw
-
+;---------- Build Memory block #2 string --------------------------------------;
 lea edi,[ebp + BINDLIST.mrBlock2]
 mov eax,[ebx + MEMIPB.allocatedBlock2]
 call HexPrint32
 mov ax,0000h + 'h'
 stosw
-
+;---------- Build Total memory allocated string -------------------------------;
 lea edi,[ebp + BINDLIST.mrAllocAll]
 mov eax,[ebx + MEMIPB.memoryTotal]
 push ebx
@@ -317,7 +284,7 @@ call SizePrint64
 pop ebx
 mov al,0
 stosb
-
+;---------- Build Memory per thread allocated string --------------------------;
 lea edi,[ebp + BINDLIST.mrAllocThr]
 mov eax,[ebx + MEMIPB.memoryPerThread]
 push ebx
@@ -326,13 +293,9 @@ call SizePrint64
 pop ebx
 mov al,0
 stosb
-
+;---------- Calculate values and build Milliseconds string --------------------;
 finit
-
-; mov ebx,[Registry]
-; lea ebx,[ebx + REGISTRY32.memOpb]
 lea ebx,[MEM_OPB]
-
 lea edi,[ebp + BINDLIST.mrDtMs]
 fild [ebx + MEMOPB.osTimerDelta]  ; st0 = delta time in 100 ns units 
 push 0 10000                      ; 10000 units * 100 ns = 1000000 nS = 1 ms
@@ -347,12 +310,8 @@ mov ax,STR_MR_PLUS_TIME
 call PoolStringWrite
 mov al,0
 stosb
-
+;---------- Calculate values and build TSC MHz string -------------------------;
 lea edi,[ebp + BINDLIST.mrDtscSec]
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov eax,[Registry]
-
 push dword [CPU_DATA.tscClockHz + 4]  ; optimize by x87 access
 push dword [CPU_DATA.tscClockHz + 0]  ; optimize by x87 access
 push 1000000
@@ -370,17 +329,9 @@ mov ax,STR_MHZ
 call PoolStringWrite
 mov al,0
 stosb
-
-; Clocks per Instruction (clocks, CPI)
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS INCLUDE MINIMIZE OFFSETS SIZE.
-; mov esi,[Registry]
-
-; lea esi,[esi + REGISTRY32.memIpb]
+;--- Calculate values and build Clocks per Instruction (clocks, CPI) string ---;
 lea esi,[MEM_IPB]
-
 lea edi,[ebp + BINDLIST.mrDtscIns]
-
 mov eax,[esi + MEMIPB.startBlockSize]  ; EAX = Block size, bytes 
 xor edx,edx
 mov ecx,[esi + MEMIPB.operandWidth]    ; Must be not zero, otherwise divide overflow
@@ -394,26 +345,19 @@ fild qword [ebx + MEMOPB.tscTimerDelta]  ; st0 = total delta TSC, st1 = total in
 fdiv st0,st1
 fstp qword [esp]
 pop eax edx                 ; EDX:EAX = bitfield as double value
-
-;mov r10,rax
-
 push ebx
 mov bx,0300h            ; Float part is 3 digits, Integer part without template
 call DoublePrint
 pop ebx
 mov al,0
 stosb
-
-; Branch for Bandwidth
-; Speed(MBPS)
-
+;---------- Branch for Bandwidth, Speed(MBPS) ---------------------------------;
 lea edi,[ebp + BINDLIST.mrLastValue]
-
 push edx eax
 fild [esi + MEMIPB.measureRepeats]   ; st0 = Repeats, iterations, note 64-bit
 fimul [esi + MEMIPB.startBlockSize]  ; st0 * Operational block size, bytes 
 fimul [esi + MEMIPB.updatedThreads]   ; Required all threads same size
-; At this point, st0 = BlockSize * Repeats * Threads
+;---------- At this point, st0 = BlockSize * Repeats * Threads ----------------;
 mov dword [esp],1000000     ; alternative is 1048576 (binary/decimal MB select)
 fidiv dword [esp]           ; st0 = total megabytes executed
 fild [ebx + MEMOPB.osTimerDelta]
@@ -424,14 +368,15 @@ fstp qword [esp]
 pop eax edx             ; EDX:EAX = bitfield as double value
 mov bx,0200h            ; Float part is 2 digits, Integer part without template
 call DoublePrint
-
 mov al,0
 stosb
 
 ; jmp .L10
 
+;---------- Branch for Latency, Latency (ns) ----------------------------------;
 
 ; TODO.
+
 ; Branch for Latency 
 ; Latency (ns)
 ;.L9:
@@ -445,19 +390,11 @@ stosb
 ;mov bx,0300h            ; Float part is 3 digits, Integer part without template
 ;call DoublePrint
 
-
-
-
 ; 0 - termination can be common.
-
-
-
-
 
 ; TODO. Error handling.
 
 .error:
-
 
 popad
 ret

@@ -13,20 +13,15 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Modify_NOT64:
 Measurement_Modify_NOT64:
-
 ;---------- Prepare big cycle -------------------------------------------------;
-
 mov rax,rsi            ; RAX = Reload source address
 mov rdx,rcx            ; RDX = Reload length
 shr rdx,4              ; RDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_Modify_NOT64  ; Go if Length < 16 instructions
 mov rbx,128            ; RBX = Addend, this operation also clear bits RBX[63-32]
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_Modify_NOT64:
 Block_Modify_NOT64:
 not qword [rax+08*00]
@@ -49,27 +44,20 @@ add rax,rbx             ; Modify address, addend=register (not constant) for opt
 dec rdx
 jnz Block_Modify_NOT64  ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_Modify_NOT64:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_Modify_NOT64:
 mov edx,ecx
 and edx,00001111b        ; ECX = Extract tail length
 jz Measure_Modify_NOT64
 mov ebx,8
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_Modify_NOT64:
 not qword [rax+08*00]
 add rax,rbx              ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_Modify_NOT64    ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_Modify_NOT64:
 dec rbp
 jnz Measurement_Modify_NOT64  ; Cycle for measurement, repeat same operation, DEC/JNZ is faster than LOOP!
 ret
-

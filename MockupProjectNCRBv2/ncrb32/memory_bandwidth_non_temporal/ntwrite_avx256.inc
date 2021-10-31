@@ -13,25 +13,19 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_NtWrite_AVX256:
 vzeroall                 ; Clear ZMM0-ZMM7 (8 registers only because 32-bit mode) for write data
 push ebx                 ; EBX = High 32 bits of measurement repeats count
-
 Measurement_NtWrite_AVX256:
-
 ;---------- Prepare big cycle -------------------------------------------------;
 ; Set pointer to middle of 512-byte interval, +/- offsets is code size optimal,
 ; because offsets [-128...+127] encoded as one byte
-
 lea eax,[esi+256]        ; EAX = Reload source address
 mov edx,ecx              ; EDX = Reload length
 shr edx,4                ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_NtWrite_AVX256  ; Go if Length < 16 instructions
 mov ebx,512              ; EBX = Addend
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_NtWrite_AVX256:
 Block_NtWrite_AVX256:
 vmovntpd [eax-32*08],ymm0
@@ -54,32 +48,24 @@ add eax,ebx                  ; Modify address, addend=register (not constant) fo
 dec edx
 jnz Block_NtWrite_AVX256     ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_NtWrite_AVX256:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_NtWrite_AVX256:
 mov edx,ecx
 and edx,00001111b            ; ECX = Extract tail length
 jz Measure_NtWrite_AVX256
 mov ebx,32
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_NtWrite_AVX256:
 vmovntpd [eax-32*08],ymm0
 add eax,ebx                  ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_NtWrite_AVX256      ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_NtWrite_AVX256:
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_NtWrite_AVX256  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret
-

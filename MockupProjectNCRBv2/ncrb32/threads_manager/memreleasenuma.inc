@@ -9,26 +9,18 @@
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft ia32 calling convention.        ; 
 ;------------------------------------------------------------------------------;
-
 MemReleaseNuma:
 cld
 push ebx esi edi ebp
-
 ;---------- Reload input parameters to non-volatile registers -----------------;
                 ; EBX = Pointer to NUMA nodes list
 mov ebp,edx     ; EBP = Number of used NUMA nodes
-
 ;---------- Get current process handle ----------------------------------------;
-
 call [GetCurrentProcess]    ; Return EAX = Handle
 xchg esi,eax                ; Copy to non-volatile register, XCHG for compact
-
 ;---------- Set nodes list limit ----------------------------------------------;
-
 mov edi,MAX_NODES           ; EDI = Maximum number of NUMA nodes
-
 ;---------- Cycle for release memory, allocated at all nodes ------------------;
-
 .numaRelease:
 mov ecx,[ebx + NUMACTRL.trueBase]  ; ECX = Address
 jecxz .skip                        ; Skip this entry if memory not allocated for it
@@ -40,17 +32,13 @@ call [VirtualFreeEx]    ; Call memory release WinAPI, return RAX = Status
 test eax,eax
 jz .error               ; Go if error detected
 .skip:
-
 ;---------- Cycle for NUMA nodes ----------------------------------------------;
-
 dec ebp
 jz .done
 add ebx,NUMACTRL_SIZE              ; Select next entry                    
 dec edi
 jnz .numaRelease                   ; Cycle for all (typical 64) entries 
-
 ;---------- Exit points -------------------------------------------------------;
-
 .done:
 clc                  ; CF = 0 means status = no errors 
 .exit:

@@ -13,7 +13,6 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_NtWrite_SSE128:
 xorps xmm0,xmm0          ; Clear XMM0-XMM7 for write data
 xorps xmm1,xmm1
@@ -24,21 +23,16 @@ xorps xmm5,xmm5
 xorps xmm6,xmm6
 xorps xmm7,xmm7
 push ebx                 ; EBX = High 32 bits of measurement repeats count
-
 Measurement_NtWrite_SSE128:
-
 ;---------- Prepare big cycle -------------------------------------------------;
 ; Set pointer to middle of 256-byte interval, +/- offsets is code size optimal,
 ; because offsets [-128...+127] encoded as one byte
-
 lea eax,[esi+128]        ; EAX = Reload source address
 mov edx,ecx              ; EDX = Reload length
 shr edx,4                ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_NtWrite_SSE128  ; Go if Length < 16 instructions
 mov ebx,256              ; EBX = Addend
-
 ;---------- Big cycle ---------------------------------------------------------;
-
 DumpStart_NtWrite_SSE128:
 Block_NtWrite_SSE128:
 movntps [eax-16*08],xmm0
@@ -61,32 +55,24 @@ add eax,ebx                  ; Modify address, addend=register (not constant) fo
 dec edx
 jnz Block_NtWrite_SSE128     ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_NtWrite_SSE128:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_NtWrite_SSE128:
 mov edx,ecx
 and edx,00001111b            ; ECX = Extract tail length
 jz Measure_NtWrite_SSE128
 mov ebx,16
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_NtWrite_SSE128:
 movntps [eax-16*08],xmm0
 add eax,ebx                  ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_NtWrite_SSE128      ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_NtWrite_SSE128:
 sub ebp,1                    ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_NtWrite_SSE128  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret
-

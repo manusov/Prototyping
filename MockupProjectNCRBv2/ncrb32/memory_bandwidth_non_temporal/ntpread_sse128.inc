@@ -13,30 +13,22 @@
 ;          All registers corrupted                                             ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_NtpRead_SSE128:
 push ebx                 ; EBX = High 32 bits of measurement repeats count
-
 Measurement_NtpRead_SSE128:
-
 ;---------- Prepare big cycle -------------------------------------------------;
 ; Set pointer to middle of 256-byte interval, +/- offsets is code size optimal,
 ; because offsets [-128...+127] encoded as one byte
-
 lea eax,[esi+128]        ; EAX = Reload source address
 mov edx,ecx              ; EDX = Reload length
 shr edx,4                ; EDX = Block length, convert from INSTRUCTIONS to 16xINSTRUCTION units
 jz Small_NtpRead_SSE128  ; Go if Length < 16 instructions
 mov ebx,256              ; EBX = Addend
-
 ;---------- Big cycle ---------------------------------------------------------;
 ; 256 bytes per cycle with 16 128-bit SSE registers
-
 DumpStart_NtpRead_SSE128:
 Block_NtpRead_SSE128:
-
 ;---------- Prefetch, except last 1 iteration ---------------------------------;
-
 cmp edx,1
 je @f
 prefetchnta [eax-16*08+ebx]
@@ -44,9 +36,7 @@ prefetchnta [eax-16*04+ebx]
 prefetchnta [eax+16*00+ebx]
 prefetchnta [eax+16*04+ebx]
 @@:
-
 ;---------- Read --------------------------------------------------------------;
-
 movaps xmm0,[eax-16*08]
 movaps xmm1,[eax-16*07]
 movaps xmm2,[eax-16*06]
@@ -67,32 +57,24 @@ add eax,ebx                ; Modify address, addend=register (not constant) for 
 dec edx
 jnz Block_NtpRead_SSE128   ; Cycle for block data transfer, DEC/JNZ is faster than LOOP!
 DumpStop_NtpRead_SSE128:
-
 ;---------- Prepare tail cycle ------------------------------------------------;
-
 Small_NtpRead_SSE128:
 mov edx,ecx
 and edx,00001111b          ; ECX = Extract tail length
 jz Measure_NtpRead_SSE128
 mov ebx,16                 ; 16 bytes per cycle with one 128-bit SSE register
-
 ;---------- Tail cycle --------------------------------------------------------;
-
 Tail_NtpRead_SSE128:
 movaps xmm0,[eax-16*08]
 add eax,ebx                ; Modify address, addend=register (not constant) for optimization!
 dec edx
 jnz Tail_NtpRead_SSE128    ; Cycle for tail data transfer, DEC/JNZ is faster than LOOP!
-
 ;---------- Measurement cycle -------------------------------------------------;
-
 Measure_NtpRead_SSE128:
 sub ebp,1                  ; EBX:EBP = Measurement cycle counter
 sbb dword [esp],0
 mov eax,ebp
 or eax,[esp]
 jnz Measurement_NtpRead_SSE128  ; Cycle for measurement, repeat same operation
-
 pop ebx
 ret
-

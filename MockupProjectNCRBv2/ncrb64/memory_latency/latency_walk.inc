@@ -14,7 +14,6 @@
 ;          Registers corrupted, but must save R14, R15                         ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
 Pattern_Latency_Walk:
 mov rcx,[rsi]          ; qword [rsi] = walk list entry point, Block #1
 WalkRepeat:
