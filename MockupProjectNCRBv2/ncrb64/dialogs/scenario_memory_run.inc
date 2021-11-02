@@ -7,13 +7,13 @@
 ;          Benchmark scenario build at IPB (Input Parameters Block)            ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
-
-
+;
+;
 ; TODO. Can run as simple run or helper for draw, use input flag.
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
-
-
+;
+;
 GuiToUserParms:
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
 lea rsi,[BIND_LIST]
@@ -289,35 +289,34 @@ fstp qword [rsp + 8]
 pop rax rax
 mov bx,0100h            ; Float part is 1 digit, Integer part without template
 call DoublePrint        ; print MHz
-mov al,' '
-stosb
-mov ax,STR_MHZ
-call PoolStringWrite
 mov al,0
 stosb
 ;--- Calculate values and build Clocks per Instruction (clocks, CPI) string ---;
 lea r11,[MEM_IPB]
 lea rdi,[r14 + BINDLIST.mrDtscIns]
-mov rax,[r11 + MEMIPB.startBlockSize]  ; RAX = Block size, bytes 
+mov rax,[r11 + MEMIPB.startBlockSize] ; RAX = Block size, bytes 
 xor edx,edx
-mov ecx,[r11 + MEMIPB.operandWidth]    ; Must be not zero, otherwise divide overflow
-shr ecx,3                        ; RCX = Bytes per instr., convert bits to bytes
-div rcx                          ; RCX = Instructions per block
+mov ecx,[r11 + MEMIPB.operandWidth]   ; Must be not zero, otherwise divide overflow
+shr ecx,3                             ; RCX = Bytes per instr., convert bits to bytes
+div rcx                               ; RCX = Instructions per block
 mov rcx,[r11 + MEMIPB.measureRepeats]
-mul rcx                          ; RAX = Total instructions
+mul rcx                               ; RAX = Total instructions
 push rax
-fild qword [rsp]                   ; st0 = total instructions
+fild qword [rsp]                      ; st0 = total instructions
 fild qword [r12 + MEMOPB.tscTimerDelta]  ; st0 = total delta TSC, st1 = total instructions  
 fdiv st0,st1
 fstp qword [rsp]
-pop rax                 ; RAX = bitfield as double value
-mov r10,rax
+pop rax                 ; RAX = bitfield as double value, clocks per instruction
+mov r10,rax             ; R10 = this copy used for Latency Mode branch  
 mov bx,0300h            ; Float part is 3 digits, Integer part without template
 call DoublePrint
 mov al,0
 stosb
-;---------- Branch for Bandwidth, Speed(MBPS) ---------------------------------;
+;---------- Final result select: Bandwidth or Latency measurement mode --------;
 lea rdi,[r14 + BINDLIST.mrLastValue]
+cmp [r11 + MEMIPB.updatedAsm],LATENCY_MODE
+jae .latencyMode
+;---------- Branch for Bandwidth, Speed (MBPS) --------------------------------;
 mov rax,[r11 + MEMIPB.startBlockSize]    ; RAX = Operational block size, bytes 
 mov rcx,[r11 + MEMIPB.measureRepeats]    ; RCX = Repeats, iterations, note 64-bit     
 mul rcx                                  ; RAX = BlockSize * Repeats
@@ -325,6 +324,7 @@ mov ecx,[r11 + MEMIPB.updatedThreads]    ; Required all threads same size
 mul rcx                                  ; RAX = BlockSize * Repeats * Threads
 push rax
 fild qword [rsp]            ; st0 = total bytes executed 
+;---------- At this point, st0 = BlockSize * Repeats * Threads ----------------;
 mov dword [rsp],1000000     ; alternative is 1048576 (binary/decimal MB select)
 fidiv dword [rsp]           ; st0 = total megabytes executed
 fild [r12 + MEMOPB.osTimerDelta]
@@ -332,31 +332,34 @@ mov dword [rsp],10000000    ; 10000000 units * 100 ns = 1 second
 fidiv dword [rsp]
 fdivr st0,st1
 fstp qword [rsp]
-pop rax                 ; RAX = bitfield as double value
-mov bx,0200h            ; Float part is 2 digits, Integer part without template
+pop rax             ; RAX = bitfield as double value
+mov bx,0200h        ; Float part is 2 digits, Integer part without template
+jmp .entryMode
+;---------- Branch for Latency, Latency (ns) ----------------------------------;
+.latencyMode:
+mov rax,[CPU_DATA.tscClockHz]
+mov [r12 + MEMOPB.tscFrequencyHz],rax
+push 1000000000
+fild qword [rsp]
+fild [r12 + MEMOPB.tscFrequencyHz]  
+fdivp st1,st0
+fstp [r12 + MEMOPB.tscPeriodNs]
+mov [rsp],r10
+fld qword [rsp]
+fmul [r12 + MEMOPB.tscPeriodNs]
+fstp qword [rsp]
+pop rax
+mov bx,0300h        ; Float part is 3 digits, Integer part without template
+.entryMode:
+;---------- Write value and terminate string ----------------------------------;
 call DoublePrint
 mov al,0
 stosb
-;---------- Branch for Latency, Latency (ns) ----------------------------------;
-
-; TODO.
-
-; .L9:
-; lea rsi,[MsgResultLatency]
-; call StringWrite_CRLF_Equal
-; push r10
-; fld qword [rsp]
-; fmul [r9+OPB.TSCperiodNs]
-; fstp qword [rsp]
-; pop rax
-; mov bx,0300h            ; Float part is 3 digits, Integer part without template
-; call DoublePrint
 ;
-; 0 - termination can be common.
-
+;
 ; TODO. Error handling.
-
 .error:
-
+;
+;
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret

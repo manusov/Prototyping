@@ -37,6 +37,7 @@
 ;                                                                                                         ;
 ;=========================================================================================================;
 
+
 ;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;                        FASM and NCRB definitions.                            ;        
@@ -276,7 +277,7 @@ dialog      tabOs         , '',                         2,  30, 403, 253, WS_CHI
 dialogitem  'STATIC'      , '', IDC_OS              ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_OS_UP           ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_OS_TEXT         ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_OS_REPORT       , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_OS_REPORT       , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_OS_CANCEL       , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 4 = native os info, useable if run ncrb32 under win64 ---------;
@@ -284,7 +285,7 @@ dialog      tabNativeOs   , '',                         2,  30, 403, 253, WS_CHI
 dialogitem  'STATIC'      , '', IDC_NATIVE_OS       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_UP    ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_NATIVE_OS_TEXT  ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_NAT_OS_REPORT   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_NAT_OS_REPORT   , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_NAT_OS_CANCEL   , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 5 = platform topology info by winapi --------------------------; 
@@ -294,7 +295,7 @@ dialogitem  'EDIT'        , '', IDE_TOPOL_UP_1      ,   3,  17, 400,  10, WS_VIS
 dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_1    ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_TOPOL_UP_2      ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_TOPOL_TEXT_2    ,   3, 179, 400,  49, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_TOPOL_REPORT    , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_TOPOL_REPORT    , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_TOPOL_CANCEL    , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 6 = platform topology info by winapi (ex, extended) -----------; 
@@ -304,7 +305,7 @@ dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_1     ,   3,  17, 400,  10, WS_VIS
 dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_1   ,   3,  30, 400, 129, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_TOP_EX_UP_2     ,   3, 166, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_TOP_EX_TEXT_2   ,   3, 179, 400,  49, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_TOPOL_EX_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 7 = platform NUMA domains list- -------------------------------; 
@@ -312,7 +313,7 @@ dialog      tabNuma       , '',                         2,  30, 403, 253, WS_CHI
 dialogitem  'STATIC'      , '', IDC_NUMA            ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_NUMA_UP         ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_NUMA_TEXT       ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_NUMA_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_NUMA_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_NUMA_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 8 = platform processor groups list ----------------------------; 
@@ -320,7 +321,7 @@ dialog      tabPgroups    , '',                         2,  30, 403, 253, WS_CHI
 dialogitem  'STATIC'      , '', IDC_P_GROUPS        ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_UP     ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_P_GROUPS_TEXT   ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_P_GROUPS_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_P_GROUPS_REPORT , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_P_GROUPS_CANCEL , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 9 = ACPI tables list ------------------------------------------; 
@@ -330,7 +331,7 @@ dialogitem  'EDIT'        , '', IDE_ACPI_UP_1       ,   3,  17, 400,  10, WS_VIS
 dialogitem  'EDIT'        , '', IDE_ACPI_TEXT_1     ,   3,  30, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
 dialogitem  'EDIT'        , '', IDE_ACPI_UP_2       ,   3, 126, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_ACPI_TEXT_2     ,   3, 139, 400,  89, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_ACPI_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_ACPI_REPORT     , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_ACPI_CANCEL     , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Tab 10 = affinized CPUID dump, per each logical CPU ---------------; 
@@ -338,11 +339,11 @@ dialog      tabAffCpuid   , '',                         2,  30, 403, 253, WS_CHI
 dialogitem  'STATIC'      , '', IDC_AFF_CPUID       ,   2,   3, 380,  10, WS_VISIBLE
 dialogitem  'EDIT'        , '', IDE_A_CPUID_UP      ,   3,  17, 400,  10, WS_VISIBLE + WS_BORDER + ES_READONLY
 dialogitem  'EDIT'        , '', IDE_A_CPUID_TEXT    ,   3,  30, 400, 198, WS_VISIBLE + WS_BORDER + ES_MULTILINE + ES_AUTOHSCROLL + ES_AUTOVSCROLL + ES_READONLY + WS_VSCROLL
-dialogitem  'BUTTON'      , '', IDB_A_CPUID_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_A_CPUID_REPORT  , 323, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT + WS_DISABLED
 dialogitem  'BUTTON'      , '', IDB_A_CPUID_CANCEL  , 362, 234,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog                                   
 ;---------- Child window = memory and cache benchmark run, text results -------; 
-dialog      childMemoryRun,    '',                     20,  20, 240, 295, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+dialog      childMemoryRun,    '',                     20,  20, 325, 285, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_MR_FIRST        ,   7,  10, 205,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_MR_APPLICATION  ,   7,  23,  75,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_MR_METHOD       ,   7,  32,  75,  10, WS_VISIBLE 
@@ -366,52 +367,46 @@ dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_THR  ,   7, 193,  95,  10, WS_VIS
 dialogitem  'STATIC'      , '', IDC_MR_MEAS_RESULTS ,   7, 206, 380,  10, WS_VISIBLE  
 dialogitem  'STATIC'      , '', IDC_MR_DT_MS        ,   7, 219, 190,  10, WS_VISIBLE 
 dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_MHZ ,   7, 228, 190,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_CLK ,   7, 244, 190,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_LAST         ,   7, 260,  75,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_APPLIC_V     ,  89,  23, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_METHOD_V     ,  89,  32, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_WIDTH_V      ,  89,  41, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_THREADS_V    ,  89,  50, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR_V  ,  89,  59, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAG_V  ,  89,  68, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_NUMA_V       ,  89,  77, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS_V   ,  89,  86, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ_V ,  89,  95, 150,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST_V  ,  89, 104, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL_V ,  89, 113, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_T_V ,  89, 122, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEASURE_P_V  ,  89, 131, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEASURE_R_V  ,  89, 140, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1_V    , 115, 166, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2_V    , 115, 175, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_A_V  , 115, 184, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_T_V  , 115, 193, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DT_MS_V      ,  76, 219, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_M_V ,  76, 228, 150,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_C_V , 135, 244,  90,  10, WS_VISIBLE 
-dialogitem  'STATIC'      , '', IDC_MR_LAST_V       ,  65, 260, 150,  10, WS_VISIBLE
-dialogitem  'BUTTON'      , '', IDB_MR_OK           , 195, 275,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_CLK ,   7, 237, 190,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LAST         ,   7, 253,  75,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_APPLIC_V     ,  94,  23, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_METHOD_V     ,  94,  32, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_WIDTH_V      ,  94,  41, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_THREADS_V    ,  94,  50, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_HYPER_THR_V  ,  94,  59, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_LARGE_PAG_V  ,  94,  68, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_NUMA_V       ,  94,  77, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_P_GROUPS_V   ,  94,  86, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_TARGET_OBJ_V ,  94,  95, 230,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MR_PREF_DIST_V  ,  94, 104, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_TOTAL_V ,  94, 113, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_SIZE_PER_T_V ,  94, 122, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_P_V  ,  94, 131, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEASURE_R_V  ,  94, 140, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_1_V    ,  94, 166, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_BLOCK_2_V    ,  94, 175, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_A_V  ,  94, 184, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_MEM_ALC_T_V  ,  94, 193, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DT_MS_V      ,  94, 219, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_SEC_M_V ,  94, 228, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_DTSC_INS_C_V ,  94, 237, 230,  10, WS_VISIBLE 
+dialogitem  'STATIC'      , '', IDC_MR_LAST_V       ,  94, 253, 230,  10, WS_VISIBLE
+dialogitem  'BUTTON'      , '', IDB_MR_OK           , 283, 267,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog
 ;---------- Child window = memory and cache benchmark run, draw chart ---------;
-dialog      childMemoryDraw,   '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
-dialogitem  'STATIC'      , '', IDC_MD_ASM          ,   9, 271, 250,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_PREFETCH     , 236, 271,  50,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_OBJECT       ,   9, 279,  50,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_THREADS      ,  59, 279,  50,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_REPEATS      , 118, 279,  60,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_PAGES        , 187, 279,  50,  10, WS_VISIBLE
-dialogitem  'STATIC'      , '', IDC_MD_NUMA         , 236, 279,  50,  10, WS_VISIBLE
-dialogitem  'BUTTON'      , '', IDB_MD_RESIZE       , 296, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_MD_SILENT       , 335, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
-dialogitem  'BUTTON'      , '', IDB_MD_CANCEL       , 374, 272,  38,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialog      childMemoryDraw,   '',                     28,  10, 387, 278, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
+dialogitem  'STATIC'      , '', IDC_MD_ASM          ,   5, 257, 250,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_PREFETCH     , 230, 257,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_OBJECT       ,   5, 265,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_THREADS      ,  53, 265,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_REPEATS      , 111, 265,  60,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_PAGES        , 180, 265,  50,  10, WS_VISIBLE
+dialogitem  'STATIC'      , '', IDC_MD_NUMA         , 230, 265,  50,  10, WS_VISIBLE
+dialogitem  'BUTTON'      , '', IDB_MD_RESIZE       , 290, 260,  30,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_MD_SILENT       , 321, 260,  30,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
+dialogitem  'BUTTON'      , '', IDB_MD_CANCEL       , 352, 260,  30,  13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog
-;---------- Child window = math benchmark run, text results -------------------;
-dialog      childMathRun,      '',                     40,  40, 220, 250, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
-enddialog
-;---------- Child window = math benchmark run, draw chart ---------------------;
-dialog      childMathDraw,     '',                     30,  10, 420, 290, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
-enddialog
-;---------- Child window = math benchmark, vector brief -----------------------;
+;---------- Child window = vector brief benchmark -----------------------------;
 dialog      childVectorBrief,  '',                     20,  20, 405, 270, WS_CAPTION + WS_SYSMENU, 0, 0, 'Verdana', 10
 dialogitem  'STATIC'      , '', IDC_VB_CPU_NAME     ,   7,  10, 170,  10, WS_VISIBLE
 dialogitem  'STATIC'      , '', IDC_VB_TSC_CLK      ,   7,  19, 170,  10, WS_VISIBLE
@@ -602,8 +597,9 @@ DB  'OS NUMA nodes'                  , 0
 DB  'OS physical memory'   , 0
 DB  'Available'            , 0
 DB  'Minimum large page'   , 0
-;--- Assembler instructions and modes names for memory and cache benchmarks ---;
+;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
+; Part 1 of 2, temporal variant.
 DB  'Read x86 (MOV)'                      , 0
 DB  'Write x86 (MOV)'                     , 0
 DB  'Copy x86 (MOV)'                      , 0
@@ -636,6 +632,34 @@ DB  'Scatter write AVX-512 (VSCATTERQPD)' , 0
 DB  'Cache optimized write (CLZERO)'      , 0
 DB  'Latency (LCM)'                       , 0  
 DB  'Latency (RDRAND)'                    , 0
+;---------- Assembler instructions names for memory and cache benchmarks ------;
+; This strings also used as sequental pool when method name visual.
+; Part 2 of 2, non-temporal variant.
+DB  'Non-temporal write SSE-128 (MOVNTPS)'                    , 0   
+DB  'Non-temporal copy SSE-128 (MOVAPS+MOVNTPS)'              , 0
+DB  'Non-temporal write AVX-256 (VMOVNTPD)'                   , 0
+DB  'Non-temporal copy AVX-256 (VMOVAPD+VMOVNTPD)'            , 0
+DB  'Non-temporal write AVX-512 (VMOVNTPD)'                   , 0
+DB  'Non-temporal copy AVX-512 (VMOVAPD+VMOVNTPD)'            , 0
+DB  'Non-temporal read SSE-128 (MOVNTDQA)'                    , 0   
+DB  'Non-temporal copy SSE-128 (MOVNTDQA+MOVNTPD)'            , 0
+DB  'Non-temporal read AVX-256 (VMOVNTDQA)'                   , 0
+DB  'Non-temporal copy AVX-256 (VMOVNTDQA+VMOVNTPD)'          , 0
+DB  'Non-temporal read AVX-512 (VMOVNTDQA)'                   , 0
+DB  'Non-temporal copy AVX-512 (VMOVNTDQA+VMOVNTPD)'          , 0
+DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0   
+DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
+DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0
+DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0
+DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
+DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0
+DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0
+DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
+DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0
+DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0
+DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0
+DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0
+;---------- Modes names for memory and cache benchmarks -----------------------;
 DB  'Nontemporal'                         , 0
 DB  'Force 32x2'                          , 0
 ;---------- Target objects names for memory and cache benchmark ---------------;  
@@ -780,31 +804,31 @@ DB  'smt='            , 0
 DB  'UNKNOWN table signature' , 0
 ;---------- Strings for child screen = Memory and cache performance report ----;
 DB  'Simple block benchmark, conditions and options settings:', 0 
-DB  'application'          , 0
-DB  'method'               , 0
-DB  'operand width (bits)' , 0
-DB  'threads'              , 0
-DB  'hyper-threading'      , 0
-DB  'large pages'          , 0
-DB  'NUMA optimization'    , 0
-DB  'processor groups'     , 0
-DB  'target object'        , 0
-DB  'prefetch distance'    , 0
-DB  'data size total'      , 0
-DB  'size per thread'      , 0
-DB  'measurement profile'  , 0
-DB  'measurement repeats'  , 0
-DB  'memory allocation:'          , 0
-DB  'block #1 base'               , 0
-DB  'block #2 base'               , 0
-DB  'memory allocated total'      , 0
-DB  'memory allocated per thread' , 0
-DB  'measurements results:'       , 0
-DB  'dT (ms)'                     , 0
-DB  'dTSC/Sec (MHz)'              , 0
-DB  'dTSC/Instruction per thread (clks)' , 0
-DB  'Speed (MBPS)' , 0
-DB  'Latency (ns)' , 0
+DB  'application'             , 0
+DB  'method'                  , 0
+DB  'operand width (bits)'    , 0
+DB  'threads'                 , 0
+DB  'hyper-threading'         , 0
+DB  'large pages'             , 0
+DB  'NUMA optimization'       , 0
+DB  'processor groups'        , 0
+DB  'target object'           , 0
+DB  'prefetch distance'       , 0
+DB  'data size total'         , 0
+DB  'size per thread'         , 0
+DB  'measurement profile'     , 0
+DB  'measurement repeats'     , 0
+DB  'memory allocation:'      , 0
+DB  'block #1 base'           , 0
+DB  'block #2 base'           , 0
+DB  'allocated total'         , 0
+DB  'allocated per thread'    , 0
+DB  'measurements results:'   , 0
+DB  'dT (ms)'                 , 0
+DB  'dTSC/Sec (MHz)'          , 0
+DB  'dTSC/Instruction (clks)' , 0
+DB  'Speed (MBPS)'            , 0
+DB  'Latency (ns)'            , 0
 DB  'ia32'                                  , 0   ; Application type
 DB  'x64'                                   , 0
 DB  'ia32 under Win64'                      , 0

@@ -45,14 +45,11 @@ push PARM_HWNDDLG
 call [SetWindowText]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
+; Detect click "OK" button at vector brief window
 .wmcommand:
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-; Check for "OK" button
-cmp ax,IDM_EXIT
-je .wmclose
-jmp .processed
+cmp PARM_WPARAM,IDB_VB_OK
+jne .processed
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-; "OK" button or close window
 .wmclose:
 push 1                           ; Parm#2 = Result for return
 push ebx                         ; Parm#1 = Window handle

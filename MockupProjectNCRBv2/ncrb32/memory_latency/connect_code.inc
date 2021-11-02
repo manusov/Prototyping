@@ -16,21 +16,20 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 GetLatencyPattern:
-movzx eax,al                         ; This clears bits EAX[31-8]
-imul eax,eax,6                       ; 6 = sizeof.LATENCY_ENTRY
-push eax
-movzx eax,word [TABLE_LATENCY + eax]  ; Read 16-bit compact offset
-lea ebx,[ROUTINES_LATENCY + eax]      ; Calculate 32-bit absolute address
-pop eax
-cmp al,2
-ja .x2
-mov al,2
-jmp .xdone
+push ecx                          ; This routine changes output parameters only
+movzx eax,al                      ; This clears bits EAX[31-8] 
+imul eax,eax,6                    ; 6 = sizeof.LATENCY_ENTRY 
+lea ecx,[LATENCY_PATTERNS_32]     ; ECX = Pointer to set 32 or set 32x2 
+cmp al,6                          ; EAX = Pattern index inside set
+jbe .x2                           ; Go if first set of patterns (32)
+sub al,6*2                        ; This branch for second set (32x2)
+lea ecx,[LATENCY_PATTERNS_32x2]
 .x2:
-mov al,5
-.xdone:
-movzx eax,word [TABLE_LATENCY + eax]  ; Read 16-bit compact offset
-add eax,ROUTINES_LATENCY              ; Calculate 32-bit absolute address
+movzx ebx,word [ecx + eax]        ; EBX = 16-bit compact offset of Builder  
+add ebx,ROUTINES_LATENCY          ; EBX = Pointer to Builder
+movzx eax,word [ecx + 6*2]        ; EAX = 16-bit compact offset of Walker 
+add eax,ROUTINES_LATENCY          ; EAX = Pointer to Walker
+pop ecx
 ret
 ;---------- Get pointer to performance pattern cycle body for dump by ID ------;
 ;    Also returns used instruction operand width, bits                         ;
@@ -43,18 +42,18 @@ ret
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 GetLatencyDump:
-cmp al,2
-ja .x2
-mov al,2
-jmp .xdone
-.x2:
-mov al,5
-.xdone:
 movzx eax,al
-imul eax,eax,6   ; sizeof.LATENCY_ENTRY
-movzx ecx,byte [TABLE_LATENCY + eax + 5]
-movzx edx,byte [TABLE_LATENCY + eax + 4]
-movzx eax,word [TABLE_LATENCY + eax + 2]
+imul eax,eax,6   ; sizeof.BANDWIDTH_ENTRY
+cmp al,6
+ja .x2
+add eax,LATENCY_PATTERNS_32          ; EAX = Pointer to set 32 
+jmp .xLoad
+.x2:
+add eax,LATENCY_PATTERNS_32x2 - 6*2  ; EAX = Pointer to set 32x2
+.xLoad:
+movzx ecx,byte [eax + 5]
+movzx edx,byte [eax + 4]
+movzx eax,word [eax + 2]
 add eax,ROUTINES_LATENCY
 ret
 ;--- Include files connect for performance patterns: build list, walk list ----;
@@ -65,4 +64,3 @@ include 'latency_walk_32.inc'      ; Walk on pre-builded walk list, one 32-bit l
 include 'latency_lcm_32x2.inc'     ; Build walk list, use linear congruental method, for two 32-bit loads match x64 version
 include 'latency_rdrand_32x2.inc'  ; Build walk list, use RDRAND instruction, for two 32-bit loads match x64 version
 include 'latency_walk_32x2.inc'    ; Walk on pre-builded walk list, two 32-bit loads match x64 version
-

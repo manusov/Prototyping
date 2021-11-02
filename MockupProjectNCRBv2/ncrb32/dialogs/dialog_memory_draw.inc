@@ -122,7 +122,6 @@ jmp .processed
 .wmclose:
 ;---------- Stop measurement thread -------------------------------------------;
 mov [DRAW_THREAD_PARMS.measureBreak],1
-
 ;---------- Wait thread terminated ( 2 of 2 waits ) ---------------------------; 
 ; Wait for measurement thread done, this event at thread exit point
 push THREAD_TIME_LIMIT                    ; Parm#2 = Time limit
@@ -162,10 +161,84 @@ push ebx                         ; Parm#1 = Window handle
 call [EndDialog]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-.wmcommand:                      ; User input: cancel button or close window
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-cmp ax,IDM_EXIT
+.wmcommand:
+cmp PARM_WPARAM,IDB_MD_CANCEL  ; Detect click "Exit" button in the draw child window
 je .wmclose
+cmp PARM_WPARAM,IDB_MD_RESIZE  ; Detect click "Resize" button in the draw child window
+je .drawResize
+cmp PARM_WPARAM,IDB_MD_SILENT  ; Detect click "Silent" button in the draw child window
+jne .processed
+;------------------------ "Silent" button handler -----------------------------;
+mov eax,TIMER_TICK_SILENT ; Period (ms) for screen refresh frequency = low 
+mov cl,1                  ; Silent Mode = 1
+jmp .resizeEntry
+;------------------------ "Resize" button handler -----------------------------; 
+.drawResize:
+mov eax,TIMER_TICK_SHOW   ; Period (ms) for screen refresh frequency = high
+mov cl,0                  ; Silent Mode = 0
+;---------- Entry point for silent mode branch --------------------------------;
+.resizeEntry:
+push ecx
+;---------- Start parameters frame here ---------------------------------------;
+push 0                    ; Parm#4 = Notify function pointer, not used here
+push eax                  ; Parm#3 = Timer ticks period, ms
+push 0                    ; Parm#2 = Event ID
+push ebx                  ; Parm#1 = Parent window handle
+call [SetTimer]
+;---------- Set thread break flag, cause measurement thread termination -------; 
+mov [DRAW_THREAD_PARMS.measureBreak],1
+;--- Wait for measurement thread done, this event at thread exit point --------;
+push THREAD_TIME_LIMIT               ; Parm#2 = Time limit
+push [DRAW_THREAD_PARMS.eventDone]   ; Parm#1 = Handle for done event
+call [WaitForSingleObject]
+;---------- Wait measurement thread terminated by thread handle ---------------;
+; Note status after [WaitForSingleObject] ignored. TODO. Check it.
+push THREAD_TIME_LIMIT                 ; Parm#2 = Time limit
+push [DRAW_THREAD_PARMS.threadHandle]  ; Parm#1 = Thread handle
+call [WaitForSingleObject]
+;---------- When previous thread terminated, can set [SilentMode] -------------;
+pop ecx
+mov [GUI_PARMS.silentMode],cl 
+;---------- Remove thread and associated handles, note can corrupt pointers ---;
+call DrawSessionStop
+;---------- Clear drawings variables ------------------------------------------; 
+mov [DRAW_PARMS.drawPreviousY],0
+mov [DRAW_PARMS.timerCount],0
+;---------- Rescaling ---------------------------------------------------------;
+lea edi,[DRAW_THREAD_PARMS]
+finit
+cmp [MEM_IPB.updatedAsm],LATENCY_MODE
+jae .L40
+fld [edi + DTHP.statMbpsMax]
+push 90 10
+jmp .L41
+.L40:
+fld [edi + DTHP.statNspiMax]
+push 9 2
+.L41:
+fidiv dword [esp + 4]
+fimul dword [esp]
+fistp dword [esp + 4]
+;---------- Restart -----------------------------------------------------------;
+call DrawSessionStart   ; note can corrupt pointers
+pop eax eax
+test eax,eax
+jnz @f
+inc eax
+@@:
+mov [DRAW_PARMS.valueGridY],eax
+;---------- Rescale, same operation at drawsessionstart.inc -------------------;
+push eax -GRIDSTEPY
+fild dword [esp]      ; ST0 = - grid step, pixels
+fidiv dword [esp+4]   ; ST0 = ( - grid step, pixels ) / ( Y units per grid )      
+fstp [DRAW_PARMS.yMultiplier]
+pop eax eax
+; Wait for measurement thread run, this event at thread entry point
+; Note status after [WaitForSingleObject] ignored. TODO. Check it.
+push THREAD_TIME_LIMIT               ; Parm#2 = Time limit
+push [DRAW_THREAD_PARMS.eventStart]  ; Parm#1 = Handle for start event
+call [WaitForSingleObject]
+mov [GUI_PARMS.childWinRunning],1
 jmp .processed
 ;---------- WM_TIMER handler --------------------------------------------------;
 .wmtimer:

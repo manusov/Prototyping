@@ -33,8 +33,7 @@ end virtual
 
 include 'load_inf.inc'
 include 'load_kmd.inc'
-include 'sysinfo_user_mode.inc'
-include 'sysinfo_kernel_mode.inc'
+include 'sysinfo.inc'
 
 include 'cpuid_x64.inc'
 
@@ -47,7 +46,3 @@ include 'info_numa_domains.inc'
 include 'info_processor_groups.inc'
 include 'info_acpi.inc'
 include 'info_affinized_cpuid.inc'
-include 'info_kernel_mode.inc'
-
-include 'create_bindlist.inc'
-

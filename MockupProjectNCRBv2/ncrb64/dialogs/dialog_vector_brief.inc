@@ -53,12 +53,10 @@ mov rcx,PARM_HWNDDLG
 call [SetWindowText]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-; Handler required for "OK" button
+; Detect click "OK" button at vector brief window
 .wmcommand:
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-cmp ax,IDM_EXIT
-je .wmclose
-jmp .processed
+cmp PARM_WPARAM,IDB_VB_OK
+jne .processed
 ;---------- WM_CLOSE handler: close window ------------------------------------;
 .wmclose:
 mov edx,1                   ; RDX = Parm#2 = Result for return

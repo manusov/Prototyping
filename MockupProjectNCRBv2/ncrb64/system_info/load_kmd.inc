@@ -1,6 +1,3 @@
-
-
-
 ; UNDER CONSTRUCTION.
 
 
@@ -10,15 +7,8 @@ push rbx rsi rdi rbp r15
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-
-; TODO. OPTIMIZE BASE-INDEX ACCESS, INCLUDE OFFSETS SIZE MINIMIZING.
-; mov r15,[Registry]
-
-; lea rbx,[r15 + REGISTRY64.scpData]
 lea rbx,[SCP_DATA]
-
 ;---------- Initializing data structure ---------------------------------------;
-
 cld
 mov rdi,rbx
 mov ecx,sizeof.SCPDATA
@@ -27,12 +17,8 @@ rep stosb
 lea rax,[TEMP_BUFFER]
 mov [rbx + SCPDATA.drvPath],rax
 mov [rbx + SCPDATA.driver],INVALID_HANDLE_VALUE
-
 ;---------- Initializing full path to driver file -----------------------------;
-
-; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
 mov rsi,[APP_DATA.lockedStrings]
-
 mov ax,STR_NAME_KMD64
 call IndexString
 mov rcx,rsi                    ; RCX = Parm#1 = Pointer to file name
@@ -42,9 +28,7 @@ lea r9,[rbx + SCPDATA.drvFile] ; R9  = Parm#4 = Pointer to pointer to file name
 call [GetFullPathNameA]
 test rax,rax
 jz .errorGetPath               ; Go if error status returned when get path 
-
 ;---------- Open Service Control Manager (SCM) --------------------------------;
-
 xor ecx,ecx             ; RCX = Parm#1 = Pointer to machine name, 0 = not used 
 xor edx,edx             ; RDX = Parm#2 = Pointer to database name, 0 = not used
 mov r8d,SC_MANAGER_ALL_ACCESS  ; R8 = Parm#3 = Desired access rights  
@@ -52,14 +36,9 @@ call [OpenSCManagerA]
 test rax,rax
 jz .errorOpenScm        ; Go if error status returned when open SCM
 mov [rbx + SCPDATA.manager],rax 
-
 ;---------- Try Open Service, check for already exist -------------------------;
-
 push rax
-
-; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
 mov rsi,[APP_DATA.lockedStrings]
-
 mov ax,STR_DRV_NAME
 call IndexString
 pop rcx                           ; RCX = Parm#1 = Service handle
@@ -68,9 +47,7 @@ mov r8d,SERVICE_ALL_ACCESS        ; R8  = Parm#3 = Desired access rights
 call [OpenServiceA]
 test rax,rax
 jnz .skipCreate         ; Go if open success, means this service already exist
-
 ;---------- Create Service ----------------------------------------------------;
-
 xor eax,eax             ; RAX = 0 for compact push 0
 push rax                ; Alignment
 push rax                ; Parm#13 = Pointer to password, 0 = not used
@@ -91,14 +68,10 @@ call [CreateServiceA]
 add rsp,32 + 10 * 8          ; Remove parameters shadow and stack parameters
 test rax,rax
 jz .errorCreateService  ; Go if error status returned when create service
-
 ;---------- Skip create point -------------------------------------------------;
-
 .skipCreate:
 mov [rbx + SCPDATA.service],rax 
-
 ;---------- Check service status ----------------------------------------------;
-
 xchg rcx,rax            ; RCX = Parm#1 = Handle 
 lea rdi,[rbx + SCPDATA.status]
 mov rdx,rdi             ; RDX = Parm#2 = Pointer to status structure
@@ -107,28 +80,19 @@ test rax,rax
 jz .errorGetStatus      ; Go if error status returned when get status
 cmp [rdi + SERVICE_STATUS.dwCurrentState],SERVICE_RUNNING
 je .skipStart           ; Go skip start if service already running
-
 ;---------- Start service -----------------------------------------------------;
-
 mov rcx,[rbx + SCPDATA.service]  ; RCX = Parm#1 = Handle
 xor edx,edx                      ; RDX = Parm#2 = Arguments count
 lea r8,[rbx + SCPDATA.vectors]   ; R8  = Parm#3 = Pointer to arguments vectors, empty 
 call [StartService]
 test rax,rax
 jz .errorStartService   ; Go if error status returned when start service
-
 ;---------- Skip start point --------------------------------------------------;
-
 .skipStart:
-
 ;---------- Create (open) device file -----------------------------------------;
-
-; mov rsi,[r15 + REGISTRY64.appData.lockedStrings]
 mov rsi,[APP_DATA.lockedStrings]
-
 mov ax,STR_DRV_DEVICE
 call IndexString
-
 xor eax,eax                    ; RAX = 0 for compact push 0
 push rax                       ; Alignment
 push rax                       ; Parm#7 = Template file handle, 0 = not used
@@ -170,11 +134,7 @@ push rbx rsi rdi rbp r15
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-
-;mov rbx,[Registry]
-;add rbx,REGISTRY64.scpData
 lea rbx,[SCP_DATA]
-
 
 ; xor r15d,r15d
 
@@ -194,9 +154,7 @@ jnz @f                       ; Go skip error log if no errors
 ; lea r15,[ErrorCloseDevice]
 ; call GetOsErrorCode
 @@:
-
 ;---------- Stop service ------------------------------------------------------;
-
 mov rdi,[rbx + SCPDATA.service]
 mov rcx,rdi                     ; RCX = Parm#1 = Handle 
 jrcxz .skipStop                 ; Go skip if handle = 0
@@ -210,9 +168,7 @@ jnz @f                        ; Go skip error log if no errors
 ; lea r15,[ErrorStopService]
 ; call GetOsErrorCode
 @@:
-
 ;---------- Delete service ----------------------------------------------------;
-
 mov rcx,rdi                   ; RCX = Parm#1 = Service handle
 call [DeleteService]
 test rax,rax
@@ -222,9 +178,7 @@ jnz @f                        ; Go skip error log if no errors
 ; lea r15,[ErrorDeleteService]
 ; call GetOsErrorCode
 @@:
-
 ;---------- Close service handle ----------------------------------------------;
-
 mov rcx,rdi                  ; RCX = Parm#1 = Service handle
 call [CloseServiceHandle]
 test rax,rax
@@ -234,11 +188,8 @@ jnz @f                       ; Go skip error log if no errors
 ; lea r15,[ErrorCloseService]
 ; call GetOsErrorCode
 @@:
-
 ;---------- Skip stop point ---------------------------------------------------;
-
 .skipStop:
-
 ;---------- Close manager handle ----------------------------------------------;
  
 mov rcx,[rbx + SCPDATA.manager]    ; RCX = Parm#1 = Manager handle
@@ -251,7 +202,6 @@ jnz @f                       ; Go skip error log if no errors
 ; lea r15,[ErrorCloseManager]
 ; call GetOsErrorCode
 @@:
-
 mov rsp,rbp
 pop r15 rbp rdi rsi rbx
 ret
@@ -266,13 +216,8 @@ TryKernelModeDriver:
 push rbx rsi rdi rbp
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
-
-;mov rbx,[Registry]
-;add rbx,REGISTRY64.scpData
 lea rbx,[SCP_DATA]
-
 ;---------- Write to device file, this is requests for driver -----------------;
-
 push 0                         ; Alignment and variable
 push 0                         ; Parm#5 = Pointer to overlapped, 0 = not used
 lea r9,[rbx + SCPDATA.bytes]   ; Parm#4 = R9  = Pointer to byte count variable
@@ -298,7 +243,6 @@ jz .errorWriteDevice           ; Go if error status returned when send request
 mov rsp,rbp
 pop rbp rdi rsi rbx
 ret
-
 
 ;------------------------------------------------------------------------------;
 ;       Fragment executed at kernel mode, as callback from KMD handler.        ;

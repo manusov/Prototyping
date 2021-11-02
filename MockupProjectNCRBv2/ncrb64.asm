@@ -35,6 +35,7 @@
 ;                                                                                                         ;
 ;=========================================================================================================;
 
+
 ;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;                        FASM and NCRB definitions.                            ;        
@@ -51,7 +52,7 @@ PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win64'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
 ABOUT_TEXT_2A           EQU 'v2.00.00 for Windows x64'
-ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0004 for Windows x64'
+ABOUT_TEXT_2B           EQU 'ENGINEERING SAMPLE #0005 for Windows x64'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -210,7 +211,7 @@ jmp .createFonts
 ;---------- Load configuration file ncrb.inf ----------------------------------; 
 ; TODO.
 ;---------- Get system information, user mode routines ------------------------;
-call SysinfoUserMode
+call SystemInfo
 ; TODO. Error handling.
 ; mov ax,STR_ERROR_CPUID
 ; mov ax,STR_ERROR_CPUID_F1    
@@ -1192,8 +1193,8 @@ VALUE_BUFFER_LIMIT  = 128 * 1024
 ;---------- Equations for UPB, IPB, OPB data build and interpreting -----------;
 ; Assembler Methods (AM) option values count and Bandwidth/Latency criteria
 ; TODO. Add new methods, update AM_BYTE_COUNT, LATENCY_MODE, plus see below.
-AM_BYTE_COUNT       =  22     ; 22 bytes per methods primary list
-LATENCY_MODE        =  44     ; modes ID = 44, 45 for latency measurement
+AM_BYTE_COUNT       =  26     ; 26 bytes per methods primary list
+LATENCY_MODE        =  24     ; modes ID = 24, 25 for latency measurement. TODO. USE TRANSLATION FOR TEMPORAL/NONTEMPORAL, THIS VALUE = 24*2=48.
 READ_SSE128_MODE    =  9      ; for add information about prefetch distance
 READ_AVX256_MODE    =  12     ; for add information about prefetch distance
 READ_AVX512_MODE    =  15     ; for add information about prefetch distance

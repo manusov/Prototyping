@@ -147,7 +147,7 @@ call GetLatencyDump
 mov [edi + MEMIPB.patternRoutine],ebx     ; Pointer to performance pattern 
 mov [edi + MEMIPB.dumpMethodStart],eax    ; Pointer to hex-dumped part of pattern
 mov [edi + MEMIPB.dumpMethodLength],edx   ; Hex-dumped part length
-shl ecx,3                              ; convert bytes to bits, means * 8
+shl ecx,3                                 ; convert bytes to bits, means * 8
 mov [edi + MEMIPB.operandWidth],ecx       ; Select instruction operand width
 pop ebx
 

@@ -4,4 +4,6 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
+; TODO.
+; Table for system information handlers sequentally call.
 

@@ -32,10 +32,12 @@ jmp .finish
 .wminitdialog:                   ; Build main window 
 mov ax,BINDER_BUILD_MEMORY_RUN
 call Binder
-; ... TODO. Latency.
 mov ax,BINDER_BUILD_MEMORY_MBPS
+cmp [MEM_IPB.updatedAsm],LATENCY_MODE
+jb @f
+mov ax,BINDER_BUILD_MEMORY_NS
+@@:
 call Binder
-; ... TODO. Latency.
 push [edi + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 4]
 push ICON_SMALL
 push WM_SETICON 
@@ -49,14 +51,11 @@ push PARM_HWNDDLG
 call [SetWindowText]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
+; Detect click "OK" button at results window
 .wmcommand:
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-; Check for "OK" button
-cmp ax,IDM_EXIT
-je .wmclose
-jmp .processed
+cmp PARM_WPARAM,IDB_MR_OK 
+jne .processed
 ;---------- WM_CLOSE handler: close window ------------------------------------;
-; "OK" button or close window
 .wmclose:
 push 1                           ; Parm#2 = Result for return
 push ebx                         ; Parm#1 = Window handle

@@ -17,14 +17,17 @@ dw  x2 - ROUTINES_LATENCY   ; Dump fragment start, dump show at drawings Y=F(X)
 db  x3 - x2                 ; Dump fragment size
 db  x4                      ; Data Bytes per Instruction,
 }                           ; example YMM register op. = 32 bytes (256 bit) 
-;--- List of performance patterns: latency measurement: build and walk  -------;
-; Note for both fill methods (LCM, RDRAND) dump walk method only
 align 2
-TABLE_LATENCY:
-LATENCY_ENTRY  Pattern_Latency_LCM_32      , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4
-LATENCY_ENTRY  Pattern_Latency_RDRAND_32   , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4  
-LATENCY_ENTRY  Pattern_Latency_Walk_32     , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4   
-LATENCY_ENTRY  Pattern_Latency_LCM_32x2    , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8
-LATENCY_ENTRY  Pattern_Latency_RDRAND_32x2 , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8  
-LATENCY_ENTRY  Pattern_Latency_Walk_32x2   , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8   
+;---------- Include files connect for performance patterns --------------------;
+; Latency measurement, note for both fill methods (LCM, RDRAND) dump walk method only
+; Variant 32
+LATENCY_PATTERNS_32:
+LATENCY_ENTRY  Pattern_Latency_LCM_32      , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4   ; ID = 0
+LATENCY_ENTRY  Pattern_Latency_RDRAND_32   , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4   ; ID = 1  
+LATENCY_ENTRY  Pattern_Latency_Walk_32     , DumpStart_Latency_Walk_32   , DumpStop_Latency_Walk_32   , 4   ; ID = 2   
+; Variant 32 x 2, for match to x64 version
+LATENCY_PATTERNS_32x2:
+LATENCY_ENTRY  Pattern_Latency_LCM_32x2    , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8   ; ID = 3
+LATENCY_ENTRY  Pattern_Latency_RDRAND_32x2 , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8   ; ID = 4  
+LATENCY_ENTRY  Pattern_Latency_Walk_32x2   , DumpStart_Latency_Walk_32x2 , DumpStop_Latency_Walk_32x2 , 8   ; ID = 5   
 

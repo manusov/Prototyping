@@ -174,10 +174,80 @@ mov rcx,rbx                            ; RCX = Parm#1 = Window handle
 call [EndDialog]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------; 
-.wmcommand:                    ; User input: cancel button or close window
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-cmp ax,IDM_EXIT
+.wmcommand:
+cmp r8,IDB_MD_CANCEL    ; Detect click "Exit" button in the draw child window
 je .wmclose
+cmp r8,IDB_MD_RESIZE    ; Detect click "Resize" button in the draw child window
+je .drawResize
+cmp r8,IDB_MD_SILENT    ; Detect click "Silent" button in the draw child window
+jne .processed
+;------------------------ "Silent" button handler -----------------------------;
+mov r8d,TIMER_TICK_SILENT   ; Timer period (ms), screen refresh low frequency
+mov edi,1                   ; Silent Mode = 1
+jmp .resizeEntry
+;------------------------ "Resize" button handler -----------------------------; 
+.drawResize:
+mov r8d,TIMER_TICK_SHOW     ; Timer period (ms), screen refresh high frequency
+xor edi,edi                 ; Silent Mode = 0
+;---------- Entry point for silent mode branch --------------------------------;
+.resizeEntry:     ; R8  = Parm#3 = Timer ticks period, ms
+mov rcx,rbx       ; RCX = Parm#1 = Parent window handle
+xor edx,edx       ; RDX = Parm#2 = Event ID
+xor r9d,r9d       ; R9  = Parm#4 = Notify function pointer, not used here
+call [SetTimer]
+;---------- Set thread break flag ---------------------------------------------;
+mov [DRAW_THREAD_PARMS.measureBreak],1
+;--- Wait for measurement thread done, this event at thread exit point --------;
+mov rcx,[DRAW_THREAD_PARMS.eventDone]   ; RCX = Parm#1 = Handle for done event
+mov edx,THREAD_TIME_LIMIT               ; RDX = Parm#2 = Time limit
+call [WaitForSingleObject]
+;---------- Wait thread terminated by thread handle ---------------------------;
+; Note status after [WaitForSingleObject] ignored. TODO. Check it.
+mov rcx,[DRAW_THREAD_PARMS.threadHandle]  ; RCX = Parm#1 = Thread handle
+mov edx,THREAD_TIME_LIMIT                 ; RDX = Parm#2 = Time limit
+call [WaitForSingleObject]
+;---------- When previous thread terminated, can set [SilentMode] -------------;
+mov [GUI_PARMS.silentMode],dil
+;---------- Remove thread and associated handles, note can corrupt pointers ---;
+call DrawSessionStop
+;---------- Clear drawings variables ------------------------------------------;
+mov [DRAW_PARMS.drawPreviousY],0
+mov [DRAW_PARMS.timerCount],0
+;---------- Rescaling ---------------------------------------------------------;
+lea rdi,[DRAW_THREAD_PARMS]
+finit
+cmp [MEM_IPB.updatedAsm],LATENCY_MODE
+jae .L40
+fld [rdi + DTHP.statMbpsMax]
+push 90 10
+jmp .L41
+.L40:
+fld [rdi + DTHP.statNspiMax]
+push 9 2
+.L41:
+fidiv dword [rsp + 8]
+fimul dword [rsp]
+fistp dword [rsp + 8]
+;---------- Restart -----------------------------------------------------------;
+call DrawSessionStart   ; note can corrupt pointers
+pop rax rax
+test eax,eax
+jnz @f
+inc eax
+@@:
+mov [DRAW_PARMS.valueGridY],eax
+;---------- Rescale, same operation at drawsessionstart.inc -------------------;
+push rax -GRIDSTEPY
+fild dword [rsp]        ; ST0 = - grid step, pixels
+fidiv dword [rsp + 8]   ; ST0 = ( - grid step, pixels ) / ( Y units per grid )      
+fstp [DRAW_PARMS.yMultiplier]
+pop rax rax
+;--- Wait for measurement thread run, this event at thread entry point --------;
+; Note status after [WaitForSingleObject] ignored. TODO. check it.
+mov rcx,[DRAW_THREAD_PARMS.eventStart]  ; RCX = Parm#1 = Handle for start event
+mov edx,THREAD_TIME_LIMIT               ; RDX = Parm#2 = Time limit
+call [WaitForSingleObject]
+mov [GUI_PARMS.childWinRunning],1
 jmp .processed
 ;---------- WM_TIMER handler ( timer event: timer tick callback ) -------------;
 .wmtimer:

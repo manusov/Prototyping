@@ -323,10 +323,6 @@ push ebx
 mov bx,0100h            ; Float part is 1 digit, Integer part without template
 call DoublePrint        ; print MHz
 pop ebx
-mov al,' '
-stosb
-mov ax,STR_MHZ
-call PoolStringWrite
 mov al,0
 stosb
 ;--- Calculate values and build Clocks per Instruction (clocks, CPI) string ---;
@@ -344,15 +340,20 @@ fild qword [esp]                   ; st0 = total instructions
 fild qword [ebx + MEMOPB.tscTimerDelta]  ; st0 = total delta TSC, st1 = total instructions  
 fdiv st0,st1
 fstp qword [esp]
-pop eax edx                 ; EDX:EAX = bitfield as double value
+pop eax edx             ; EDX:EAX = bitfield as double value
 push ebx
 mov bx,0300h            ; Float part is 3 digits, Integer part without template
 call DoublePrint
 pop ebx
+push eax
 mov al,0
 stosb
-;---------- Branch for Bandwidth, Speed(MBPS) ---------------------------------;
+pop eax     ; EDX:EAX used for Latency branch
+;---------- Final result select: Bandwidth or Latency measurement mode --------;
 lea edi,[ebp + BINDLIST.mrLastValue]
+cmp [esi + MEMIPB.updatedAsm],LATENCY_MODE
+jae .latencyMode
+;---------- Branch for Bandwidth, Speed (MBPS) --------------------------------;
 push edx eax
 fild [esi + MEMIPB.measureRepeats]   ; st0 = Repeats, iterations, note 64-bit
 fimul [esi + MEMIPB.startBlockSize]  ; st0 * Operational block size, bytes 
@@ -367,35 +368,35 @@ fdivr st0,st1
 fstp qword [esp]
 pop eax edx             ; EDX:EAX = bitfield as double value
 mov bx,0200h            ; Float part is 2 digits, Integer part without template
+jmp .entryMode
+;---------- Branch for Latency, Latency (ns) ----------------------------------;
+.latencyMode:
+push edx eax
+mov eax,dword [CPU_DATA.tscClockHz + 0]
+mov edx,dword [CPU_DATA.tscClockHz + 4]
+mov dword [ebx + MEMOPB.tscFrequencyHz + 0],eax
+mov dword [ebx + MEMOPB.tscFrequencyHz + 4],edx
+push 1000000000
+fild dword [esp]
+fild [ebx + MEMOPB.tscFrequencyHz]  
+fdivp st1,st0
+fstp [ebx + MEMOPB.tscPeriodNs]
+fld qword [esp + 4]
+fmul [ebx + MEMOPB.tscPeriodNs]
+fstp qword [esp + 4]
+pop eax eax edx
+mov bx,0300h        ; Float part is 3 digits, Integer part without template
+.entryMode:
+;---------- Write value and terminate string ----------------------------------;
 call DoublePrint
 mov al,0
 stosb
-
-; jmp .L10
-
-;---------- Branch for Latency, Latency (ns) ----------------------------------;
-
-; TODO.
-
-; Branch for Latency 
-; Latency (ns)
-;.L9:
-;;lea esi,[MsgResultLatency]
-;call StringWrite_CRLF_Equal
-;push edx eax
-;fld qword [esp]
-;fmul [OutputParms + OPB.TSCperiodNs]
-;fstp qword [esp]
-;pop eax edx
-;mov bx,0300h            ; Float part is 3 digits, Integer part without template
-;call DoublePrint
-
-; 0 - termination can be common.
-
+;
+;
 ; TODO. Error handling.
-
 .error:
-
+;
+;
 popad
 ret
 

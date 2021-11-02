@@ -533,8 +533,9 @@ STR_NUMA_NODES         = STR_THREADS + 6
 STR_OS_PHYSICAL        = STR_NUMA_NODES + 1
 STR_OS_AVAILABLE       = STR_OS_PHYSICAL + 1
 STR_OS_MIN_LARGE       = STR_OS_PHYSICAL + 2
-;--- Assembler instructions and modes names for memory and cache benchmarks ---;
+;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
+; Part 1 of 2, temporal variant.
 STR_AM_IA32_00         = STR_OS_MIN_LARGE + 1  
 STR_AM_IA32_01         = STR_AM_IA32_00 + 1   
 STR_AM_IA32_02         = STR_AM_IA32_00 + 2 
@@ -567,8 +568,36 @@ STR_AM_22              = STR_AM_IA32_00 + 28
 STR_AM_23              = STR_AM_IA32_00 + 29
 STR_AM_LCM             = STR_AM_IA32_00 + 30
 STR_AM_RDRAND          = STR_AM_IA32_00 + 31
-STR_NON_TEMPORAL       = STR_AM_IA32_00 + 32
-STR_32X2               = STR_AM_IA32_00 + 33
+;---------- Assembler instructions names for memory and cache benchmarks ------;
+; This strings also used as sequental pool when method name visual.
+; Part 2 of 2, non-temporal variant.
+STR_AM_NT_00           = STR_AM_RDRAND + 1
+STR_AM_NT_01           = STR_AM_NT_00 + 1
+STR_AM_NT_02           = STR_AM_NT_00 + 2
+STR_AM_NT_03           = STR_AM_NT_00 + 3
+STR_AM_NT_04           = STR_AM_NT_00 + 4
+STR_AM_NT_05           = STR_AM_NT_00 + 5
+STR_AM_NT_06           = STR_AM_NT_00 + 6
+STR_AM_NT_07           = STR_AM_NT_00 + 7
+STR_AM_NT_08           = STR_AM_NT_00 + 8
+STR_AM_NT_09           = STR_AM_NT_00 + 9
+STR_AM_NT_10           = STR_AM_NT_00 + 10
+STR_AM_NT_11           = STR_AM_NT_00 + 11
+STR_AM_NT_12           = STR_AM_NT_00 + 12
+STR_AM_NT_13           = STR_AM_NT_00 + 13
+STR_AM_NT_14           = STR_AM_NT_00 + 14
+STR_AM_NT_15           = STR_AM_NT_00 + 15
+STR_AM_NT_16           = STR_AM_NT_00 + 16
+STR_AM_NT_17           = STR_AM_NT_00 + 17
+STR_AM_NT_18           = STR_AM_NT_00 + 18
+STR_AM_NT_19           = STR_AM_NT_00 + 19
+STR_AM_NT_20           = STR_AM_NT_00 + 20
+STR_AM_NT_21           = STR_AM_NT_00 + 21
+STR_AM_NT_22           = STR_AM_NT_00 + 22
+STR_AM_NT_23           = STR_AM_NT_00 + 23
+;---------- Modes names for memory and cache benchmarks -----------------------;
+STR_NON_TEMPORAL       = STR_AM_NT_23 + 1
+STR_32X2               = STR_NON_TEMPORAL + 1
 ;---------- Target objects names for memory and cache benchmark ---------------;
 STR_MEMORY_L1          = STR_32X2 + 1
 STR_MEMORY_L2          = STR_MEMORY_L1 + 1 
@@ -1011,7 +1040,7 @@ vbX87sincos    db  40 + 1  dup ?  ; Benchmark results for x87 Sine+Cosine (FSINC
 ;       This can be solution for alignment.
 ; But BINDLIST can be used for reports, include saved text strings.
 mrApplication  db  40 + 1  dup ?
-mrMethod       db  40 + 1  dup ?
+mrMethod       db  80 + 1  dup ?
 mrWidth        db  40 + 1  dup ?
 mrThreads      db  40 + 1  dup ?
 mrHyperT       db  40 + 1  dup ?

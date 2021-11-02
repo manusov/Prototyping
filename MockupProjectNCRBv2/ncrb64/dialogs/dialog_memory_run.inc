@@ -40,10 +40,12 @@ jmp .finish                    ; Go exit if unknown event
 .wminitdialog: 
 mov ax,BINDER_BUILD_MEMORY_RUN
 call Binder
-; ... TODO. Latency.
 mov ax,BINDER_BUILD_MEMORY_MBPS
+cmp [MEM_IPB.updatedAsm],LATENCY_MODE
+jb @f
+mov ax,BINDER_BUILD_MEMORY_NS
+@@:
 call Binder
-; ... TODO. Latency.
 mov r9,[r15 + APPDATA.createdIcons + MEMORY_ICON_NUMBER * 8] 
 mov r8d,ICON_SMALL 
 mov edx,WM_SETICON 
@@ -57,12 +59,10 @@ mov rcx,PARM_HWNDDLG
 call [SetWindowText]
 jmp .processed
 ;---------- WM_COMMAND handler: interpreting user input -----------------------;
-; Handler required for "OK" button 
+; Detect click "OK" button at results window 
 .wmcommand:
-;---------- Detect click "Exit" item in the main menu -------------------------; 
-cmp ax,IDM_EXIT
-je .wmclose
-jmp .processed
+cmp PARM_WPARAM,IDB_MR_OK
+jne .processed
 ;---------- WM_CLOSE handler: close window ------------------------------------;
 .wmclose:
 mov edx,1                ; RDX = Parm#2 = Result for return
