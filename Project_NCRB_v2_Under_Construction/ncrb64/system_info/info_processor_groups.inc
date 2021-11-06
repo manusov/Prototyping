@@ -1,12 +1,17 @@
 ;---------- Get Processor Groups information ----------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoProcessorGroups:
-sub rsp,32 + 8
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+lea rsi,[DYNA_IMPORT]
 xor ebx,ebx           ; RBX = Node number and compare pattern
 cmp [rsi + DYNAIMPORT._GetActiveProcessorGroupCount],rbx  
 je .skipGroupList 
@@ -16,7 +21,6 @@ call [rsi + DYNAIMPORT._GetActiveProcessorGroupCount]
 test ax,ax
 jz .skipGroupList
 movzx r12d,ax 
-mov r14,rdi           ; Can't PUSH because parameter shadow for functions
 mov rdi,rbp           ; RDI = Pointer, RBP = Start
 .groupList:
 mov eax,ebx
@@ -32,15 +36,15 @@ jb .groupList
 mov [DYNA_PTR.listGroup.objectStart],rbp
 mov [DYNA_PTR.listGroup.objectStop],rdi
 mov rbp,rdi
-mov rdi,r14
 .skipGroupList:
-add rsp,32 + 8
+mov rsp,r13
 ret
+
 ;--- Build Processor groups information for text report and GUI widgets -------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextProcessorGroups:

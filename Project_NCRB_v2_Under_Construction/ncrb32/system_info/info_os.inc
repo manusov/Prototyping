@@ -1,8 +1,9 @@
 ;---------- Get Operating System information ----------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoOperatingSystem:
@@ -125,11 +126,12 @@ ret
 .error:
 stc
 ret
+
 ;--- Build Operating System information for text report and GUI widgets -------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextOperatingSystem:
@@ -241,62 +243,8 @@ mov al,0
 stosb
 mov ebp,edi
 mov [DYNA_PTR.textOs.objectStop],ebp
-;---------- Additions for screen 0 information --------------------------------;
-lea ecx,[BIND_LIST]
-add ecx,BINDLIST.bindSys
-lea edi,[ecx + BINDSYS.procTotal]
-mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
-mov bl,0
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.groups]
-mov eax,[OS_DATA.activeProcessorGroupCount] ; Processors groups
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.procCur]
-mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.numaNodes]
-mov eax,[OS_DATA.numaNodeCount]  ; NUMA domains
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.memPhys]
-mov eax,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 0]
-mov edx,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 4]
-mov bl,2
-call SizePrint64
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.memAvail]
-mov eax,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 0]
-mov edx,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 4]
-call SizePrint64
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.largePage]
-mov eax,[OS_DATA.largePageSize]
-xor edx,edx
-mov bl,0FFh
-call SizePrint64
-mov al,0
-stosb
-lea edi,[ecx + BINDSYS.largeEnable]
-cmp [OS_DATA.largePageEnable],0
-mov ax,STR_OS_DISABLED
-je @f
-mov ax,STR_OS_ENABLED
-@@:
-push esi
-call PoolStringWrite
-pop esi
-mov al,0
-stosb
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          AX  = Index for parameter name for write to string                  ; 
@@ -322,6 +270,7 @@ lea edi,[ebp - 82 + 33]
 lea ecx,[ebp - 82 + 62]
 pop esi
 ret
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes                           ;
 ;           This variant for memory status structure.                          ;
@@ -357,6 +306,7 @@ call SizePrint64
 .skip:
 pop edi
 jmp HexPrint64
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units auto selected                               ;
 ;           This variant for system information structure.                     ;
@@ -370,6 +320,7 @@ jmp HexPrint64
 HelperOsInfoSizeAuto:
 mov bl,0FFh
 jmp SizeHelperEntry
+
 ;---------- Write memory block size to pre-blanked, hex only ------------------;
 ;           This variant for memory status structure.                          ;
 ;           This variant for 64-bit value.                                     ;
@@ -381,6 +332,7 @@ jmp SizeHelperEntry
 HelperOsInfoHex:
 mov bl,0
 jmp SizeHelperEntry 
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for system information structure.                     ;
@@ -407,6 +359,7 @@ xor edx,edx
 call SizePrint64
 pop eax edi
 jmp HexPrint32
+
 ;---------- Write 32-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
@@ -432,6 +385,7 @@ call DecimalPrint32
 pop eax
 mov edi,ecx
 jmp HexPrint32
+
 ;---------- Write 16-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   EDI = Pointer to destination buffer, decimal value position         ;
 ;          ECX = Pointer to destination buffer, hex value position             ; 
@@ -454,6 +408,7 @@ mov bl,0
 call DecimalPrint32
 pop eax edi
 jmp HexPrint16
+
 ;---------- Write system information strings ----------------------------------;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;

@@ -1,12 +1,13 @@
 ;---------- Get Native OS information -----------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoNativeOs:
-mov eax,[ebx + DYNAIMPORT._GetNativeSystemInfo]
+mov eax,[DYNA_IMPORT._GetNativeSystemInfo]
 test eax,eax
 jz @f
 lea ecx,[OS_DATA.nativeSystemInfo]
@@ -14,11 +15,12 @@ push ecx
 call eax
 @@:
 ret
+
 ;--- Build Native OS information for text report and GUI widgets --------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextNativeOs:

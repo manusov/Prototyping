@@ -1,8 +1,10 @@
 ;---------- Get Extended Topology information ---------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoExtendedTopology:
@@ -35,11 +37,12 @@ ret
 .error:
 stc
 ret
+
 ;--- Build Platform ext. topology inform. for text report and GUI widgets -----;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextExtendedTopology:
@@ -192,27 +195,6 @@ stosb
 mov ebp,edi
 mov [DYNA_PTR.textTopologyEx1.objectStop],ebp
 .noTopologyEx:
-;---------- Support screen 0 threads, cores, sockets ( text ) -----------------;
-push ebx ecx
-lea edx,[BIND_LIST]
-lea ecx,[SYS_PARMS.summaryTopology]
-mov bl,0
-lea edi,[edx + BINDLIST.bindTopology.threads]
-mov eax,[ecx + SUMMARYTOPOLOGY.threads]
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[edx + BINDLIST.bindTopology.cores]
-mov eax,[ecx + SUMMARYTOPOLOGY.cores]
-call DecimalPrint32
-mov al,0
-stosb
-lea edi,[edx + BINDLIST.bindTopology.sockets]
-mov eax,[ecx + SUMMARYTOPOLOGY.sockets]
-call DecimalPrint32
-mov al,0
-stosb
-pop ecx ebx
 ;--- Build text block for extended topology screen, second block = summary ----;
 mov [DYNA_PTR.textTopologyEx2.objectStart],ebp
 push esi
@@ -234,6 +216,7 @@ mov ebp,edi
 pop esi
 mov [DYNA_PTR.textTopologyEx2.objectStop],ebp
 ret
+
 ;---------- Get topological information ---------------------------------------;
 ; INPUT:   EBX = WinAPI function address                                       ;
 ;          EBP = Pointer to buffer for topology information                    ;
@@ -276,6 +259,7 @@ ret
 .error:
 stc
 jmp .exit
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
@@ -350,6 +334,7 @@ call DecimalPrint32
 .done:
 pop edx ecx ebp esi
 ret
+
 ;--- Write proc. group string for text generation by topology parsing ---------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
@@ -365,6 +350,7 @@ mov ax,[esi + 08]
 call HexPrint16
 pop esi
 ret
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;

@@ -1,12 +1,18 @@
 ;---------- Get NUMA domains information --------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoNumaDomains:
-sub rsp,32 + 8
+push 0
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+lea rsi,[DYNA_IMPORT]
 mov rax,[rsi + DYNAIMPORT._GetNumaHighestNodeNumber]
 test rax,rax
 jz .skipNumaList
@@ -14,7 +20,6 @@ mov rcx,r13           ; RCX = Parm#1 = Pointer to output variable
 call rax
 test rax,rax
 jz .error
-mov r14,rdi           ; Can't PUSH because parameter shadow for functions
 mov rdi,rbp           ; RDI = Pointer, RBP = Start
 xor ebx,ebx           ; RBX = Node number and compare pattern
 mov r12d,[r13]        ; R12 = Maximum node number
@@ -70,19 +75,19 @@ jbe .standardNumaList
 mov [DYNA_PTR.listNuma.objectStart],rbp
 mov [DYNA_PTR.listNuma.objectStop],rdi
 mov rbp,rdi
-mov rdi,r14
 .skipNumaList:
-add rsp,32 + 8
+mov rsp,r13
+pop rax
 ret
 .error:
-add rsp,32 + 8
 stc
-ret
+jmp .skipNumaList
+
 ;--- Build NUMA domains information for text report and GUI widgets -----------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextNumaDomains:
@@ -111,37 +116,6 @@ jmp .numaStd
 .numaDoneStd:
 mov al,0
 stosb
-push rdi
-mov rsi,[DYNA_PTR.listNuma.objectStart]
-lodsd  ; this for ADD RSI,4
-lea rdi,[BIND_LIST]
-add rdi,BINDLIST.bindSys.masksList
-xor edx,edx
-.masksStd:
-cmp rsi,rcx
-jae .numaDone
-test edx,edx
-jz .firstMaskStd
-cmp edx,2
-jb .nextMaskStd
-ja .skipMaskStd
-mov eax,', ..'
-stosd
-mov al,'.'
-stosb
-jmp .skipMaskStd
-.nextMaskStd:
-mov ax,', '
-stosw
-.firstMaskStd:
-mov rax,[rsi + 04]
-call HexPrint64
-mov al,'h'
-stosb
-.skipMaskStd:
-add rsi,20
-inc edx
-jmp .masksStd
 .numaExt:
 cmp rsi,rcx
 jae .numaDoneExt
@@ -159,45 +133,11 @@ jmp .numaExt
 .numaDoneExt:
 mov al,0
 stosb
-push rdi
-mov rsi,[DYNA_PTR.listNuma.objectStart]
-lodsd  ; this for ADD RSI,4
-lea rdi,[BIND_LIST]
-add rdi,BINDLIST.bindSys.masksList
-xor edx,edx
-.masksExt:
-cmp rsi,rcx
-jae .numaDone
-test edx,edx
-jz .firstMaskExt
-cmp edx,2
-jb .nextMaskExt
-ja .skipMaskExt 
-mov eax,', ..'
-stosd
-mov al,'.'
-stosb
-jmp .skipMaskExt 
-.nextMaskExt:
-mov ax,', '
-stosw
-.firstMaskExt:
-mov rax,[rsi + 04]
-call HexPrint64
-mov al,'h'
-stosb
-.skipMaskExt:
-add rsi,28
-inc edx
-jmp .masksExt
-.numaDone:
-mov al,0
-stosb
-pop rdi
 mov rbp,rdi
 mov [DYNA_PTR.textNuma.objectStop],rbp
 .noNuma:
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          EAX = Number write to string                                        ; 

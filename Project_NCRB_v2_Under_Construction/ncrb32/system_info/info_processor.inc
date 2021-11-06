@@ -3,9 +3,10 @@
 ; Repeat this call before vector brief, memory run, memory draw.               ;
 ; Move local helpers to this file or eliminate helpers, optimize structure.    ;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoProcessor:
@@ -22,7 +23,6 @@ mov eax,1
 cpuid
 stosd
 ;------- Build CPU common features bitmap, for system information screen ------; 
-push esi
 mov ebx,esi
 xor eax,eax
 mov esi,[APP_DATA.lockedDataCpuCommon]
@@ -62,75 +62,15 @@ stosd
 ; xor eax,eax    ; *** DEBUG ***
 ; stosd          ; *** DEBUG ***
 ; stosd          ; *** DEBUG ***
-pop esi
 ;---------- Measure TSC frequency ---------------------------------------------;
-push esi
 call HelperMeasureTsc
-pop esi
 ; TODO. Check for errors, CF=1
-push esi
-; EDI = Pointer for bind buffer addressing.
-; EBP = Pointer for CPU data addressing in the application registry
-lea edi,[BIND_LIST]
-lea ebp,[CPU_DATA.vendorString]
-mov ebx,ebp
-;---------- CPU vendor string, 12 chars ---------------------------------------;
-xchg eax,ebp
-stosd
-xor eax,eax
-stosd
-;---------- CPU signature: type, family, model, stepping ----------------------;
-mov ax,STR_TFMS
-call PoolStringWrite
-mov eax,[ebx + CPUDATA.cpuSignature]
-call HexPrint32
-mov ax,STR_H
-call PoolStringWrite
-mov al,0
-stosb 
-;---------- CPU model string, maximum 48 chars --------------------------------;
-lea eax,[ebx + CPUDATA.modelString]
-stosd
-xor eax,eax
-stosd
-;---------- TSC frequency -----------------------------------------------------;
-mov ecx,32
-mov al,0
-rep stosb
-push edi ebx
-sub edi,32
-mov ax,STR_TSC
-call PoolStringWrite
-finit
-push 0 1000000
-fild qword [ebx + CPUDATA.tscClockHz] 
-fidiv dword [esp]
-fstp qword [esp]
-pop eax edx
-mov bx,0100h
-call DoublePrint
-mov ax,STR_MHZ
-call PoolStringWrite
-pop ebx edi
-;---------- CPU instructions and OS context management features bitmaps -------; 
-mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 4]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 4]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 0]
-stosd
-mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
-stosd
-pop esi
 clc
 ret
 .error:
 stc
 ret
+
 ;---------- Detect CPUID support and execute CPUID function #0 ----------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -183,6 +123,7 @@ ret                       ; Return, at this point CF=0(NC) after XOR EAX,EAX
 .absent:
 stc                       ; CF=1(C) means error
 ret 
+
 ;---------- Get CPU name string, execute CPUID functions 80000002h-80000004h --;
 ; Call this subroutine only if CPUID instruction supported.                    ;
 ;                                                                              ;
@@ -262,6 +203,7 @@ rep stosb
 inc edi                   ; Skip terminator byte
 pop esi ebx
 ret
+
 ;---------- Measure CPU TSC (Time Stamp Counter) clock frequency --------------;
 ; Store results F = Frequency=[Hz].                                            ;
 ; Call this subroutine only if CPUID and RDTSC both supported.                 ;
@@ -322,6 +264,7 @@ ret
 .error:
 stc             ; CF=1 (CY) means CPU clock measured ERROR
 jmp .exit
+
 ;---------- Interpreting list of entries ENTRY_CPUID, ENTRY_XCR0 --------------;
 ; INPUT:   RSI = Pointer to builder script                                     ;
 ; OUTPUT:  EAX = Bitmap, result of builder script                              ;
@@ -383,6 +326,7 @@ call HelperEntryXcr0
 jmp .next
 .prefixXcr0:
 jmp .build
+
 ;---------- Interpreting one ENTRY_CPUID object at build bitmap list ----------;
 ; Check CPUID instruction support before this subroutine call.                 ;
 ;                                                                              ;
@@ -440,6 +384,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;---------- Interpreting one ENTRY_XCR0 object at build bitmap list -----------;
 ; Check CPUID instruction support before this subroutine call,                 ;
 ; XGETBV instruction support verified in this subroutine.                      ;

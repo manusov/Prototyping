@@ -1,8 +1,10 @@
 ;---------- Get Affinized CPUID dump information ------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoAffinizedCpuid:
@@ -54,11 +56,12 @@ mov [DYNA_PTR.listAffCpuid.objectStop],edi
 mov ebp,edi
 .skipAffCpuid:
 ret
+
 ;--- Build Affinized CPUID dump information for text report and GUI widgets ---;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextAffinizedCpuid:

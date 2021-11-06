@@ -1,8 +1,10 @@
 ;---------- Get Processor Groups information ----------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoProcessorGroups:
@@ -34,11 +36,12 @@ mov ebp,edi
 .skipGroupList:
 pop eax
 ret
+
 ;--- Build Processor groups information for text report and GUI widgets -------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextProcessorGroups:

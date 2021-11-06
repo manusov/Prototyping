@@ -1,17 +1,21 @@
 ;---------- Get Topology information ------------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoTopology:
-sub rsp,32 + 8
-mov rbp,[APP_MEMORY]
+push 0
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
 call HelperAlignment
-mov rbx,[rsi + DYNAIMPORT._GetLogicalProcessorInformation]
+mov rbx,[DYNA_IMPORT._GetLogicalProcessorInformation]
 test rbx,rbx
-jz @f
+jz .exit
 mov dword [r13],0            ; dword [r13]  = Buffer size variable, stack
 mov rdx,r13                  ; RDX = Parm#2 = Pointer to buffer size variable 
 mov rcx,rbp                  ; RCX = Parm#1 = Pointer to buffer 
@@ -32,18 +36,19 @@ jz .error                    ; Go if unexpected error: zero-sized buffer
 mov [DYNA_PTR.listTopology.objectStart],rbp
 add rbp,r14
 mov [DYNA_PTR.listTopology.objectStop],rbp
-@@:
-add rsp,32 + 8
+.exit:
+mov rsp,r13
+pop rax
 ret
 .error:
-add rsp,32 + 8
 stc
-ret
+jmp .exit 
+
 ;--- Build Platform topology information for text report and GUI widgets ------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextTopology:
@@ -169,30 +174,6 @@ lea rax,[SYS_PARMS.summaryTopology]
 mov qword [rax + SUMMARYTOPOLOGY.threads],r8
 mov [rax + SUMMARYTOPOLOGY.sockets],r9d
 ;---------- Build text block for topology screen, second block = summary ------;
-; TODO. OPTIMIZE BY ELIMINATE DUAL ADDRESS CALCULATION: FOR "N/A" AND FOR VALUES
-push rsi rcx
-lea rcx,[BIND_LIST]
-lea rdx,[rcx + BINDLIST.bindCache]
-mov ax,STR_N_A
-lea rdi,[rdx + BINDCACHE.l1c]
-push rax
-call PoolStringWrite
-pop rax
-lea rdi,[rdx + BINDCACHE.l1d]
-push rax
-call PoolStringWrite
-pop rax
-lea rdi,[rdx + BINDCACHE.l2u]
-push rax
-call PoolStringWrite
-pop rax
-lea rdi,[rdx + BINDCACHE.l3u]
-push rax
-call PoolStringWrite
-pop rax
-lea rdi,[rdx + BINDCACHE.l4u]
-call PoolStringWrite
-pop rcx rsi
 mov [DYNA_PTR.textTopology2.objectStart],rbp
 mov rdi,rbp
 mov ax,0101h                 ; Instruction cache , L1
@@ -213,6 +194,7 @@ ret
 .error:
 stc
 ret
+
 ;---------- Align memory pointer, required for WinAPI calls -------------------;
 ; INPUT:   RBP = Pointer                                                       ;
 ; OUTPUT:  RBP = Aligned pointer, updated if required                          ;
@@ -224,6 +206,7 @@ and bpl,0F0h
 add rbp,010h
 @@: 
 ret
+
 ;--- Write relation name string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          AX  = String ID at application strings pool                         ;
@@ -236,6 +219,7 @@ push rcx rsi
 call PoolStringWrite
 pop rsi rcx
 ret
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
@@ -303,6 +287,7 @@ call DecimalPrint32
 .done:
 pop rsi rdx rcx
 ret
+
 ;--- Write number value string for text generation by topology parsing --------;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RDX = Destination base address                                      ;
@@ -340,6 +325,7 @@ movzx edi,ah
 movzx eax,al
 mov eax,dword [rsi + rax]
 jmp ParameterEntry
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RSI = Pointer to topology information buffer                        ;
@@ -401,60 +387,42 @@ mov eax,r9d
 mov bl,0
 call DecimalPrint32
 pop rdi
-;---------- additions for screen 0 --------------------------------------------;
 pop rax
 push rax
 call HelperSummaryCache
 .nodata:
 pop rax rsi rcx
 ret
+
+;--- Helper for write cache size and count variables by topology WinAPI -------;
+;                                                                              ; 
+; INPUT:   AX = Cache level and type code                                      ;
+;          R8  = Cache size value                                              ;
+;          R9D = Cache count value                                             ;
+;                                                                              ;
+; OUTPUT:  None                                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 HelperSummaryCache:
-push rdi
-lea rcx,[BIND_LIST]
 lea rbx,[SYS_PARMS.summaryCache]
-add rcx,BINDLIST.bindCache
 lea rsi,[rbx + SUMMARYCACHE.sizeL1C]
-lea rdi,[rcx + BINDCACHE.l1c]  
-mov dl,00000001b
 cmp ax,0101h
 je .detected 
 lea rsi,[rbx + SUMMARYCACHE.sizeL1D]
-lea rdi,[rcx + BINDCACHE.l1d]  
-mov dl,00000010b
 cmp ax,0201h
 je .detected 
 lea rsi,[rbx + SUMMARYCACHE.sizeL2U]
-lea rdi,[rcx + BINDCACHE.l2u]  
-mov dl,00000100b
 cmp ax,0002h
 je .detected 
 lea rsi,[rbx + SUMMARYCACHE.sizeL3U]
-lea rdi,[rcx + BINDCACHE.l3u]  
-mov dl,00001000b
 cmp ax,0003h
 je .detected 
 lea rsi,[rbx + SUMMARYCACHE.sizeL4U]
-lea rdi,[rcx + BINDCACHE.l4u]  
-mov dl,00010000b
 cmp ax,0004h
 je .detected 
 jmp .nodata
 .detected:
-or [rcx + BINDCACHE.cacheBitmap],dl
 mov [rsi + 0],r8
 mov [rsi + 8],r9d
-mov bl,0FFh
-mov eax,r8d
-call SizePrint64
-mov al,' '
-stosb
-mov ax,STR_TP_X
-call PoolStringWrite
-mov eax,r9d
-mov bl,0
-call DecimalPrint32
-mov al,0
-stosb
 .nodata:
-pop rdi
 ret

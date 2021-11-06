@@ -1,14 +1,14 @@
 ;---------- Get ACPI information ----------------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoAcpi:
-push ebx esi edi
-lea ecx,[BIND_LIST]
-lea edx,[ecx + BINDLIST.bindMadt]
+lea edx,[ACPI_DATA.tempMadt]
 mov bl,2
 .writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
 mov ax,STR_N_A
@@ -29,7 +29,6 @@ call PoolStringWrite
 add edx,sizeof.BINDACPI
 dec bl
 jnz .writeNotAvl
-pop edi esi ebx
 xor eax,eax
 cmp [DYNA_IMPORT._EnumSystemFirmwareTables],eax
 je .skipAcpiList
@@ -68,16 +67,14 @@ test eax,eax
 jz .skipOneTable
 cmp eax,VALUE_BUFFER_LIMIT
 ja .skipOneTable 
-push ecx esi
+push ecx
 cld
 mov ecx,9
 mov esi,edx
 rep movsd
 ;--- start of addition for show ACPI tables MADT and SRAT at screen 0 ---------;
-pop esi
 push esi edi ebx edx ebp
-lea ecx,[BIND_LIST]
-lea ebx,[ecx + BINDLIST.acpiEnable]
+lea ebx,[ACPI_DATA.tempAcpiEnable]
 or byte [ebx],00000001b
 mov ebp,[edx]
 cmp ebp,'APIC'
@@ -87,11 +84,11 @@ je .sratFound
 jmp .skipTable
 .madtFound:
 or byte [ebx],00000010b
-lea ebx,[ecx + BINDLIST.bindMadt]
+lea ebx,[ACPI_DATA.tempMadt]
 jmp .copyAcpi
 .sratFound:
 or byte [ebx],00000100b
-lea ebx,[ecx + BINDLIST.bindSrat]
+lea ebx,[ACPI_DATA.tempSrat]
 .copyAcpi:
 lea esi,[edx + 10]
 lea edi,[ebx + BINDACPI.oem]
@@ -213,11 +210,12 @@ ret
 .error:
 stc
 ret
+
 ;--- Build ACPI information for text report and GUI widgets -------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextAcpi:
@@ -280,6 +278,7 @@ mov ebp,edi
 mov [DYNA_PTR.textAcpi2.objectStop],ebp
 .noAcpiData:
 ret
+
 ;---------- Copy text string with chars checks --------------------------------;
 ; INPUT:   EBX = Source base                                                   ;
 ;          EBP = Destination base                                              ;
@@ -313,6 +312,7 @@ mov al,' '
 stosb
 loop .copy
 ret
+
 ;---------- Write decimal number text string, 8 bit value ---------------------;
 ; INPUT:   EBX = Source base                                                   ;
 ;          EBP = Destination base                                              ;
@@ -331,6 +331,7 @@ mov bl,0
 call DecimalPrint32 
 pop ebx
 ret
+
 ;---------- Write hex number text string, 32 bit value ------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -350,6 +351,7 @@ lea edi,[ebp + ecx]
 movzx ecx,al
 mov eax,[ebx + ecx]
 jmp HexPrint32
+
 ;--- Copy fixed size string and write last 0, verify chars printability -------;
 ;                                                                              ;
 ; INPUT:   RSI = Source string                                                 ;

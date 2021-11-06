@@ -1,13 +1,14 @@
 ;---------- Get Topology information ------------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoTopology:
 push eax                    ; for create variable
-mov ebp,[APP_MEMORY]
 call HelperAlignment
 mov ebx,[DYNA_IMPORT._GetLogicalProcessorInformation]
 test ebx,ebx
@@ -41,11 +42,12 @@ ret
 pop eax
 stc
 ret
+
 ;--- Build Platform topology information for text report and GUI widgets ------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextTopology:
@@ -179,30 +181,6 @@ stosb
 mov ebp,edi
 mov [DYNA_PTR.textTopology1.objectStop],ebp
 ;---------- Build text block for topology screen, second block = summary ------;
-; TODO. OPTIMIZE BY ELIMINATE DUAL ADDRESS CALCULATION: FOR "N/A" AND FOR VALUES
-push esi ecx
-lea ecx,[BIND_LIST]
-lea edx,[ecx + BINDLIST.bindCache]
-mov ax,STR_N_A
-lea edi,[edx + BINDCACHE.l1c]
-push eax
-call PoolStringWrite
-pop eax
-lea edi,[edx + BINDCACHE.l1d]
-push eax
-call PoolStringWrite
-pop eax
-lea edi,[edx + BINDCACHE.l2u]
-push eax
-call PoolStringWrite
-pop eax
-lea edi,[edx + BINDCACHE.l3u]
-push eax
-call PoolStringWrite
-pop eax
-lea edi,[edx + BINDCACHE.l4u]
-call PoolStringWrite
-pop ecx esi
 mov [DYNA_PTR.textTopology2.objectStart],ebp
 push esi
 mov edi,ebp
@@ -226,6 +204,7 @@ ret
 .error:
 stc
 ret
+
 ;---------- Align memory pointer, required for WinAPI calls -------------------;
 ; INPUT:   EBP = Pointer                                                       ;
 ; OUTPUT:  EBP = Aligned pointer, updated if required                          ;
@@ -237,6 +216,7 @@ and ebp,0FFFFFFF0h
 add ebp,010h
 @@: 
 ret
+
 ;--- Write relation name string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          AX  = String ID at application strings pool                         ;
@@ -249,6 +229,7 @@ push ecx esi
 call PoolStringWrite
 pop esi ecx
 ret
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   EDX = Destination base address                                      ;
 ;          ESI = Pointer to parsed topology entry: affinity mask               ;
@@ -315,6 +296,7 @@ call DecimalPrint32
 .done:
 pop ebp esi edx ecx
 ret
+
 ;--- Write number value string for text generation by topology parsing --------;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   EDX = Destination base address                                      ;
@@ -352,6 +334,7 @@ movzx edi,ah
 movzx eax,al
 mov eax,dword [esi + eax]
 jmp ParameterEntry
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   ESI = Pointer to topology information buffer                        ;
@@ -417,46 +400,41 @@ mov eax,[ebp + 08]
 mov bl,0
 call DecimalPrint32
 pop edi
-;---------- additions for screen 0 --------------------------------------------;
 pop eax
 push eax
 call HelperSummaryCache
 .nodata:
 pop eax ebp eax eax esi ecx
 ret
+
+;--- Helper for write cache size and count variables by topology WinAPI -------;
+;                                                                              ; 
+; INPUT:   AX = Cache level and type code                                      ;
+;          dword [EBP + 4] = Cache size value                                  ;
+;          dword [EBP + 8] = Cache count value                                 ;
+;                                                                              ;
+; OUTPUT:  None                                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 HelperSummaryCache:
-push edi
-lea ecx,[BIND_LIST]
 lea ebx,[SYS_PARMS.summaryCache]
-add ecx,BINDLIST.bindCache
 lea esi,[ebx + SUMMARYCACHE.sizeL1C]
-lea edi,[ecx + BINDCACHE.l1c]  
-mov dl,00000001b
 cmp ax,0101h
 je .detected 
 lea esi,[ebx + SUMMARYCACHE.sizeL1D]
-lea edi,[ecx + BINDCACHE.l1d]  
-mov dl,00000010b
 cmp ax,0201h
 je .detected 
 lea esi,[ebx + SUMMARYCACHE.sizeL2U]
-lea edi,[ecx + BINDCACHE.l2u]  
-mov dl,00000100b
 cmp ax,0002h
 je .detected 
 lea esi,[ebx + SUMMARYCACHE.sizeL3U]
-lea edi,[ecx + BINDCACHE.l3u]  
-mov dl,00001000b
 cmp ax,0003h
 je .detected 
 lea esi,[ebx + SUMMARYCACHE.sizeL4U]
-lea edi,[ecx + BINDCACHE.l4u]  
-mov dl,00010000b
 cmp ax,0004h
 je .detected 
 jmp .nodata
 .detected:
-or [ecx + BINDCACHE.cacheBitmap],dl
 mov eax,[ebp + 08]
 mov [esi + 8],eax
 mov eax,[ebp + 04]
@@ -465,16 +443,5 @@ mov [esi + 0],eax
 mov [esi + 4],edx
 mov bl,0FFh
 mov eax,[ebp + 04]
-call SizePrint64
-mov al,' '
-stosb
-mov ax,STR_TP_X
-call PoolStringWrite
-mov eax,[ebp + 08]
-mov bl,0
-call DecimalPrint32
-mov al,0
-stosb
 .nodata:
-pop edi
 ret

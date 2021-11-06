@@ -1,15 +1,20 @@
 ;---------- Get ACPI information ----------------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoAcpi:
-sub rsp,32 + 8
-push rsi rdi
-lea rcx,[BIND_LIST]
-lea rdx,[rcx + BINDLIST.bindMadt]
+push 0
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+lea rsi,[DYNA_IMPORT]
+push rsi
+lea rdx,[ACPI_DATA.tempMadt]
 mov r8d,2
 .writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
 mov ax,STR_N_A
@@ -30,7 +35,7 @@ call PoolStringWrite
 add rdx,sizeof.BINDACPI
 dec r8d
 jnz .writeNotAvl
-pop rdi rsi
+pop rsi
 xor eax,eax
 cmp [rsi + DYNAIMPORT._EnumSystemFirmwareTables],rax
 je .skipAcpiList
@@ -66,7 +71,7 @@ test rax,rax
 jz .skipOneTable
 cmp rax,VALUE_BUFFER_LIMIT
 ja .skipOneTable 
-push rsi rdi
+push rsi
 cld
 mov ecx,9
 mov rsi,r12
@@ -74,8 +79,7 @@ mov rdi,r14
 rep movsd
 mov r14,rdi
 ;--- start of addition for show ACPI tables MADT and SRAT at screen 0 ---------;
-lea rcx,[BIND_LIST]
-lea rdx,[rcx + BINDLIST.acpiEnable]
+lea rdx,[ACPI_DATA.tempAcpiEnable]
 or byte [rdx],00000001b
 mov r8d,[r12]
 cmp r8d,'APIC'
@@ -85,11 +89,11 @@ je .sratFound
 jmp .skipTable
 .madtFound:
 or byte [rdx],00000010b
-lea rdx,[rcx + BINDLIST.bindMadt]
+lea rdx,[ACPI_DATA.tempMadt]
 jmp .copyAcpi
 .sratFound:
 or byte [rdx],00000100b
-lea rdx,[rcx + BINDLIST.bindSrat]
+lea rdx,[ACPI_DATA.tempSrat]
 .copyAcpi:
 lea rsi,[r12 + 10]
 lea rdi,[rdx + BINDACPI.oem]
@@ -173,7 +177,7 @@ stosb
 pop rbx
 .skipTable:
 ;--- end of addition for show ACPI tables MADT and SRAT at screen 0 -----------;
-pop rdi rsi
+pop rsi
 .skipOneTable:
 add rbx,4
 cmp rbx,[r13]
@@ -182,17 +186,18 @@ mov [DYNA_PTR.listAcpi.objectStart],rbp
 mov [DYNA_PTR.listAcpi.objectStop],r14
 mov rbp,r14
 .skipAcpiList:
-add rsp,32 + 8
+mov rsp,r13
+pop rax
 ret
 .error:
-add rsp,32 + 8
 stc
-ret
+jmp .skipAcpiList 
+
 ;--- Build ACPI information for text report and GUI widgets -------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextAcpi:
@@ -297,6 +302,7 @@ mov rbp,rdi
 mov [DYNA_PTR.textAcpi2.objectStop],rbp
 .noAcpiData:
 ret
+
 ;---------- Copy text string with chars checks --------------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -330,6 +336,7 @@ mov al,' '
 stosb
 loop .copy
 ret
+
 ;---------- Write decimal number text string, 8 bit value ---------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -348,6 +355,7 @@ mov bl,0
 call DecimalPrint32 
 pop rbx
 ret
+
 ;---------- Write hex number text string, 32 bit value ------------------------;
 ; INPUT:   RBX = Source base                                                   ;
 ;          RBP = Destination base                                              ;
@@ -367,6 +375,7 @@ lea rdi,[rbp + rcx]
 movzx ecx,al
 mov eax,[rbx + rcx]
 jmp HexPrint32
+
 ;--- Copy fixed size string and write last 0, verify chars printability -------;
 ;                                                                              ;
 ; INPUT:   RSI = Source string                                                 ;

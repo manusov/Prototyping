@@ -917,14 +917,14 @@ cpuBitmap     dq  ?
 avx512bitmap  dq  ?
 osBitmap      dq  ?
 ends
-; ACPI strings at system information screen
+;---------- ACPI strings at system information screen -------------------------;
 struct BINDACPI
 oem           db  6  + 1  dup ?
 manufact      db  8  + 1  dup ?
 oemRev        db  25 + 1  dup ?
 comment       db  50 + 1  dup ?
 ends
-; Cache strings at system information screen
+;---------- Cache strings at system information screen ------------------------;
 struct BINDCACHE
 cacheBitmap   db  ?
 trace         db  40 + 1  dup ?
@@ -934,13 +934,13 @@ l2u           db  40 + 1  dup ?
 l3u           db  40 + 1  dup ?
 l4u           db  40 + 1  dup ?
 ends
-; Topology strings at system information screen
+;---------- Topology strings at system information screen ---------------------;
 struct BINDTOPOLOGY
 threads       db  10 + 1  dup ?
 cores         db  10 + 1  dup ?
 sockets       db  10 + 1  dup ?
 ends
-; OS/Memory/NUMA/Paging strings at system information screen
+;---------- OS/Memory/NUMA/Paging strings at system information screen --------;
 struct BINDSYS
 procTotal     db  10 + 1  dup ?
 groups        db  10 + 1  dup ?
@@ -952,9 +952,11 @@ largePage     db  20 + 1  dup ?
 largeEnable   db  20 + 1  dup ?   
 masksList     db  80 + 1  dup ?    
 ends
-; GUI control list format definition
+
+;---------- GUI control list format definition --------------------------------;
 struct BINDLIST
-; main system information screen, set widgets from bindlist buffer
+;---------- Main system information screen ------------------------------------;
+; set widgets from bindlist buffer
 bindCpu       BINDCPU       ?
 acpiEnable    db            ?    ; D0 = ACPI, D1 = MADT, D2 = SRAT
 bindMadt      BINDACPI      ?
@@ -962,7 +964,10 @@ bindSrat      BINDACPI      ?
 bindCache     BINDCACHE     ?
 bindTopology  BINDTOPOLOGY  ?
 bindSys       BINDSYS       ?
-; other screens - text blocks viewers, set widgets from bindlist buffer
+;---------- Other screens - text blocks viewers -------------------------------;
+; set widgets from bindlist buffer
+TEXT_SCREEN_COUNT = 11
+; this 11 pointers MUST BE SEQUENTAL, because accessed in the cycle
 viewOs         dq  ?
 viewNative     dq  ?
 viewTp         dq  ?
@@ -974,7 +979,9 @@ viewGroup      dq  ?
 viewAcpi       dq  ?
 viewAcpiSum    dq  ?
 viewAffCpu     dq  ?
-; memory and cache benchmarks screen, get widgets state to bindlist buffer
+; end of sequental group of pointers
+;---------- Memory and cache benchmarks screen --------------------------------;
+; get widgets state to bindlist buffer
 ; 1 bit per switch: enable or disable
 getMemMethod   dd  ?
 getMemObject   dw  ?
@@ -996,7 +1003,8 @@ getBlkStop     dq  ?
 getBlkStep     dd  ?
 getBlkDist     dd  ?
 blockSizeEdit  dq  ?
-; memory and cache benchmarks screen, set widgets state by system information
+;---------- Memory and cache benchmarks screen --------------------------------; 
+; set widgets state by system information
 ; in the bindlist buffer
 ; also used by vector brief benchmark scenario
 ; 2 bits per switch: enable-disable and checked-unchecked
@@ -1019,7 +1027,7 @@ setBlkStart    dq  ?
 setBlkStop     dq  ?
 setBlkStep     dd  ?
 setBlkDist     dd  ?
-; vector brief benchmark results screen support
+;---------- Vector brief benchmark results screen support ---------------------;
 VB_REPORT_COUNT  EQU  14  
 VB_REPORT_STEP   EQU  41
 vbSse128read   db  40 + 1  dup ?  ; Benchmark results for SSE128 Read
@@ -1036,7 +1044,7 @@ vbAvx256sqrt   db  40 + 1  dup ?  ; Benchmark results for AVX256 Square Root
 vbAvx512sqrt   db  40 + 1  dup ?  ; Benchmark results for AVX512 Square Root
 vbX87cos       db  40 + 1  dup ?  ; Benchmark results for x87 Cosine (FCOS)
 vbX87sincos    db  40 + 1  dup ?  ; Benchmark results for x87 Sine+Cosine (FSINCOS) 
-; memory and cache simple benchmark results screen support
+;---------- Memory and cache simple benchmark results screen support ----------;
 ; TODO. Can share BINDLIST space, for example mr and vb.
 ;       This can be solution for alignment.
 ; But BINDLIST can be used for reports, include saved text strings.
@@ -1062,7 +1070,7 @@ mrDtMs         db  80 + 1  dup ?
 mrDtscSec      db  40 + 1  dup ?
 mrDtscIns      db  40 + 1  dup ?
 mrLastValue    db  40 + 1  dup ? 
-; memory and cache benchmark drawings window results screen support
+;---------- Memory and cache benchmark drawings window screen support ---------;
 mdAsm          db  80 + 1  dup ?
 mdPrefetch     db  40 + 1  dup ?
 mdObject       db  40 + 1  dup ?
@@ -1071,6 +1079,7 @@ mdRepeats      db  40 + 1  dup ?
 mdPages        db  40 + 1  dup ?
 mdNuma         db  40 + 1  dup ?
 ends
+
 ;---------- Macro definitions for binders scripts instructions ----------------;
 macro BIND_STOP
 { DB  0 }
@@ -1107,6 +1116,7 @@ MACRO GET_HEX32 srcid, dstid
 { DD 0Dh + (dstid) SHL 6 + (srcid) SHL 19 } 
 MACRO GET_HEX64 srcid, dstid                             
 { DD 0Eh + (dstid) SHL 6 + (srcid) SHL 19 } 
+
 ;---------- Macro definitions for CPU/OS features bitmaps builders scripts ----;
 R_EAX = 0
 R_EBX = 1
@@ -1142,6 +1152,7 @@ MACRO ENTRY_XCR0 bit
 { DB  05h , bit }
 MACRO PREFIX_XCR0 bit
 { DB  06h , bit }
+
 ;---------- GUI common definitions --------------------------------------------; 
 CLEARTYPE_QUALITY = 5
 ID_FONT_1         = 0

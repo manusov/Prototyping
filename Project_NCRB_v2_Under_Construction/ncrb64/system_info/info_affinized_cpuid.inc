@@ -1,13 +1,15 @@
 ;---------- Get Affinized CPUID dump information ------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoAffinizedCpuid:
-sub rsp,32 + 8
-push rdi r13
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
 mov rdi,rbp
 cmp [rsi + DYNAIMPORT._SetThreadAffinityMask],0
@@ -15,8 +17,8 @@ je .skipAffCpuid
 call [GetCurrentThread]
 test rax,rax
 jz .skipAffCpuid 
-mov r13,rax              ; R13 = Current thread handle
-mov r14d,[OS_DATA.systemInfo.dwNumberOfProcessors] ; [r15 + REGISTRY64.osData.systemInfo.dwNumberOfProcessors] 
+mov r15,rax              ; R15 = Current thread handle
+mov r14d,[OS_DATA.systemInfo.dwNumberOfProcessors] 
 test r14d,r14d
 jz .skipAffCpuid
 cmp r14d,16              ; Yet limited for maximum 16 logical processors
@@ -27,7 +29,7 @@ xor r12d,r12d            ; R12 = Storage for original affinity mask
 mov ebx,1                ; RBX = Variable affinity mask for dump
 .affinizedDump:
 mov rdx,rbx              ; RDX = Parm#2 = Affinity mask
-mov rcx,r13              ; RCX = Parm#1 = Current thread handle 
+mov rcx,r15              ; RCX = Parm#1 = Current thread handle 
 call [rsi + DYNAIMPORT._SetThreadAffinityMask]
 test r12,r12
 jnz @f
@@ -44,17 +46,16 @@ jb .affinizedDump
 test r12,r12
 jz @f
 mov rdx,r12              ; RDX = Parm#2 = Affinity mask
-mov rcx,r13              ; RCX = Parm#1 = Current thread handle 
+mov rcx,r15              ; RCX = Parm#1 = Current thread handle 
 call [rsi + DYNAIMPORT._SetThreadAffinityMask]
 @@:
 mov [DYNA_PTR.listAffCpuid.objectStart],rbp
 mov [DYNA_PTR.listAffCpuid.objectStop],rdi
 mov rbp,rdi
 .skipAffCpuid:
-add rsp,32
-pop r13 rdi
-add rsp,32 + 8
+mov rsp,r13
 ret
+
 ;--- Build Affinized CPUID dump information for text report and GUI widgets ---;
 ;                                                                              ;
 ; INPUT:   UNDER CONSTRUCTION                                                  ;

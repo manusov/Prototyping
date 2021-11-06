@@ -1,25 +1,29 @@
 ;---------- Get Native OS information -----------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoNativeOs:
-sub rsp,32 + 8
-mov rax,[rsi + DYNAIMPORT._GetNativeSystemInfo]
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
+mov rax,[DYNA_IMPORT._GetNativeSystemInfo]
 test rax,rax
 jz @f
-lea rcx,[rdi + OSDATA.nativeSystemInfo]
+lea rcx,[OS_DATA.nativeSystemInfo]
 call rax
 @@:
-add rsp,32 + 8
+mov rsp,rbp
 ret
+
 ;--- Build Native OS information for text report and GUI widgets --------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextNativeOs:

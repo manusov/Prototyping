@@ -51,7 +51,7 @@ RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win64 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.00 for Windows x64 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.01 for Windows x64 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -1507,6 +1507,14 @@ extractedContextBitmap     dq ?
 tscClockHz                 dq ?
 ends
 CPU_DATA CPUDATA ?
+;---------- Temporary ACPI data for don't use BINDLIST at low level -----------;
+; Copies of ACPI-related fields of BINDLIST
+struct ACPIDATA
+tempAcpiEnable             db            ?    ; D0 = ACPI, D1 = MADT, D2 = SRAT
+tempMadt                   BINDACPI      ?
+tempSrat                   BINDACPI      ?
+ends
+ACPI_DATA ACPIDATA ?
 ;--- Application definitions for Kernel Mode Driver Service Control Program ---;  
 SCP_PATH_BUFFER_SIZE = 260     ; Buffer size for driver file string path build
 ;---------- Kernel Mode Driver (KMD) definitions ------------------------------;
@@ -1725,10 +1733,9 @@ listNuma         ALLOCATOR ?
 listGroup        ALLOCATOR ?
 listAcpi         ALLOCATOR ?
 listAffCpuid     ALLOCATOR ?
-listKmd          ALLOCATOR ?
+; This 11 pointers MUST BE SEQUENTAL, because accessed in the cycle
 textOs           ALLOCATOR ?
 textNativeOs     ALLOCATOR ?
-textProcessor    ALLOCATOR ?
 textTopology1    ALLOCATOR ?
 textTopology2    ALLOCATOR ?
 textTopologyEx1  ALLOCATOR ?
@@ -1738,8 +1745,7 @@ textGroup        ALLOCATOR ?
 textAcpi1        ALLOCATOR ?
 textAcpi2        ALLOCATOR ?
 textAffCpuid     ALLOCATOR ?
-textKmd1         ALLOCATOR ?
-textKmd2         ALLOCATOR ?
+; end of sequental group of pointers
 ends
 align 8
 DYNA_PTR DYNAPTR ?

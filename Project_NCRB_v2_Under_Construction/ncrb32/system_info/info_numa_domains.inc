@@ -1,8 +1,10 @@
 ;---------- Get NUMA domains information --------------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoNumaDomains:
@@ -80,11 +82,12 @@ ret
 stc
 pop eax
 ret
+
 ;--- Build NUMA domains information for text report and GUI widgets -----------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   EBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  EBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextNumaDomains:
@@ -116,37 +119,6 @@ jmp .numaStd
 .numaDoneStd:
 mov al,0
 stosb
-push edi
-mov esi,[DYNA_PTR.listNuma.objectStart]
-lodsd  ; this for ADD ESI,4
-lea edi,[BIND_LIST]  ; TODO. Optimize add.
-add edi,BINDLIST.bindSys.masksList
-xor edx,edx
-.masksStd:
-cmp esi,ecx
-jae .numaDone
-test edx,edx
-jz .firstMaskStd
-cmp edx,4
-jb .nextMaskStd
-ja .skipMaskStd
-mov eax,', ..'
-stosd
-mov al,'.'
-stosb
-jmp .skipMaskStd
-.nextMaskStd:
-mov ax,', '
-stosw
-.firstMaskStd:
-mov eax,[esi + 04]
-call HexPrint32
-mov al,'h'
-stosb
-.skipMaskStd:
-add esi,20
-inc edx
-jmp .masksStd
 .numaExt:
 cmp esi,ecx
 jae .numaDoneExt
@@ -165,45 +137,12 @@ jmp .numaExt
 .numaDoneExt:
 mov al,0
 stosb
-push edi
-mov esi,[DYNA_PTR.listNuma.objectStart]
-lodsd  ; this for ADD ESI,4
-lea edi,[BIND_LIST]  ;  TODO. Optimize add.
-add edi,BINDLIST.bindSys.masksList
-xor edx,edx
-.masksExt:
-cmp esi,ecx
-jae .numaDone
-test edx,edx
-jz .firstMaskExt
-cmp edx,4
-jb .nextMaskExt
-ja .skipMaskExt 
-mov eax,', ..'
-stosd
-mov al,'.'
-stosb
-jmp .skipMaskExt 
-.nextMaskExt:
-mov ax,', '
-stosw
-.firstMaskExt:
-mov eax,[esi + 04]
-call HexPrint32
-mov al,'h'
-stosb
-.skipMaskExt:
-add esi,28
-inc edx
-jmp .masksExt
-.numaDone:
-mov al,0
-stosb
-pop edi esi
+pop esi
 mov ebp,edi
 mov [DYNA_PTR.textNuma.objectStop],ebp
 .noNuma:
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   EBP = Pointer to destination buffer                                 ;
 ;          EAX = Number write to string                                        ; 

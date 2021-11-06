@@ -1,12 +1,15 @@
 ;---------- Get Operating System information ----------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoOperatingSystem:
-sub rsp,32 + 8
+mov rbp,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
 lea rsi,[DYNA_IMPORT]
 lea rdi,[OS_DATA]
 mov rax,[rsi + DYNAIMPORT._GlobalMemoryStatusEx]
@@ -53,8 +56,6 @@ call rax
 @@:
 mov [rdi + OSDATA.largePageSize],rax
 ;---------- Get large page information: try allocation ------------------------;
-mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,128 + 32
 xor eax,eax
 mov [rdi + OSDATA.largePageEnable],eax
@@ -120,25 +121,23 @@ movzx eax,al
 mov [rdi + OSDATA.largePageEnable],eax 
 .exit:
 mov rsp,rbp
-add rsp,32 + 8
 ret
 .error:
-add rsp,32 + 8
 stc
-ret
+jmp .exit
+
 ;--- Build Operating System information for text report and GUI widgets -------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextOperatingSystem:
-mov r14,rdi
 mov [DYNA_PTR.textOs.objectStart],rbp
 mov ax,STR_OS_MEMORY_LOAD                        ; Memory load percentage
 call HelperOsInfoString
-mov eax,[r14 + OSDATA.memoryStatusEx.dwMemoryLoad]
+mov eax,[OS_DATA.memoryStatusEx.dwMemoryLoad]
 push rax
 mov bl,0
 call DecimalPrint32
@@ -242,57 +241,8 @@ mov al,0
 stosb
 mov rbp,rdi
 mov [DYNA_PTR.textOs.objectStop],rbp
-;---------- Additions for screen 0 information --------------------------------;
-lea rdx,[BIND_LIST]
-add rdx,BINDLIST.bindSys
-lea rdi,[rdx + BINDSYS.procTotal]
-mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
-mov bl,0
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.groups]
-mov eax,[OS_DATA.activeProcessorGroupCount] ; Processors groups
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.procCur]
-mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.numaNodes]
-mov eax,[OS_DATA.numaNodeCount]  ; NUMA domains
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.memPhys]
-mov rax,[OS_DATA.memoryStatusEx.ullTotalPhys]
-mov bl,2
-call SizePrint64
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.memAvail]
-mov rax,[OS_DATA.memoryStatusEx.ullAvailPhys]
-call SizePrint64
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.largePage]
-mov rax,[OS_DATA.largePageSize]
-mov bl,0FFh
-call SizePrint64
-mov al,0
-stosb
-lea rdi,[rdx + BINDSYS.largeEnable]
-cmp [OS_DATA.largePageEnable],0
-mov ax,STR_OS_DISABLED
-je @f
-mov ax,STR_OS_ENABLED
-@@:
-call PoolStringWrite
-mov al,0
-stosb
 ret
+
 ;--- Pre-blank string with CR, LF, write parameter name, set text pointers ----;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          AX  = Index for parameter name for write to string                  ; 
@@ -318,6 +268,7 @@ lea rdi,[rbp - 82 + 33]
 lea r8,[rbp - 82 + 62]
 pop rsi
 ret
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for memory status structure.                          ;
@@ -351,6 +302,7 @@ call SizePrint64
 .skip:
 mov rdi,r8
 jmp HexPrint64
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units auto selected                               ;
 ;           This variant for system information structure.                     ;
@@ -364,6 +316,7 @@ jmp HexPrint64
 HelperOsInfoSizeAuto:
 mov bl,0FFh
 jmp SizeHelperEntry
+
 ;---------- Write memory block size to pre-blanked, hex only ------------------;
 ;           This variant for memory status structure.                          ;
 ;           This variant for 64-bit value.                                     ;
@@ -375,6 +328,7 @@ jmp SizeHelperEntry
 HelperOsInfoHex:
 mov bl,0
 jmp SizeHelperEntry 
+
 ;---------- Write memory block size to pre-blanked string, include hex --------;
 ;           This variant for units fixed = megabytes.                          ;
 ;           This variant for system information structure.                     ;
@@ -400,6 +354,7 @@ call SizePrint64
 pop rax
 mov rdi,r8
 jmp HexPrint32
+
 ;---------- Write 32-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
@@ -423,6 +378,7 @@ call DecimalPrint32
 pop rax
 mov rdi,r8
 jmp HexPrint32
+
 ;---------- Write 16-bit number to pre-blanked string, decimal and hex --------;
 ; INPUT:   RDI = Pointer to destination buffer, decimal value position         ;
 ;          R8  = Pointer to destination buffer, hex value position             ; 
@@ -445,6 +401,7 @@ call DecimalPrint32
 pop rax
 mov rdi,r8
 jmp HexPrint16
+
 ;---------- Write system information strings ----------------------------------;
 ; INPUT:   RBP = Pointer to destination buffer                                 ;
 ;          BH = information type: 0 = OS info , 1 = native OS info             ;

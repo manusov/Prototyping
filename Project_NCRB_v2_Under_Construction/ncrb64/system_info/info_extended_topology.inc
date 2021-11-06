@@ -1,15 +1,21 @@
 ;---------- Get Extended Topology information ---------------------------------;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF  = Error flag, 0(NC) = OK, 1(C) = Error                          ;
+;          AL  = Error code, valid if CF = 1                                   ;
+;          RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoExtendedTopology:
+push 0
+mov r13,rsp
+and rsp,0FFFFFFFFFFFFFFF0h
+sub rsp,32
 call HelperAlignment
-mov rbx,[rsi + DYNAIMPORT._GetLogicalProcessorInformationEx]
+mov rbx,[DYNA_IMPORT._GetLogicalProcessorInformationEx]
 test rbx,rbx
-jz @f
+jz .exit
 xor r14d,r14d
 mov al,0                  ; 0 = RelationProcessorCore
 call HelperTopologyEx
@@ -30,16 +36,19 @@ jc .error
 mov [DYNA_PTR.listTopologyEx.objectStart],rbp
 add rbp,r14
 mov [DYNA_PTR.listTopologyEx.objectStop],rbp
-@@:
+.exit:
+mov rsp,r13
+pop rax
 ret
 .error:
 stc
-ret
+jmp .exit
+
 ;--- Build Platform ext. topology inform. for text report and GUI widgets -----;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   RBP = Dynamically allocated memory pointer                          ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  RBP = Dynamically allocated memory pointer updated                  ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextExtendedTopology:
@@ -191,25 +200,6 @@ jz @f
 mov [rax + SUMMARYTOPOLOGY.sockets],r9d
 @@:
 .noTopologyEx:
-;---------- Support screen 0 threads, cores, sockets ( text ) -----------------;
-lea rdx,[BIND_LIST]
-lea r8,[SYS_PARMS.summaryTopology]
-mov bl,0
-lea rdi,[rdx + BINDLIST.bindTopology.threads]
-mov eax,[r8 + SUMMARYTOPOLOGY.threads]
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDLIST.bindTopology.cores]
-mov eax,[r8 + SUMMARYTOPOLOGY.cores]
-call DecimalPrint32
-mov al,0
-stosb
-lea rdi,[rdx + BINDLIST.bindTopology.sockets]
-mov eax,[r8 + SUMMARYTOPOLOGY.sockets]
-call DecimalPrint32
-mov al,0
-stosb
 ;--- Build text block for extended topology screen, second block = summary ----;
 mov [DYNA_PTR.textTopologyEx2.objectStart],rbp
 mov rdi,rbp
@@ -228,6 +218,7 @@ stosb
 mov rbp,rdi
 mov [DYNA_PTR.textTopologyEx2.objectStop],rbp
 ret
+
 ;---------- Get topological information ---------------------------------------;
 ; INPUT:   RBX = WinAPI function address                                       ;
 ;          RBP = Pointer to buffer for topology information                    ;
@@ -271,6 +262,7 @@ ret
 .error:
 stc
 jmp .exit
+
 ;--- Write affinity mask string for text generation by topology parsing -------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
@@ -291,6 +283,7 @@ mov rax,[rsi + 00]   ; RAX = Affinity mask
 call EntryAffinity
 pop rsi
 ret
+
 ;--- Write proc. group string for text generation by topology parsing ---------;
 ; INPUT:   RDX = Destination base address                                      ;
 ;          RSI = Pointer to parsed topology entry: affinity mask               ;
@@ -306,6 +299,7 @@ mov ax,[rsi + 08]
 call HexPrint16
 pop rsi
 ret
+
 ;--- Write cache size and count string for text gener. by topology parsing ----;
 ; Has 3 entry points depend on parameter width: 8, 16, 32 bits                 ;
 ; INPUT:   RSI = Pointer to topology information buffer                        ;

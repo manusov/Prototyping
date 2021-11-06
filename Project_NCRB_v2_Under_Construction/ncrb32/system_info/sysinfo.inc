@@ -11,6 +11,13 @@
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft ia32 calling convention.        ;
 ;------------------------------------------------------------------------------;
+
+; TODO. Optimize for use single call per subject, instead 2 calls: Info_ and Text_
+; TODO. Move this to separate include file with subroutine. (?)
+; TODO. Remove "magic numbers" use names for bits positions.
+; TODO. All operations with BINDLIST locate here, subject-specific at
+;       info_***.inc
+
 SystemInfo:
 push ebx esi edi ebp
 push 0                  ; Variable dword at [esp], if original ESP, no pushes
@@ -19,7 +26,6 @@ cld
 call InfoProcessor
 jc .error
 ;---------- Initializing dynamical import WinAPI list -------------------------;
-push esi
 mov ebx,[APP_DATA.lockedImportList]  ; EBX = to functions names
 lea edi,[DYNA_IMPORT]
 lea esi,[NAME_KERNEL32]     ; ESI = Pointer to libraries names array
@@ -50,7 +56,6 @@ cmp al,0
 jne .skipLib
 jmp .scanLibs               ; External cycle for libraries list
 .doneLibs:
-pop esi
 ;---------- Check for WoW64 process: ia32 application under Win64 -------------;
 lea edi,[OS_DATA.isWow64]
 mov ecx,[DYNA_IMPORT._IsWow64Process]
@@ -66,107 +71,262 @@ jnz .doneWow64          ; Go if WoW64 detected
 .noWow64:
 mov dword [edi],0       ; Clear WoW64 flag if WoW64 not detected  
 .doneWow64: 
-
-;---------- Get system and memory information parameters ----------------------;
-
-; TODO. 
-; Optimize for use single call per subject, instead 2 calls: Info_ and Text_
-
-call InfoOperatingSystem
-;---------- Get native operating system information ---------------------------;
-call InfoNativeOs
-;---------- Get platform topology by WinAPI -----------------------------------;
-; Start operations with unformatted part of application registry,
-; EBP = Pointer for unformatted part addressing 
-call InfoTopology
-;---------- Get platform extended topology by WinAPI --------------------------;
-; Separate get each type of information for build ordered list.
-call InfoExtendedTopology
-;---------- Get NUMA nodes list -----------------------------------------------;
-call InfoNumaDomains
-;---------- Get processor groups list -----------------------------------------;
-call InfoProcessorGroups
-;---------- Get affinized CPUID dump ------------------------------------------;
-call InfoAffinizedCpuid
-;---------- Build text block for operating system information screen ----------;
-; Start text blocks build operations.
+;---------- Get system information --------------------------------------------;
+call InfoOperatingSystem    ; System and memory information parameters
+call InfoNativeOs           ; Native operating system information
+mov ebp,[APP_MEMORY]
+call InfoTopology           ; Get platform topology by WinAPI
+call InfoExtendedTopology   ; Get platform extended topology by WinAPI
+call InfoNumaDomains        ; Get NUMA nodes list
+call InfoProcessorGroups    ; Get processor groups list
+call InfoAcpi               ; Get ACPI tables list
+call InfoAffinizedCpuid     ; Get affinized CPUID dump
+;---------- Build texts by system information ---------------------------------;
 call TextOperatingSystem
-;---------- Build text block for native operating system information screen ---;
 call TextNativeOs
-;---------- Build text block for topology screen, first block = list ----------;
 call TextTopology
-;--- Build text block for extended topology screen, first block = list --------;
 call TextExtendedTopology
-;---------- Build text block for NUMA domains list screen ---------------------;
 call TextNumaDomains
-;---------- Build text block for processor groups list screen -----------------;
 call TextProcessorGroups
-;---------- Build text block for ACPI screen, first block = tables list -------;
-call InfoAcpi
-;--- Build text block for ACPI screen, second block = tables detection --------;
 call TextAcpi
-;---------- Build text block for affinized CPUID dump -------------------------;
 call TextAffinizedCpuid
-;---------- Text blocks for viewers -------------------------------------------;
-
-; TODO.
-; OPTIMIZE THIS, MAKE CYCLE WITH TABLE.
-
-lea edi,[BIND_LIST]  ; TODO. Optimize add. 
-add edi,BINDLIST.viewOs
-mov eax,[DYNA_PTR.textOs.objectStart]
-stosd       ; Operating system information
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textNativeOs.objectStart]
-stosd       ; Native operating system information
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textTopology1.objectStart]
-stosd       ; Topology information by operating system, text block 1, list
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textTopology2.objectStart]
-stosd       ; Topology information by operating system, text block 2, summary
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textTopologyEx1.objectStart]
-stosd       ; Extended topology information by OS, text block 1, list
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textTopologyEx2.objectStart]
-stosd       ; Extended topology information by OS, text block 2, summary
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textNuma.objectStart]
-stosd       ; NUMA domains list by OS
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textGroup.objectStart]
-stosd       ; Processor groups list by OS
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textAcpi1.objectStart]
-stosd       ; ACPI tables, text block 1 = tables list
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textAcpi2.objectStart]
-stosd       ; ACPI tables, text block 2 = tables detection by data base
-xor eax,eax
-stosd
-mov eax,[DYNA_PTR.textAffCpuid.objectStart]
-stosd       ; Affinized CPUID dump
-xor eax,eax
-stosd
-;---------- Data for memory and cache benchmark setup -------------------------;
-
-; TODO. Move this to separate include file with subroutine. (?)
-; TODO. Remove "magic numbers" use names for bits positions.
-; TODO. All operations with BINDLIST locate here, subject-specific at
-;       info_***.inc
-
+;---------- Data fields for system information screen ( screen 0 ) ------------;
+; EDI = Pointer for bind buffer addressing.
+; EBP = Pointer for CPU data addressing in the application variables
 lea edi,[BIND_LIST]
-;---------- Benchmark methods based on CPU instructions -----------------------;
+lea ebp,[CPU_DATA.vendorString]
+mov ebx,ebp
+;---------- CPU vendor string, 12 chars ---------------------------------------;
+xchg eax,ebp
+stosd
+xor eax,eax
+stosd
+;---------- CPU signature: type, family, model, stepping ----------------------;
+mov ax,STR_TFMS
+call PoolStringWrite
+mov eax,[ebx + CPUDATA.cpuSignature]
+call HexPrint32
+mov ax,STR_H
+call PoolStringWrite
+mov al,0
+stosb 
+;---------- CPU model string, maximum 48 chars --------------------------------;
+lea eax,[ebx + CPUDATA.modelString]
+stosd
+xor eax,eax
+stosd
+;---------- TSC frequency -----------------------------------------------------;
+mov ecx,32
+mov al,0
+rep stosb
+push edi ebx
+sub edi,32
+mov ax,STR_TSC
+call PoolStringWrite
+finit
+push 0 1000000
+fild qword [ebx + CPUDATA.tscClockHz] 
+fidiv dword [esp]
+fstp qword [esp]
+pop eax edx
+mov bx,0100h
+call DoublePrint
+mov ax,STR_MHZ
+call PoolStringWrite
+pop ebx edi
+;---------- CPU instructions and OS context management features bitmaps -------; 
+mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 0]
+stosd
+mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 4]
+stosd
+mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 0]
+stosd
+mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 4]
+stosd
+mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 0]
+stosd
+mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
+stosd
+;---------- Operating System data fields visualized at for screen 0 -----------;
+lea ecx,[BIND_LIST]
+add ecx,BINDLIST.bindSys
+lea edi,[ecx + BINDSYS.procTotal]
+mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
+mov bl,0
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.groups]
+mov eax,[OS_DATA.activeProcessorGroupCount] ; Processors groups
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.procCur]
+mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.numaNodes]
+mov eax,[OS_DATA.numaNodeCount]  ; NUMA domains
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.memPhys]
+mov eax,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 0]
+mov edx,dword [OS_DATA.memoryStatusEx.ullTotalPhys + 4]
+mov bl,2
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.memAvail]
+mov eax,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 0]
+mov edx,dword [OS_DATA.memoryStatusEx.ullAvailPhys + 4]
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.largePage]
+mov eax,[OS_DATA.largePageSize]
+xor edx,edx
+mov bl,0FFh
+call SizePrint64
+mov al,0
+stosb
+lea edi,[ecx + BINDSYS.largeEnable]
+cmp [OS_DATA.largePageEnable],0
+mov ax,STR_OS_DISABLED
+je @f
+mov ax,STR_OS_ENABLED
+@@:
+call PoolStringWrite
+mov al,0
+stosb
+;---------- Platform topology by OS data fields visualized at for screen 0 ----;
+; Instruction cache , L1
+lea ebp,[SYS_PARMS.summaryCache]
+lea esi,[ebp + SUMMARYCACHE.sizeL1C]
+lea edi,[BIND_LIST.bindCache.l1c]
+mov cl,00000001b
+call HelperSysinfoTopologyCache
+;---------- Data cache , L1 ---------------------------------------------------; 
+lea esi,[ebp + SUMMARYCACHE.sizeL1D]
+lea edi,[BIND_LIST.bindCache.l1d]
+mov cl,00000010b
+call HelperSysinfoTopologyCache
+;---------- Unified cache , L2 ------------------------------------------------;
+lea esi,[ebp + SUMMARYCACHE.sizeL2U]
+lea edi,[BIND_LIST.bindCache.l2u]
+mov cl,00000100b
+call HelperSysinfoTopologyCache
+;---------- Unified cache , L3 ------------------------------------------------;
+lea esi,[ebp + SUMMARYCACHE.sizeL3U]
+lea edi,[BIND_LIST.bindCache.l3u]
+mov cl,00001000b
+call HelperSysinfoTopologyCache
+;---------- Unified cache , L4 ------------------------------------------------;
+lea esi,[ebp + SUMMARYCACHE.sizeL4U]
+lea edi,[BIND_LIST.bindCache.l4u]
+mov cl,00010000b
+call HelperSysinfoTopologyCache
+;--- Support screen 0 threads, cores, sockets by extended topology WinAPI -----;
+lea edx,[BIND_LIST]
+lea ecx,[SYS_PARMS.summaryTopology]
+mov bl,0
+lea edi,[edx + BINDLIST.bindTopology.threads]
+mov eax,[ecx + SUMMARYTOPOLOGY.threads]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[edx + BINDLIST.bindTopology.cores]
+mov eax,[ecx + SUMMARYTOPOLOGY.cores]
+call DecimalPrint32
+mov al,0
+stosb
+lea edi,[edx + BINDLIST.bindTopology.sockets]
+mov eax,[ecx + SUMMARYTOPOLOGY.sockets]
+call DecimalPrint32
+mov al,0
+stosb
+;---------- NUMA domains affinity masks at screen 0 ---------------------------;
+mov esi,[DYNA_PTR.listNuma.objectStart]
+mov ecx,[DYNA_PTR.listNuma.objectStop]
+lea edi,[BIND_LIST.bindSys.masksList]
+lodsd
+test eax,eax
+jnz .extendedNuma
+;---------- NUMA without processor groups -------------------------------------;
+xor edx,edx
+.masksStd:
+cmp esi,ecx
+jae .doneNuma
+test edx,edx
+jz .firstMaskStd
+cmp edx,4
+jb .nextMaskStd
+ja .skipMaskStd
+mov eax,', ..'
+stosd
+mov al,'.'
+stosb
+jmp .skipMaskStd
+.nextMaskStd:
+mov ax,', '
+stosw
+.firstMaskStd:
+mov eax,[esi + 04]
+call HexPrint32
+mov al,'h'
+stosb
+.skipMaskStd:
+add esi,20
+inc edx
+jmp .masksStd
+;---------- NUMA with processor groups ----------------------------------------;
+.extendedNuma:
+xor edx,edx
+.masksExt:
+cmp esi,ecx
+jae .numaDone
+test edx,edx
+jz .firstMaskExt
+cmp edx,4
+jb .nextMaskExt
+ja .skipMaskExt 
+mov eax,', ..'
+stosd
+mov al,'.'
+stosb
+jmp .skipMaskExt 
+.nextMaskExt:
+mov ax,', '
+stosw
+.firstMaskExt:
+mov eax,[esi + 04]
+call HexPrint32
+mov al,'h'
+stosb
+.skipMaskExt:
+add esi,28
+inc edx
+jmp .masksExt
+.numaDone:
+mov al,0
+stosb
+;---------- Done for both branches --------------------------------------------;
+.doneNuma:
+mov al,0
+stosb
+;---------- Data fields for ACPI ----------------------------------------------;
+; Copy from temporary buffer to BINDLIST, transit copy used for don't access
+; BINDLIST at low level.
+lea esi,[ACPI_DATA]
+lodsb
+mov [BIND_LIST.acpiEnable],al
+lea edi,[BIND_LIST.bindMadt]
+mov ecx,sizeof.BINDACPI * 2  ; * 2 because MADT and SRAT tables show at screen 0
+rep movsb
+;--- Data fields for memory and cache benchmarks setup screen ( screen 1 ) ----;
+; Benchmark methods availability based on CPU instructions 
+lea edi,[BIND_LIST]
 mov eax,dword [CPU_DATA.extractedFeaturesBitmap]
 mov edx,dword [CPU_DATA.extractedContextBitmap]
 mov ebx,00000555h       ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
@@ -329,6 +489,28 @@ mov word [edi + BINDLIST.setMemAccess],00000010b  ; Access step
 mov word [edi + BINDLIST.setMemPref],00000010b    ; 01010101b  ; Prefetch modes
 mov word [edi + BINDLIST.setMemMeas],11010101b    ; Measure precision modes
 mov word [edi + BINDLIST.setMemPix],00010111b     ; Pixels approximation modes
+;---------- Text blocks for viewers -------------------------------------------;
+; This 11 pointers MUST BE SEQUENTAL, because accessed in the cycle:
+; 1.  Operating system information
+; 2.  Native operating system information
+; 3.  Topology information by operating system, text block 1, list
+; 4.  Topology information by operating system, text block 2, summary
+; 5.  Extended topology information by OS, text block 1, list
+; 6.  Extended topology information by OS, text block 2, summary
+; 7.  NUMA domains list by OS
+; 8.  Processor groups list by OS
+; 9.  ACPI tables, text block 1 = tables list
+; 10. ACPI tables, text block 2 = tables detection by data base
+; 11. Affinized CPUID dump
+mov ecx,TEXT_SCREEN_COUNT
+lea esi,[DYNA_PTR.textOs.objectStart]
+add edi,BINDLIST.viewOs
+@@:
+movsd
+xor eax,eax
+stosd
+lodsd    ; This instead ADD ESI,4
+loop @b
 ;---------- Exit points -------------------------------------------------------;
 ; TODO. Error Handling.
 .error:
@@ -336,3 +518,41 @@ mov word [edi + BINDLIST.setMemPix],00010111b     ; Pixels approximation modes
 pop ecx     ; this POP for remove temporary variable
 pop ebp edi esi ebx
 ret
+
+;---------- Helper for write cache summary by platform topology WinAPI --------;
+;                                                                              ; 
+; INPUT:   ESI = Source pointer for cache size and count variables             ;
+;          EDI = Destination pointer for write text string                     ;
+;          CL  = Bitmap for set GUI objects (cache items) active               ;      
+;                                                                              ;
+; OUTPUT:  None                                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+HelperSysinfoTopologyCache:
+mov eax,[esi + 0]
+mov edx,[esi + 4]
+mov ebx,eax
+or ebx,edx
+jz .nodata
+mov ebx,[esi + 8]
+test ebx,ebx
+jz .nodata
+or [BIND_LIST.bindCache.cacheBitmap],cl
+push ebx
+mov bl,0FFh
+call SizePrint64
+mov al,' '
+stosb
+mov ax,STR_TP_X
+call PoolStringWrite
+pop eax
+mov bl,0
+call DecimalPrint32
+.done:
+mov al,0
+stosb
+ret
+.nodata:
+mov ax,STR_N_A
+call PoolStringWrite
+jmp .done

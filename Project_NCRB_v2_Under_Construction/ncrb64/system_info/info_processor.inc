@@ -3,9 +3,10 @@
 ; Repeat this call before vector brief, memory run, memory draw.               ;
 ; Move local helpers to this file or eliminate helpers, optimize structure.    ;
 ;                                                                              ;
-; INPUT:   UNDER CONSTRUCTION                                                  ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; OUTPUT:  UNDER CONSTRUCTION                                                  ;
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 InfoProcessor:
@@ -53,56 +54,12 @@ stosq
 ;---------- Measure TSC frequency ---------------------------------------------;
 call HelperMeasureTsc
 ; TODO. Check for errors, CF=1
-; RDI = Pointer for bind buffer addressing.
-; R14 = Pointer for CPU data addressing in the application registry 
-lea rdi,[BIND_LIST]
-lea r14,[CPU_DATA.vendorString]
-;---------- CPU vendor string, 12 chars ---------------------------------------; 
-mov rax,r14
-stosq
-;---------- CPU signature: type, family, model, stepping ----------------------;
-mov ax,STR_TFMS
-call PoolStringWrite
-mov eax,[r14 + CPUDATA.cpuSignature]
-call HexPrint32
-mov ax,STR_H
-call PoolStringWrite
-mov al,0
-stosb 
-;---------- CPU model string, maximum 48 chars --------------------------------;
-lea rax,[r14 + CPUDATA.modelString]
-stosq
-;---------- TSC frequency -----------------------------------------------------;
-mov ecx,32
-mov al,0
-rep stosb
-push rdi
-sub rdi,32
-mov ax,STR_TSC
-call PoolStringWrite
-finit
-push 1000000
-fild qword [r14 + CPUDATA.tscClockHz] 
-fidiv dword [rsp]
-fstp qword [rsp]
-pop rax
-mov bx,0100h
-call DoublePrint
-mov ax,STR_MHZ
-call PoolStringWrite
-pop rdi
-;---------- CPU instructions and OS context management features bitmaps -------;
-mov rax,[r14 + CPUDATA.extractedFeaturesBitmap]
-stosq
-mov rax,[r14 + CPUDATA.extractedAvx512Bitmap]
-stosq
-mov rax,[r14 + CPUDATA.extractedContextBitmap]
-stosq
 clc
 ret
 .error:
 stc
 ret
+
 ;---------- Detect CPUID support and execute CPUID function #0. ---------------;
 ; Note CPUID can be supported by CPU but locked by Virtual Monitor.            ;
 ; Note check bit EFLAGS.21 toggleable, it is CPUID support indicator.          ;
@@ -155,6 +112,7 @@ ret                       ; Return, at this point CF=0(NC) after XOR EAX,EAX
 .absent:
 stc                       ; CF=1(C) means error
 ret 
+
 ;---------- Get CPU name string, execute CPUID functions 80000002h-80000004h --;
 ; Call this subroutine only if CPUID instruction supported.                    ;
 ;                                                                              ;
@@ -234,6 +192,7 @@ rep stosb
 inc rdi                   ; Skip terminator byte
 pop rsi rbx
 ret
+
 ;---------- Measure CPU TSC (Time Stamp Counter) clock frequency --------------;
 ; Store results F = Frequency=[Hz].                                            ;
 ; Call this subroutine only if CPUID and RDTSC both supported.                 ;
@@ -287,6 +246,7 @@ ret
 .error:
 stc             ; CF=1 (CY) means CPU clock measured ERROR
 jmp .exit
+
 ;---------- Interpreting list of entries ENTRY_CPUID, ENTRY_XCR0 --------------;
 ; INPUT:   RSI = Pointer to builder script                                     ;
 ; OUTPUT:  RAX = Bitmap, result of builder script                              ;  
@@ -347,6 +307,7 @@ call HelperEntryXcr0
 jmp .next
 .prefixXcr0:
 jmp .build
+
 ;---------- Interpreting one ENTRY_CPUID object at build bitmap list ----------;
 ; Check CPUID instruction support before this subroutine call.                 ;
 ;                                                                              ;
@@ -404,6 +365,7 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
 ;---------- Interpreting one ENTRY_XCR0 object at build bitmap list -----------;
 ; Check CPUID instruction support before this subroutine call,                 ;
 ; XGETBV instruction support verified in this subroutine.                      ;
