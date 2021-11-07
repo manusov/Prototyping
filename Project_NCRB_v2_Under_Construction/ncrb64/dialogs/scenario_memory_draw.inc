@@ -22,17 +22,17 @@
 ; Remember about PUSH-POP in the callers.                                      ;
 ;------------------------------------------------------------------------------;
 
-
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
 ; TODO. SOURCE STYLE: ".exit:", no ".Exit:", "L" labels names change.
 ; TODO. CPU UTILIZATION AFTER DRAW CHART DONE.
 
-
 DrawSessionStart:
 push rbx rsi rdi rbp r12 r13 r14 r15
 cld
 call InfoProcessor
+mov al,MSG_RUNTIME_TIMINGS
+jc .exit
 mov al,1  ; Run context = drawings, with memory allocation multiplication
 call GuiToUserParms   ; Update UPB
 call SessionStart     ; Initializing, allocate events, threads, memory, IPB
@@ -118,7 +118,7 @@ jae .L22
 ;---------- Run with default recommended repeats count: Bandwidth mode --------;
 mov edx,[rbx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 jmp .L21
 ;---------- Run with default recommended repeats count: Latency mode ----------;
 ; Setup pattern for prepare walk list
@@ -130,7 +130,7 @@ call ThreadsUpdatePattern
 mov rcx,rsi
 mov edx,[rbx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 ;---------- Setup pattern for walk --------------------------------------------;
 mov rcx,rsi
 mov r8d,[rbx + MEMIPB.updatedThreads]
@@ -141,7 +141,7 @@ call ThreadsUpdatePattern
 mov rcx,rsi
 mov edx,[rbx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 ;--------- Done point for adaptive modes ( bandwidth and latency branches ) ---;
 ; Pre-measurements executed, next, test control = f ( results )
 ; must be calculated
@@ -258,7 +258,7 @@ xor r8d,r8d          ; R8  = Parm#3 = bInitialState
 xor r9d,r9d          ; R9  = Parm#4 = Name, 0=None
 call [CreateEvent]   ; Call WinAPI function
 test rax,rax         ; Status=0 means error
-jz .error            ; Go if error creating event
+jz .error00          ; Go if error creating event
 stosq                ; Store handle in the thread parameters, EventStart 
 ;---------- Create event for thread done, store event handle ------------------;
 xor ecx,ecx          ; RCX = Parm#1 = lpEventAttributes  
@@ -267,7 +267,7 @@ xor r8d,r8d          ; R8  = Parm#3 = bInitialState
 xor r9d,r9d          ; R9  = Parm#4 = Name, 0=None
 call [CreateEvent]   ; Call WinAPI function
 test rax,rax         ; Status=0 means error
-jz .error            ; Go if error creating event
+jz .error00          ; Go if error creating event
 stosq                ; Store handle in the thread parameters, EventDone 
 ;---------- Create thread, store event handle ---------------------------------;
 xor ecx,ecx                 ; RCX = Parm#1 = Security
@@ -280,7 +280,7 @@ sub rsp,32                  ; Make parameters shadow
 call [CreateThread]         ; Call WinAPI function
 add rsp,32+16               ; Remove parameters shadow + 2 parameters
 test rax,rax                ; Status=0 means error
-jz .error                   ; Go if error creating thread
+jz .error00                 ; Go if error creating thread
 stosq                       ; Store handle in the thread parameters, ThreadHandle 
 ;---------- Clear measurement counter and array of measurement results --------;
 mov ecx,DRAW_POINTS_COUNT + 20 - 3   ; OLD: + 4 dwords: 2 counters + break flag + align
@@ -295,15 +295,17 @@ mov rsp,rbp
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
 ;---------- Exit point for errors detected ------------------------------------;
-.error:
+.error00:
+mov al,MSG_RUNTIME_ALLOC
 stc
 jmp .L90
 ;---------- CF=1 with AL=2  means timings measurement error -------------------; 
 ; note this branch without valid RBP
-.Error02:
-mov al,2
+.error02:
+mov al,MSG_RUNTIME_TIMINGS
 stc
 jmp .exit
+
 ;--- Stop measurement and drawings session, release resources ---------------;
 ;    used for draw performance = f( block size ) function.                   ;
 ;    Include terminate  DrawSessionThread  subroutine as parallel thread     ;
@@ -376,8 +378,10 @@ pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
 ;---------- Exit point for errors detected ------------------------------------;
 .error:
+mov al,MSG_RUNTIME_RELEASE
 stc
 jmp .L90
+
 ;--- This subroutine runs as parallel background thread, make measurements ----; 
 ;    and store results. Used for draw performance = f( block size ) function.  ;
 ;                                                                              ;

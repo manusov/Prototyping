@@ -11,7 +11,7 @@ InfoExtendedTopology:
 call HelperAlignment
 mov ebx,[DYNA_IMPORT._GetLogicalProcessorInformationEx]
 test ebx,ebx
-jz @f
+jz .exit
 xor edi,edi
 mov al,0                  ; 0 = RelationProcessorCore
 call HelperTopologyEx
@@ -32,9 +32,11 @@ jc .error
 mov [DYNA_PTR.listTopologyEx.objectStart],ebp
 add ebp,edi
 mov [DYNA_PTR.listTopologyEx.objectStop],ebp
-@@:
+.exit:
+clc
 ret
 .error:
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 ret
 

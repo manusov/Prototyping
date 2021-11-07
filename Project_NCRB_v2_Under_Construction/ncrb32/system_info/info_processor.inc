@@ -13,17 +13,20 @@ InfoProcessor:
 ;---------- Check CPUID instruction support, get 12-chars vendor string -------;
 lea edi,[CPU_DATA.vendorString]
 call HelperCheckCpuid
-jc .error
+jc .errorCpuid        ; Go error if CPUID instruction not supported or locked
 cmp eax,1
-jb .error
+jb .errorFunction     ; Go error if CPUID function 1 not supported or locked
 ;---------- Get 48-chars CPU model string -------------------------------------;
 call HelperGetCpuName
 ;---------- Get CPU signature: type, family, model, stepping ------------------;
 mov eax,1
 cpuid
 stosd
+test dl,00000001b
+jz .errorX87          ; Go error if X87 FPU not supported or locked 
+test dl,00010000b
+jz .errorTsc          ; Go error if Time Stamp Counter not supported or locked
 ;------- Build CPU common features bitmap, for system information screen ------; 
-mov ebx,esi
 xor eax,eax
 mov esi,[APP_DATA.lockedDataCpuCommon]
 test esi,esi
@@ -64,10 +67,27 @@ stosd
 ; stosd          ; *** DEBUG ***
 ;---------- Measure TSC frequency ---------------------------------------------;
 call HelperMeasureTsc
-; TODO. Check for errors, CF=1
-clc
+jc .errorTscFreq      ; Go error if TSC frequency measurement failed
 ret
-.error:
+;---------- Errors handling ---------------------------------------------------;
+.errorCpuid:
+mov al,MSG_ERROR_CPUID
+stc
+ret
+.errorFunction:
+mov al,MSG_ERROR_CPUID_F1
+stc
+ret
+.errorX87:
+mov al,MSG_ERROR_X87
+stc
+ret
+.errorTsc:
+mov al,MSG_ERROR_TSC
+stc
+ret
+.errorTscFreq:
+mov al,MSG_ERROR_TSC_FREQ
 stc
 ret
 
@@ -266,19 +286,24 @@ stc             ; CF=1 (CY) means CPU clock measured ERROR
 jmp .exit
 
 ;---------- Interpreting list of entries ENTRY_CPUID, ENTRY_XCR0 --------------;
+;                                                                              ;
 ; INPUT:   RSI = Pointer to builder script                                     ;
+;                                                                              ;
 ; OUTPUT:  EAX = Bitmap, result of builder script                              ;
 ;          RAX.[63-31] = 0                                                     ;  
+;                                                                              ;
 ;------------------------------------------------------------------------------;
 HelperBuildBitmap:
 push esi edi ebp ebx
 cld
-xor ebp,ebp
-xor ebx,ebx
+xor ebp,ebp          ; EBP = Current selected bit number
+xor ebx,ebx          ; EBX = Bitmap accumulation
+mov edi,0FFFFFFFFh   ; EDI = Additional prefix-controlled conditions bitmap
+;---------- Cycle for build bitmap --------------------------------------------;
 .build:
 lodsb
-mov dl,al
-and eax,00111111b
+mov dl,al            ; DL[7-6]  = register id
+and eax,00111111b    ; EAX[4-0] = script command id
 dec eax
 jz .entryCpuid
 dec eax
@@ -291,40 +316,68 @@ dec eax
 jz .entryXcr0
 dec eax
 jz .prefixXcr0
+;---------- Return with RAX = bitmap, bits [31-00] only used ------------------;
 .done:
 xchg eax,ebx
 pop ebx ebp edi esi
 ret
+;---------- Detected script command: CPUID without subfunction ----------------;
 .entryCpuid:
 lodsd
 xchg ecx,eax
 lodsb
-mov dh,al
-xchg ecx,eax
-xor ecx,ecx
+mov dh,al            ; DH  = Bit number, read from script
+xchg ecx,eax         ; EAX = CPUID function, read from script
+xor ecx,ecx          ; ECX = CPUID subfunction = 0
 .helperCpuid:
 call HelperEntryCpuid 
 .next:
-inc ebp
+inc ebp              ; EBP = Bit counter, go to next bit
+and ebx,edi          ; EBX = Accumulate bitmap, mask by additional bitmap = EDI
+mov edi,0FFFFFFFFh   ; EDI = Additional bitmap, restore
 jmp .build
+;---------- Detected script command: CPUID with subfunction -------------------;
 .entryCpuidS:
-lodsd
+lodsd                ; EAX = CPUID function, read from script
 xchg ecx,eax
 lodsd
-xchg ecx,eax
-mov dh,[esi]
+xchg ecx,eax         ; ECX = CPUID subfunction, read from script
+mov dh,[esi]         ; DH  = Bit number, read from script
 inc esi
 jmp .helperCpuid
+;---------- Detected script command: CPUID w/o sf as additional condition -----;
 .prefixCpuid:
-jmp .next
-.prefixCpuidS:
+lodsd
+xchg ecx,eax
+lodsb
+mov dh,al            ; DH  = Bit number, read from script 
+xchg ecx,eax         ; EAX = CPUID function, read from script 
+xor ecx,ecx          ; ECX = CPUID subfunction = 0
+.helperPrefixCpuid:
+push ebx
+xor ebx,ebx
+call HelperEntryCpuid 
+btr edi,ebp
+or edi,ebx
+pop ebx
 jmp .build
+;---------- Detected script command: CPUID + sf as additional condition -------;
+.prefixCpuidS:
+lodsd                ; EAX = CPUID function, read from script
+xchg ecx,eax    
+lodsd
+xchg ecx,eax         ; ECX = CPUID subfunction, read from script 
+mov dh,[esi]         ; DH  = Bit number, read from script
+inc esi
+jmp .helperPrefixCpuid
+;---------- Detected script command: XCR0 -------------------------------------;
 .entryXcr0:
 xor eax,eax
-lodsb
+lodsb           ; EAX = Tested bit number at XCR0, read from script
 call HelperEntryXcr0
 jmp .next
-.prefixXcr0:
+;---------- Detected script command: XCR0 as additional condition -------------;
+.prefixXcr0:    ; This branch yet not used
 jmp .build
 
 ;---------- Interpreting one ENTRY_CPUID object at build bitmap list ----------;

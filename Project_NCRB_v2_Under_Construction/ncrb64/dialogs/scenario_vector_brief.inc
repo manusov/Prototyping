@@ -11,7 +11,8 @@ push rbx rsi rdi rbp r12 r13 r14 r15
 cld
 ;---------- Refresh system information-- --------------------------------------;
 call InfoProcessor
-; TODO. CHECK RUNTIME ERRORS.
+mov al,MSG_RUNTIME_TIMINGS
+jc .error
 ;---------- Measurements ------------------------------------------------------;
 mov rbx,[CPU_DATA.extractedFeaturesBitmap]
 mov rdx,[CPU_DATA.extractedContextBitmap] 
@@ -145,5 +146,8 @@ add r14,VB_REPORT_STEP
 dec r13d
 jnz .strings
 pop rax     ; remove local variable
+clc
+.error:     ; CF = 1 and AL must be valid if exit by error branch 
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
+

@@ -52,7 +52,7 @@ call [GetSystemTimeAsFileTime]
 lea ecx,[THREAD_LIST]                   ; ECX = Pointer to threads list
 mov edx,[esi + MEMIPB.updatedThreads]   ; EDX = number of threads
 call ThreadsReStart
-mov al,2  ; AL = error status, valid if CF=1 only
+mov al,MSG_RUNTIME_TIMINGS              ; AL = error status, valid if CF=1 only
 jc .exit
 mov dword [edi + MEMOPB.tscTimerDelta + 0],eax   ; Store delta-TSC, units = TSC clocks
 mov dword [edi + MEMOPB.tscTimerDelta + 4],edx

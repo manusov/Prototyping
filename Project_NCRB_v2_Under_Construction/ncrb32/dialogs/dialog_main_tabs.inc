@@ -80,13 +80,14 @@ je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
 cmp ax,IDB_SYSINFO_VBRF
-je .vbrfRun
+je .vectorBriefRun
 jmp .processed
 ;---------- Handler for "Run" button ------------------------------------------;
 .memoryRun:
 mov ax,BINDER_GET_MEMORY
 call Binder
 call ScenarioMemoryRun
+jc .runtimeError                ; Go error message box if status bad
 push 0                          ; Parm#5 = Pass value
 push DialogProcChildMemoryRun   ; Parm#4 = Pointer to dialogue procedure
 push ebx                        ; Parm#3 = Owner window handle
@@ -100,6 +101,7 @@ jmp .processed
 mov ax,BINDER_GET_MEMORY
 call Binder
 call DrawSessionStart
+jc .runtimeError                ; Go error message box if status bad
 push 0
 push DialogProcChildMemoryDraw
 push ebx
@@ -107,10 +109,12 @@ push IDD_CHILD_MEMORY_DRAW
 push [edi + APPDATA.hResources] ; Parm#1 = Handle of resource module
 call [DialogBoxParam]           ; Create modal dialogue 
 call DrawSessionStop
+jc .runtimeError                ; Go error message box if status bad
 jmp .processed
 ;---------- Handler for "Vector brief" button ---------------------------------;
-.vbrfRun:
+.vectorBriefRun:
 call ScenarioVectorBrief
+jc .runtimeError                ; Go error message box if status bad
 push 0
 push DialogProcChildVectorBrief
 push ebx
@@ -131,3 +135,16 @@ mov eax,1
 .finish:
 pop edi esi ebx ebp
 ret 16
+
+;---------- Handler for runtime errors ----------------------------------------;
+.runtimeError:
+mov esi,[APP_DATA.lockedStrings]
+movzx eax,al
+add eax,STR_RUNTIME_ALLOC
+call IndexString       ; Return ESI = Selected string address 
+push MB_ICONERROR      ; Parm#4 = Attributes
+push PROGRAM_NAME      ; Parm#3 = Pointer to title (caption) string
+push esi               ; Parm#2 = Pointer to string: error name 
+push ebx               ; Parm#1 = Parent Window = NULL
+call [MessageBox]  
+jmp .processed

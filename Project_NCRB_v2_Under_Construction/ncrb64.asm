@@ -51,7 +51,7 @@ RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win64 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.01 for Windows x64 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.02 for Windows x64 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -66,6 +66,19 @@ MSG_RAW_RESOURCE_FAILED = 6
 MSG_CREATE_FONT_FAILED  = 7
 MSG_DIALOGUE_FAILED     = 8
 ALLOCATE_MEMORY_SIZE    = 1024 * 1024
+;---------- Application start errors identifiers ------------------------------;
+MSG_ERROR_CPUID         = 0 
+MSG_ERROR_CPUID_F1      = 1     
+MSG_ERROR_X87           = 2 
+MSG_ERROR_TSC           = 3 
+MSG_ERROR_TSC_FREQ      = 4 
+MSG_ERROR_MEMORY_API    = 5 
+MSG_ERROR_TOPOLOGY_API  = 6 
+;---------- Application runtime errors identifiers ----------------------------;
+MSG_RUNTIME_ALLOC       = 0    
+MSG_RUNTIME_RELEASE     = 1 
+MSG_RUNTIME_TIMINGS     = 2 
+MSG_RUNTIME_ADDRESS     = 3 
 ;------------------------------------------------------------------------------;
 ;                                                                              ;
 ;                                Code section.                                 ;        
@@ -211,15 +224,7 @@ jmp .createFonts
 ; TODO.
 ;---------- Get system information, user mode routines ------------------------;
 call SystemInfo
-; TODO. Error handling.
-; mov ax,STR_ERROR_CPUID
-; mov ax,STR_ERROR_CPUID_F1    
-; mov ax,STR_ERROR_X87
-; mov ax,STR_ERROR_TSC
-; mov ax,STR_ERROR_TSC_FREQ
-; mov ax,STR_ERROR_MEMORY_API
-; mov ax,STR_ERROR_TOPOLOGY_API
-; jmp .errorPlatform
+jc .errorPlatform
 ;---------- Load kernel mode driver kmd64.sys ---------------------------------;
 ; TODO.
 ; call LoadKernelModeDriver
@@ -370,6 +375,8 @@ jmp .exitResources
 ; OK, use strings from resource DLL.
 .errorPlatform:       ; Input AX = Error string ID.
 mov rsi,[APP_DATA.lockedStrings]
+movzx eax,al
+add eax,STR_ERROR_CPUID
 jmp .errorEntry 
 ;---------- Copy text string terminated by 00h --------------------------------;
 ; Note last byte 00h not copied.                                               ;

@@ -11,13 +11,13 @@ lea ebx,[DYNA_IMPORT]
 lea edi,[OS_DATA]
 mov eax,[ebx + DYNAIMPORT._GlobalMemoryStatusEx]
 test eax,eax
-jz .error
+jz .error     ; Go error if this required function not found
 lea ecx,[OS_DATA.memoryStatusEx]
 mov [ecx + MEMORYSTATUSEX_DEF.dwLength],sizeof.MEMORYSTATUSEX_DEF
 push ecx
 call eax 
 test eax,eax
-jz .error
+jz .error     ; Go error if this required function failed
 lea ecx,[OS_DATA.systemInfo]
 push ecx
 call [GetSystemInfo]
@@ -122,8 +122,10 @@ mov [OS_DATA.largePageEnable],eax
 .exit:
 add esp,128
 pop esi
+clc
 ret
 .error:
+mov al,MSG_ERROR_MEMORY_API
 stc
 ret
 

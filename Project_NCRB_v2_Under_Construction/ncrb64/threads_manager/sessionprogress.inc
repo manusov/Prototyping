@@ -1,31 +1,31 @@
-;--- Execute measurement session --------------------------------------------;
-; Execute measurements (run target performance pattern),                     ; 
-; use allocated memory and threads resources handles,                        ; 
-; allocated when session starts (see sessionstart.inc).                      ;
-; See complementar routines: sessionstart.inc , sessionstop.inc.             ;
-;                                                                            ;
-; INPUT:   None in the registers                                             ;
-;          IPB = Memory and Threads allocation data, used for release        ;
-;          Threads List, NUMA nodes list                                     ;
-;                                                                            ;
-; OUTPUT:  CF = Error flag, 0(NC) = No errors, 1(C) = Error detected.        ;
-;          AL = Error code, valid if CF=1(C)                                 ;
-;               00 = Memory allocation error                                 ;
-;               01 = Memory release error                                    ;
-;               02 = Time measurement error                                  ;
-;               04 = Address arithmetics error                               ;
-;               04-0FFh = Reserved                                           ;
-;          OPB = Benchmark results data                                      ;
-;          Threads List, NUMA nodes list                                     ;
-;                                                                            ;
-; All CPU registers can be corrupted, this rule for complex modules:         ;
-; directory threads_manager\:                                                ;
-;   sessionstart.inc, sessionstop.inc, sessionprogress.inc.                  ;
-; directory gui\:                                                            ;
-;   drawsessionstart.inc, drawsessionstop.inc                                ;
-;   but not drawsessionthread.inc because OS callback                        ;       
-; Remember about PUSH-POP in the callers.                                    ;
-;----------------------------------------------------------------------------;
+;--- Execute measurement session ----------------------------------------------;
+; Execute measurements (run target performance pattern),                       ; 
+; use allocated memory and threads resources handles,                          ; 
+; allocated when session starts (see sessionstart.inc).                        ;
+; See complementar routines: sessionstart.inc , sessionstop.inc.               ;
+;                                                                              ;
+; INPUT:   None in the registers                                               ;
+;          IPB = Memory and Threads allocation data, used for release          ;
+;          Threads List, NUMA nodes list                                       ;
+;                                                                              ;
+; OUTPUT:  CF = Error flag, 0(NC) = No errors, 1(C) = Error detected.          ;
+;          AL = Error code, valid if CF=1(C)                                   ;
+;               00 = Memory allocation error                                   ;
+;               01 = Memory release error                                      ;
+;               02 = Time measurement error                                    ;
+;               04 = Address arithmetics error                                 ;
+;               04-0FFh = Reserved                                             ;
+;          OPB = Benchmark results data                                        ;
+;          Threads List, NUMA nodes list                                       ;
+;                                                                              ;
+; All CPU registers can be corrupted, this rule for complex modules:           ;
+; directory threads_manager\:                                                  ;
+;   sessionstart.inc, sessionstop.inc, sessionprogress.inc.                    ;
+; directory gui\:                                                              ;
+;   drawsessionstart.inc, drawsessionstop.inc                                  ;
+;   but not drawsessionthread.inc because OS callback                          ;       
+; Remember about PUSH-POP in the callers.                                      ;
+;------------------------------------------------------------------------------;
 SessionProgress:
 ;--- Stack alignment, required because OS API used, save number of threads ----;
 mov rbp,rsp                    ; RBP = Save input RSP
@@ -54,7 +54,7 @@ call [GetSystemTimeAsFileTime]
 lea rcx,[THREAD_LIST]                  ; RCX = Pointer to threads list
 mov edx,[rsi + MEMIPB.updatedThreads]  ; EDX = number of threads
 call ThreadsReStart
-mov al,2                               ; AL = error status, valid if CF=1 only
+mov al,MSG_RUNTIME_TIMINGS             ; AL = error status, valid if CF=1 only
 jc .exit
 mov [rdi + MEMOPB.tscTimerDelta],rax   ; Store delta-TSC, units = TSC clocks
 ;---------- Get stop time point, by OS timer API ( alternative of TSC ) -------;

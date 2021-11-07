@@ -334,7 +334,7 @@ mov edx,[edi + MEMIPB.updatedPG]    ; EDX = Processor Groups option
 mov eax,[edi + MEMIPB.updatedNUMA]  ; EAX = NUMA option
 call BuildNumaNodesList             ; CF returned, build list of NUMA nodes
 jnc .numaValid                      ; Go if no errors, means EAX = NUMA nodes count
-mov al,0                            ; otherwise AL = error status
+mov al,MSG_RUNTIME_ALLOC            ; otherwise AL = error status
 jmp .exit                           ; Go for error handling
 .numaValid:
 ;--- Update NUMA nodes count after rejection nodes with affinity mask = 0 -----;
@@ -410,16 +410,16 @@ lea ebx,[NUMA_LIST]      ; EBX = Base address of NUMA nodes list
 mov edx,ecx              ; EDX = Number of NUMA nodes 
 xchg ecx,eax             ; ECX = Memory allocation size per one node
 mov eax,[edi + MEMIPB.updatedLP]     ; EAX = Large Pages option
-call MemAllocationNuma   ; CF returned
-mov al,0                 ; AL = error status
-jc .exit                 ; Go if error
+call MemAllocationNuma               ; CF returned
+mov al,MSG_RUNTIME_ALLOC             ; AL = error status
+jc .exit                             ; Go if error
 ;---------- Build threads list ------------------------------------------------;
 ; this is THIRD step after NUMA domains list build and its memory allocated
 lea ecx,[THREAD_LIST]
 lea edx,[MEM_IPB]
-call BuildThreadsList    ; CF returned 
-mov al,0                 ; AL = error status, valid if CF=1
-jc .exit                 ; Go if error
+call BuildThreadsList     ; CF returned 
+mov al,MSG_RUNTIME_ALLOC  ; AL = error status, valid if CF=1
+jc .exit                  ; Go if error
 ;---------- Update visualized block#1, block#2 bases at IPB -------------------;
 ; Update from Threads List first entry
 lea ecx,[THREAD_LIST]
@@ -435,8 +435,8 @@ mov [edi + MEMIPB.allocatedBlock2],eax
 ;---------- Start execution threads before per-iterations calls ---------------; 
 lea ecx,[THREAD_LIST]
 mov edx,[edi + MEMIPB.updatedThreads]
-call ThreadsStart  ; CF returned
-mov al,2           ; AL = error status, valid if CF=1 only
+call ThreadsStart             ; CF returned
+mov al,MSG_RUNTIME_TIMINGS    ; AL = error status, valid if CF=1 only
 ;---------- Initialization done -----------------------------------------------;
 ; next phase is per-iterations calls, CF actual here
 .exit:

@@ -12,7 +12,7 @@ push eax                    ; for create variable
 call HelperAlignment
 mov ebx,[DYNA_IMPORT._GetLogicalProcessorInformation]
 test ebx,ebx
-jz @f
+jz .exit
 mov dword [esp],0            ; dword [esp]  = Buffer size variable, stack
 mov eax,esp
 push eax                     ; Parm#2 = Pointer to buffer size variable 
@@ -35,11 +35,13 @@ jz .error                    ; Go if unexpected error: zero-sized buffer
 mov [DYNA_PTR.listTopology.objectStart],ebp
 add ebp,edi
 mov [DYNA_PTR.listTopology.objectStop],ebp
-@@:
-pop eax
+.exit:
+pop eax     ; This POP for remove stack variable
+clc
 ret
 .error:
-pop eax
+pop eax     ; This POP for remove stack variable
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 ret
 
@@ -51,8 +53,7 @@ ret
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 TextTopology:
-; TODO. REDESIGN CYCLE WITH MORE EFFECTIVE CPU REGISTERS USAGE,
-; WITHOUT STACK VARIABLES.
+;
 TEMP_THREADS   EQU  dword [esp + 00 + 04]
 TEMP_CORES     EQU  dword [esp + 04 + 04]
 TEMP_SOCKETS   EQU  dword [esp + 08 + 04]
@@ -200,8 +201,10 @@ stosb
 mov ebp,edi
 pop esi
 mov [DYNA_PTR.textTopology2.objectStop],ebp
+clc
 ret
 .error:
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 ret
 

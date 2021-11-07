@@ -333,9 +333,9 @@ lea rcx,[NUMA_LIST]            ; RCX = Pointers to NUMA nodes list for build
 mov edx,[rdi + MEMIPB.updatedPG]    ; EDX = Processor Groups option
 mov r8d,[rdi + MEMIPB.updatedNUMA]  ; R8D = NUMA option
 call BuildNumaNodesList             ; CF returned, build list of NUMA nodes
-jnc .numaValid                 ; Go if no errors, means EAX = NUMA nodes count
-mov al,0                       ; otherwise AL = error status
-jmp .exit                      ; Go for error handling
+jnc .numaValid                      ; Go if no errors, means EAX = NUMA nodes count
+mov al,MSG_RUNTIME_ALLOC            ; otherwise AL = error status
+jmp .exit                           ; Go for error handling
 .numaValid:
 ;--- Update NUMA nodes count after rejection nodes with affinity mask = 0 -----;
 mov [rdi + MEMIPB.domainsCount],eax
@@ -407,15 +407,15 @@ div r8           ; Divide  allocated memory / node count  for multi-thread
 lea rcx,[NUMA_LIST]               ; RCX = Base address of NUMA nodes list
 mov rdx,rax                       ; RDX = Memory allocation size per one node
 mov r9d,[rdi + MEMIPB.updatedLP]  ; R9D = Large Pages option
-call MemAllocationNuma   ; CF returned
-mov al,0                 ; AL = error status
-jc .exit                 ; Go if error
+call MemAllocationNuma            ; CF returned
+mov al,MSG_RUNTIME_ALLOC          ; AL = error status
+jc .exit                          ; Go if error
 ;---------- Build threads list ------------------------------------------------;
 ; This is THIRD step after NUMA domains list build and its memory allocated
 lea rcx,[THREAD_LIST]
 lea rdx,[MEM_IPB]
 call BuildThreadsList    ; CF returned 
-mov al,0                 ; AL = error status, valid if CF=1
+mov al,MSG_RUNTIME_ALLOC ; AL = error status, valid if CF=1
 jc .exit                 ; Go if error
 ;---------- Update visualized block#1, block#2 bases --------------------------;
 ; Update IPB from Threads List first entry
@@ -434,7 +434,7 @@ mov [rdi + MEMIPB.allocatedBlock2],rax
 lea rcx,[THREAD_LIST]
 mov edx,[rdi + MEMIPB.updatedThreads]
 call ThreadsStart  ; CF returned
-mov al,2           ; AL = error status, valid if CF=1 only
+mov al,MSG_RUNTIME_TIMINGS           ; AL = error status, valid if CF=1 only
 ;---------- Initialization done -----------------------------------------------;
 ; next phase is per-iterations calls, CF actual here
 .exit:

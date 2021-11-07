@@ -36,11 +36,13 @@ jc .error
 mov [DYNA_PTR.listTopologyEx.objectStart],rbp
 add rbp,r14
 mov [DYNA_PTR.listTopologyEx.objectStop],rbp
+clc
 .exit:
 mov rsp,r13
-pop rax
+pop rcx
 ret
 .error:
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 jmp .exit
 

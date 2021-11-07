@@ -11,7 +11,8 @@ pushad
 cld
 ;---------- Refresh system information-- --------------------------------------;
 call InfoProcessor
-; TODO. CHECK RUNTIME ERRORS.
+mov al,MSG_RUNTIME_TIMINGS
+jc .error
 ;---------- Measurements ------------------------------------------------------;
 lea esi,[VECTOR_BRIEF]
 lea edi,[VECBR_OPB]
@@ -157,5 +158,7 @@ add edi,VB_REPORT_STEP
 dec ecx
 jnz .strings
 pop eax eax ; remove local variable
+.error:     ; CF = 1 and AL must be valid if exit by error branch
+mov [esp + 28],al
 popad
 ret

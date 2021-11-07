@@ -16,7 +16,7 @@ lea rsi,[DYNA_IMPORT]
 push rsi
 lea rdx,[ACPI_DATA.tempMadt]
 mov r8d,2
-.writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
+.writeNotAvl:
 mov ax,STR_N_A
 lea rdi,[rdx + BINDACPI.oem]
 push rax

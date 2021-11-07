@@ -33,13 +33,13 @@ lea edi,[MEM_IPB]      ; RDI = Pointer to IPB (benchmark scenario)
 lea ecx,[THREAD_LIST]                  ; ECX = Pointer to threads list
 mov edx,[edi + MEMIPB.updatedThreads]  ; EDX = Threads count
 call ReleaseThreadsList
-mov al,1  ; AL = error status, valid if CF=1 only
-jc .exit  ; Go if error
+mov al,MSG_RUNTIME_RELEASE             ; AL = error status, valid if CF=1 only
+jc .exit                               ; Go if error
 ;---------- NUMA-aware or unaware memory release ------------------------------;
 lea ebx,[NUMA_LIST]                    ; EBX = Pointer to NUMA nodes list
 mov edx,[edi + MEMIPB.domainsCount]    ; EDX = NUMA domains count
 call MemReleaseNuma
-mov al,1  ; AL = error status, valid if CF=1 only
+mov al,MSG_RUNTIME_RELEASE             ; AL = error status, valid if CF=1 only
 ;---------- Done, return CF=Error flag, AL=Error code (valid if CF=1) ---------;
 .exit:
 ret

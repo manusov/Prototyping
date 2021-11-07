@@ -91,13 +91,14 @@ je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
 cmp ax,IDB_SYSINFO_VBRF
-je .vbrfRun
+je .vectorBriefRun
 jmp .processed
 ;---------- Handler for "Run" button ------------------------------------------;
 .memoryRun:
 mov ax,BINDER_GET_MEMORY
 call Binder
 call ScenarioMemoryRun
+jc .runtimeError                    ; Go error message box if status bad
 lea r9,[DialogProcChildMemoryRun]   ; R9  = Parm#4 = Pointer to dialogue proced.
 mov edx,IDD_CHILD_MEMORY_RUN        ; RDX = Parm#2 = Resource ( template ) id
 .entryDialog:
@@ -113,6 +114,7 @@ jmp .processed
 mov ax,BINDER_GET_MEMORY
 call Binder
 call DrawSessionStart
+jc .runtimeError                    ; Go error message box if status bad
 push 0 0                            ; Parm#5 = Pass value, plus alignment qword
 lea r9,[DialogProcChildMemoryDraw]
 mov r8,rbx                          ; R8  = Parm#3 = Owner window handle
@@ -122,10 +124,12 @@ sub rsp,32                          ; Allocate parameters shadow
 call [DialogBoxParam]               ; Create modal dialogue 
 add rsp,32 + 16                     ; Remove parameters shadow and 2 parameters
 call DrawSessionStop
+jc .runtimeError                    ; Go error message box if status bad
 jmp .processed
 ;---------- Handler for "Vector brief" button ---------------------------------;
-.vbrfRun:
+.vectorBriefRun:
 call ScenarioVectorBrief
+jc .runtimeError                    ; Go error message box if status bad
 lea r9,[DialogProcChildVectorBrief]
 mov edx,IDD_CHILD_VECTOR_BRIEF
 jmp .entryDialog
@@ -144,3 +148,17 @@ mov eax,1
 mov rsp,rbp
 pop r15 rdi rsi rbx rbp
 ret
+
+;---------- Handler for runtime errors ----------------------------------------;
+.runtimeError:
+mov rsi,[APP_DATA.lockedStrings]
+movzx eax,al
+add eax,STR_RUNTIME_ALLOC
+call IndexString       ; Return ESI = Selected string address 
+mov r9d,MB_ICONERROR   ; R9  = Parm#4 = Attributes
+lea r8,[PROGRAM_NAME]  ; R8  = Parm#3 = Pointer to title (caption) string
+mov rdx,rsi            ; RDX = Parm#2 = Pointer to string: error name 
+mov rcx,rbx            ; RCX = Parm#1 = Parent Window - this window
+call [MessageBox]  
+jmp .processed
+ 

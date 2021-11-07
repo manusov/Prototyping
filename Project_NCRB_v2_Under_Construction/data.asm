@@ -926,8 +926,8 @@ DB  'CPUID function 1 not supported or locked.'         , 0
 DB  'x87 Floating Point Unit not supported or locked.'  , 0
 DB  'Time Stamp Counter not supported or locked.'       , 0
 DB  'Error measuring TSC frequency.'                    , 0
-DB  'Memory information API return error.'              , 0
-DB  'CPU topological information API return error.'     , 0
+DB  'Memory information API failed.'                    , 0
+DB  'CPU topological information API failed.'           , 0
 ;---------- Strings for non-fatal warning messages ----------------------------;
 DB  'WARNING: system is not fully NCRB-compatible,' , 0Dh, 0Ah
 DB  'missing OS API functions list:'                , 0Dh, 0Ah, 0Dh, 0Ah, 0
@@ -1638,47 +1638,50 @@ BIND_STOP
 endres
 ;---------- CPU common features bitmap builder script -------------------------;
 resdata cpuCommonFeatures
-ENTRY_CPUID    00000001h             , R_EDX , 23   ; MMX
-ENTRY_CPUID    00000001h             , R_EDX , 25   ; SSE  
-ENTRY_CPUID    00000001h             , R_EDX , 26   ; SSE2
-ENTRY_CPUID    00000001h             , R_ECX , 01   ; SSE3
-ENTRY_CPUID    00000001h             , R_ECX , 09   ; SSSE3
-ENTRY_CPUID    00000001h             , R_ECX , 19   ; SSE4.1
-ENTRY_CPUID    00000001h             , R_ECX , 20   ; SSE4.2
-ENTRY_CPUID    00000001h             , R_ECX , 28   ; AVX
-ENTRY_CPUID    00000007h             , R_EBX , 05   ; AVX2
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 16   ; AVX512F
-ENTRY_CPUID    00000001h             , R_ECX , 30   ; RDRAND
-ENTRY_CPUID    00000001h             , R_ECX , 05   ; VMX
-ENTRY_CPUID    80000001h             , R_ECX , 02   ; SVM
-ENTRY_CPUID    80000001h             , R_EDX , 29   ; x86-64
-ENTRY_CPUID    00000001h             , R_ECX , 12   ; FMA 256
-ENTRY_CPUID    80000008h             , R_EBX , 0    ; CLZERO
-ENTRY_CPUID    00000001h             , R_EDX , 0    ; x87 (redundant by run criteria)
+ENTRY_CPUID     00000001h             , R_EDX , 23   ; MMX
+ENTRY_CPUID     00000001h             , R_EDX , 25   ; SSE  
+ENTRY_CPUID     00000001h             , R_EDX , 26   ; SSE2
+ENTRY_CPUID     00000001h             , R_ECX , 01   ; SSE3
+ENTRY_CPUID     00000001h             , R_ECX , 09   ; SSSE3
+ENTRY_CPUID     00000001h             , R_ECX , 19   ; SSE4.1
+ENTRY_CPUID     00000001h             , R_ECX , 20   ; SSE4.2
+ENTRY_CPUID     00000001h             , R_ECX , 28   ; AVX
+ENTRY_CPUID     00000007h             , R_EBX , 05   ; AVX2
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 16   ; AVX512F
+ENTRY_CPUID     00000001h             , R_ECX , 30   ; RDRAND
+ENTRY_CPUID     00000001h             , R_ECX , 05   ; VMX
+ENTRY_CPUID     80000001h             , R_ECX , 02   ; SVM
+ENTRY_CPUID     80000001h             , R_EDX , 29   ; x86-64
+ENTRY_CPUID     00000001h             , R_ECX , 12   ; FMA 256
+ENTRY_CPUID     80000008h             , R_EBX , 0    ; CLZERO
+ENTRY_CPUID     00000001h             , R_EDX , 0    ; x87 (redundant by run criteria)
 ENTRY_STOP
 endres  
 ;---------- CPU AVX512 features bitmap builder script -------------------------;
 resdata cpuAvx512Features
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 28   ; AVX512CD
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 26   ; AVX512PF
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 27   ; AVX512ER
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 31   ; AVX512VL
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 30   ; AVX512BW
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 17   ; AVX512DQ
-ENTRY_CPUID_S  00000007h , 00000000h , R_EBX , 21   ; AVX512_IFMA
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 01   ; AVX512_VBMI
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 06   ; AVX512_VBMI2
-ENTRY_CPUID_S  00000007h , 00000001h , R_EAX , 05   ; AVX512_BF16
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 09   ; AVX512+VAES
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 08   ; AVX512+GFNI
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 11   ; AVX512_VNNI
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 12   ; AVX512_BITALG
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 14   ; AVX512_VPOPCNTDQ
-ENTRY_CPUID_S  00000007h , 00000000h , R_ECX , 10   ; AVX512+VPCLMULQDQ
-ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 08   ; AVX512_VP2INTERSECT
-ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 23   ; AVX512_FP16
-ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 03   ; AVX512_4FMAPS
-ENTRY_CPUID_S  00000007h , 00000000h , R_EDX , 02   ; AVX512_4VNNIW
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 28   ; AVX512CD
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 26   ; AVX512PF
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 27   ; AVX512ER
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 31   ; AVX512VL
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 30   ; AVX512BW
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 17   ; AVX512DQ
+ENTRY_CPUID_S   00000007h , 00000000h , R_EBX , 21   ; AVX512_IFMA
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 01   ; AVX512_VBMI
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 06   ; AVX512_VBMI2
+ENTRY_CPUID_S   00000007h , 00000001h , R_EAX , 05   ; AVX512_BF16
+PREFIX_CPUID_S  00000007h , 00000000h , R_EBX , 16   ; Additional check AVX512F
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 09   ; AVX512+VAES
+PREFIX_CPUID_S  00000007h , 00000000h , R_EBX , 16   ; Additional check AVX512F
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 08   ; AVX512+GFNI
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 11   ; AVX512_VNNI
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 12   ; AVX512_BITALG
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 14   ; AVX512_VPOPCNTDQ
+PREFIX_CPUID_S  00000007h , 00000000h , R_EBX , 16   ; Additional check AVX512F
+ENTRY_CPUID_S   00000007h , 00000000h , R_ECX , 10   ; AVX512+VPCLMULQDQ
+ENTRY_CPUID_S   00000007h , 00000000h , R_EDX , 08   ; AVX512_VP2INTERSECT
+ENTRY_CPUID_S   00000007h , 00000000h , R_EDX , 23   ; AVX512_FP16
+ENTRY_CPUID_S   00000007h , 00000000h , R_EDX , 03   ; AVX512_4FMAPS
+ENTRY_CPUID_S   00000007h , 00000000h , R_EDX , 02   ; AVX512_4VNNIW
 ENTRY_STOP
 endres  
 ;---------- OS context features bitmap builder script -------------------------;

@@ -30,6 +30,8 @@ DrawSessionStart:
 pushad
 cld
 call InfoProcessor
+mov al,MSG_RUNTIME_TIMINGS
+jc .exit
 mov al,1  ; Run context = drawings, with memory allocation multiplication
 call GuiToUserParms   ; Update UPB
 call SessionStart     ; Initializing, allocate events, threads, memory, IPB
@@ -120,7 +122,7 @@ jae .L22
 ;---------- Run with default recommended repeats count: Bandwidth mode --------;
 mov edx,[ebx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 jmp .L21
 ;---------- Run with default recommended repeats count: Latency mode ----------;
 ; Setup pattern for prepare walk list
@@ -136,7 +138,7 @@ pop ebx
 mov ecx,esi
 mov edx,[ebx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 ;---------- Setup pattern for walk --------------------------------------------;
 push ebx
 mov ecx,[ebx + MEMIPB.updatedThreads]
@@ -149,7 +151,7 @@ pop ebx
 mov ecx,esi
 mov edx,[ebx + MEMIPB.updatedThreads]
 call ThreadsReStart
-jc .Error02                  ; If error, go to error handling branch
+jc .error02                  ; If error, go to error handling branch
 ;---------- Done point for adaptive modes ( bandwidth and latency branches ) --;
 ; Pre-measurements executed, 
 ; next, test control = f ( results ) must be calculated
@@ -263,7 +265,7 @@ push 1               ; Parm#2 = bManualReset
 push 0               ; Parm#1 = lpEventAttributes
 call [CreateEvent]   ; Call WinAPI function
 test eax,eax         ; Status=0 means error
-jz .error            ; Go if error creating event
+jz .error00          ; Go if error creating event
 stosd                ; Store handle in the thread parameters, EventStart 
 ;---------- Create event for thread done, store event handle ------------------;
 push 0               ; Parm#4 = Name, 0=None
@@ -272,7 +274,7 @@ push 1               ; Parm#2 = bManualReset
 push 0               ; Parm#1 = lpEventAttributes
 call [CreateEvent]   ; Call WinAPI function
 test eax,eax         ; Status=0 means error
-jz .error            ; Go if error creating event
+jz .error00          ; Go if error creating event
 stosd                ; Store handle in the thread parameters, EventDone 
 ;---------- Create thread, store event handle ---------------------------------;
 xor eax,eax          ; EAX = 0 for compact PUSH 0
@@ -284,7 +286,7 @@ push eax                    ; Parm#2 = Stack size, 0=default
 push eax                    ; Parm#1 = Security
 call [CreateThread]         ; Call WinAPI function
 test eax,eax                ; Status=0 means error
-jz .error                   ; Go if error creating thread
+jz .error00                 ; Go if error creating thread
 stosd                       ; Store handle in the thread parameters, ThreadHandle 
 ;---------- Clear measurement counter and array of measurement results --------;
 mov ecx,( DRAW_POINTS_COUNT + 15 ) * 2 + 3
@@ -293,20 +295,22 @@ rep stosd
 ;---------- Done, no errors ---------------------------------------------------; 
 ; Parallel thread with  DrawSessionThread  subroutine RUNNING
 clc
-.L90:
 .exit:                 ; Note AL = error status must be valid at this point
+mov [esp + 28],al
 popad
 ret
 ;---------- Exit point for errors detected ------------------------------------;
-.error:
-stc
-jmp .L90
-;---------- CF=1 with AL=2  means timings measurement error -------------------; 
-; note this branch without valid RBP
-.Error02:
-mov al,2
+.error00:
+mov al,MSG_RUNTIME_ALLOC
 stc
 jmp .exit
+;---------- CF=1 with AL=2  means timings measurement error -------------------; 
+; note this branch without valid RBP
+.error02:
+mov al,MSG_RUNTIME_TIMINGS
+stc
+jmp .exit
+
 ;--- Stop measurement and drawings session, release resources -----------------;
 ;    used for draw performance = f( block size ) function.                     ;
 ;    Include terminate  DrawSessionThread  subroutine as parallel thread       ;
@@ -372,14 +376,16 @@ jz .error                           ; Go exit if error
 ;---------- Done --------------------------------------------------------------; 
 ; Parallel thread with DrawSessionThread subroutine HALTED and REMOVED
 clc
-.L90:
 .exit:                 ; Note AL = error status must be valid at this point
+mov [esp + 28],al
 popad
 ret
 ;---------- Exit point for errors detected ------------------------------------;
 .error:
+mov al,MSG_RUNTIME_RELEASE
 stc
-jmp .L90
+jmp .exit
+
 ;--- This subroutine runs as parallel background thread, make measurements ----; 
 ;    and store results. Used for draw performance = f( block size ) function.  ;
 ;                                                                              ;

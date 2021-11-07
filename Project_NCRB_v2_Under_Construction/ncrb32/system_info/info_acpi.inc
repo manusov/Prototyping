@@ -10,7 +10,7 @@
 InfoAcpi:
 lea edx,[ACPI_DATA.tempMadt]
 mov bl,2
-.writeNotAvl:  ; TODO. USE BINDERS FOR THIS OPERATION.
+.writeNotAvl:
 mov ax,STR_N_A
 lea edi,[edx + BINDACPI.oem]
 push eax

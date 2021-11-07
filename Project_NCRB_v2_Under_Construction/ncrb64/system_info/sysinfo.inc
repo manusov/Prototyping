@@ -1,13 +1,9 @@
-;------------------------------------------------------------------------------;
+;---------- Get system information --------------------------------------------;
 ;                                                                              ;
-;        Scan system configuration and store results t system registry.        ;
-;             This procedure for user mode resources, x64 version.             ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; INPUT:   Application registry information,                                   ;
-;          unformatted part of registry and yet non initialized structures     ;
-;          must be pre-blanked (contain 0) before this procedure call.         ;
-;                                                                              ;
-; OUTPUT:  Application registry information                                    ; 
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft x64 calling convention.         ;
 ;------------------------------------------------------------------------------;
@@ -21,6 +17,8 @@
 ; TODO. Remove "magic numbers" use names for bits positions.
 ; TODO. All operations with BINDLIST locate here, subject-specific at
 ;       info_***.inc
+; TODO. Work buffers must be pre-blanked (contain 0)
+;       before this procedure call, or make this in the procedure.
 
 SystemInfo:
 push rbx rsi rdi rbp r12 r13 r14 r15
@@ -65,10 +63,13 @@ jmp .scanLibs               ; External cycle for libraries list
 ;---------- Get system information --------------------------------------------;
 push r13
 call InfoOperatingSystem    ; System and memory information parameters
+jc @f
 call InfoNativeOs           ; Native operating system information
 mov rbp,[APP_MEMORY]
 call InfoTopology           ; Get platform topology by WinAPI
+jc @f
 call InfoExtendedTopology   ; Get platform extended topology by WinAPI
+jc @f
 call InfoNumaDomains        ; Get NUMA nodes list
 call InfoProcessorGroups    ; Get processor groups list
 call InfoAcpi               ; Get ACPI tables list
@@ -77,12 +78,16 @@ call InfoAffinizedCpuid     ; Get affinized CPUID dump
 call TextOperatingSystem
 call TextNativeOs
 call TextTopology
+jc @f
 call TextExtendedTopology
 call TextNumaDomains
 call TextProcessorGroups
 call TextAcpi
 call TextAffinizedCpuid
+clc
+@@:
 pop r13
+jc .error
 ;---------- Data fields for system information screen ( screen 0 ) ------------;
 ; RDI = Pointer for bind buffer addressing.
 ; R15 = Pointer for CPU data addressing in the application variables 
@@ -470,12 +475,14 @@ movsq
 lodsq    ; This instead ADD RSI,8
 loop @b
 ;---------- Exit points -------------------------------------------------------;
-; TODO. Error Handling.
-.error:
-; TODO. Error Handling.
+clc      ; CF = 0, means no errors
+.done:
 mov rsp,r13
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
+.error:
+stc      ; CF = 1, means error, AL contain error code
+jmp .done
 
 ;---------- Helper for write cache summary by platform topology WinAPI --------;
 ;                                                                              ; 

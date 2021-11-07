@@ -14,12 +14,12 @@ lea rsi,[DYNA_IMPORT]
 lea rdi,[OS_DATA]
 mov rax,[rsi + DYNAIMPORT._GlobalMemoryStatusEx]
 test rax,rax
-jz .error
+jz .error     ; Go error if this required function not found
 lea rcx,[rdi + OSDATA.memoryStatusEx]
 mov [rcx + MEMORYSTATUSEX_DEF.dwLength],sizeof.MEMORYSTATUSEX_DEF
 call rax 
 test rax,rax
-jz .error
+jz .error     ; Go error if this required function failed
 lea rcx,[rdi + OSDATA.systemInfo]
 call [GetSystemInfo]
 mov rax,[rsi + DYNAIMPORT._GetActiveProcessorGroupCount]
@@ -123,6 +123,7 @@ mov [rdi + OSDATA.largePageEnable],eax
 mov rsp,rbp
 ret
 .error:
+mov al,MSG_ERROR_MEMORY_API
 stc
 jmp .exit
 

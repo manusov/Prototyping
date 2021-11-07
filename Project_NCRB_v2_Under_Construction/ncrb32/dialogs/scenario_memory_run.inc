@@ -8,7 +8,6 @@
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 
-
 ; TODO. Can run as simple run or helper for draw, use input flag.
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
@@ -112,20 +111,12 @@ call InfoProcessor
 ;---------- Build User Parameters Block, UPB = F( GUI widgets state ) ---------;
 mov al,0
 call GuiToUserParms
-
-;---------- Build Input Parameters Block, IPB = F( UPB, System config. ) ------;
-; TODO. Comments.
-;---------- Initializing measurement ------------------------------------------;
-; TODO. Comments.
-call SessionStart
+;---------- Measurement start, execution, stop --------------------------------;
+call SessionStart    ; Build IPB = F( UPB, System config. ), initializing
 jc .error            ; Go if error at start
-;---------- Run measurement ---------------------------------------------------;
-; TODO. Comments.
-call SessionProgress
+call SessionProgress ; Execute measurement
 jc .error            ; Go if error at execution
-;---------- Stop measurement --------------------------------------------------;
-; TODO. Comments.
-call SessionStop
+call SessionStop     ; Stop measurement
 jc .error            ; Go if error at termination
 
 ; TODO.
@@ -394,12 +385,9 @@ mov bx,0300h        ; Float part is 3 digits, Integer part without template
 call DoublePrint
 mov al,0
 stosb
-;
-;
-; TODO. Error handling.
-.error:
-;
-;
+clc
+.error:  ; CF = 1 error flag and AL must be valid if exit by error
+mov [esp + 28],al
 popad
 ret
 

@@ -1,13 +1,9 @@
-;------------------------------------------------------------------------------;
+;---------- Get system information --------------------------------------------;
 ;                                                                              ;
-;        Scan system configuration and store results t system registry.        ;
-;             This procedure for user mode resources, x64 version.             ;
+; INPUT:   None                                                                ;
 ;                                                                              ;
-; INPUT:   Application registry information,                                   ;
-;          unformatted part of registry and yet non initialized structures     ;
-;          must be pre-blanked (contain 0) before this procedure call.         ;
-;                                                                              ;
-; OUTPUT:  Application registry information                                    ; 
+; OUTPUT:  CF = Error flag, 0(NC) = OK, 1(C) = Error                           ;
+;          AL = Error code, valid if CF = 1                                    ;
 ;                                                                              ;
 ; Can destroy registers, volatile by Microsoft ia32 calling convention.        ;
 ;------------------------------------------------------------------------------;
@@ -17,10 +13,11 @@
 ; TODO. Remove "magic numbers" use names for bits positions.
 ; TODO. All operations with BINDLIST locate here, subject-specific at
 ;       info_***.inc
+; TODO. Work buffers must be pre-blanked (contain 0)
+;       before this procedure call, or make this in the procedure.
 
 SystemInfo:
 push ebx esi edi ebp
-push 0                  ; Variable dword at [esp], if original ESP, no pushes
 cld
 ;---------- Processor information ---------------------------------------------;
 call InfoProcessor
@@ -73,10 +70,13 @@ mov dword [edi],0       ; Clear WoW64 flag if WoW64 not detected
 .doneWow64: 
 ;---------- Get system information --------------------------------------------;
 call InfoOperatingSystem    ; System and memory information parameters
+jc .error
 call InfoNativeOs           ; Native operating system information
 mov ebp,[APP_MEMORY]
 call InfoTopology           ; Get platform topology by WinAPI
+jc .error
 call InfoExtendedTopology   ; Get platform extended topology by WinAPI
+jc .error
 call InfoNumaDomains        ; Get NUMA nodes list
 call InfoProcessorGroups    ; Get processor groups list
 call InfoAcpi               ; Get ACPI tables list
@@ -85,6 +85,7 @@ call InfoAffinizedCpuid     ; Get affinized CPUID dump
 call TextOperatingSystem
 call TextNativeOs
 call TextTopology
+jc .error
 call TextExtendedTopology
 call TextNumaDomains
 call TextProcessorGroups
@@ -512,12 +513,13 @@ stosd
 lodsd    ; This instead ADD ESI,4
 loop @b
 ;---------- Exit points -------------------------------------------------------;
-; TODO. Error Handling.
-.error:
-; TODO. Error Handling.
-pop ecx     ; this POP for remove temporary variable
+clc      ; CF = 0, means no errors
+.done:
 pop ebp edi esi ebx
 ret
+.error:
+stc      ; CF = 1, means error, AL contain error code
+jmp .done
 
 ;---------- Helper for write cache summary by platform topology WinAPI --------;
 ;                                                                              ; 

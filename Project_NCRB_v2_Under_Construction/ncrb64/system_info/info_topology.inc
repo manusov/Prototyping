@@ -36,11 +36,13 @@ jz .error                    ; Go if unexpected error: zero-sized buffer
 mov [DYNA_PTR.listTopology.objectStart],rbp
 add rbp,r14
 mov [DYNA_PTR.listTopology.objectStop],rbp
+clc
 .exit:
 mov rsp,r13
-pop rax
+pop rcx     ; This POP for remove stack variable
 ret
 .error:
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 jmp .exit 
 
@@ -190,8 +192,10 @@ mov al,0
 stosb
 mov rbp,rdi
 mov [DYNA_PTR.textTopology2.objectStop],rbp
+clc
 ret
 .error:
+mov al,MSG_ERROR_TOPOLOGY_API
 stc
 ret
 
