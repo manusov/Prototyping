@@ -148,9 +148,52 @@ mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 0]
 stosd
 mov eax,dword [ebx + CPUDATA.extractedContextBitmap + 4]
 stosd
+;---------- Set cache summary by CPUID info if topological WinAPI missing -----;
+lea esi,[CPU_CACHE_DATA]
+lea edi,[SYS_PARMS.summaryCache]
+mov ecx,5
+.updateCaches:
+mov eax,dword [esi + CPUCACHEDATA.cpuidTraceCache + 0]
+mov edx,dword [esi + CPUCACHEDATA.cpuidTraceCache + 4]
+mov ebp,eax
+or ebp,eax
+jz .noThisCache 
+mov ebp,dword [edi + SUMMARYCACHE.sizeTrace + 0]
+or ebp,dword [edi + SUMMARYCACHE.sizeTrace + 4]
+jnz .noThisCache
+mov dword [edi + SUMMARYCACHE.sizeTrace + 0],eax
+mov dword [edi + SUMMARYCACHE.sizeTrace + 4],edx
+mov [edi + SUMMARYCACHE.countTrace],1
+.noThisCache:
+add esi,12
+add edi,12
+loop .updateCaches
+;---------- Virtualization technology name string, depend on CPU vendor -------;
+; EBX = Pointer for CPU data addressing in the application variables 
+lea edx,[BIND_LIST.bindCpu]
+mov ax,STR_SIGN_AMD
+mov esi,[APP_DATA.lockedStrings]
+call IndexString                      ; ESI = Pointer to pattern for detect AMD
+lea edi,[ebx + CPUDATA.vendorString]  ; EDI = Pointer to CPU signature after CPUID
+mov ecx,12                            ; ECX = CPU signature length
+repe cmpsb
+mov ecx,dword [ebx + CPUDATA.extractedFeaturesBitmap]
+mov ax,STR_SVM                        ; Show AMD SVM if vendor = AMD
+mov ebx,12                            ; extractedVeaturesBitmap.12 = AMD SVM 
+je .vendorDetected
+mov ax,STR_VMX                        ; Show Intel VMX otherwise
+mov bl,11                             ; extractedVeaturesBitmap.11 = Intel VMX
+.vendorDetected:
+bt ecx,ebx
+setc bl
+mov dword [edx + BINDCPU.secondBitmap + 0],ebx  ; Argument for SET_BOOL script command
+mov dword [edx + BINDCPU.secondBitmap + 4],0
+mov esi,[APP_DATA.lockedStrings]
+call IndexString
+mov dword [edx + BINDCPU.secondVmm + 0],esi     ; Argument for SET_PTR script command 
+mov dword [edx + BINDCPU.secondVmm + 4],0
 ;---------- Operating System data fields visualized at for screen 0 -----------;
-lea ecx,[BIND_LIST]
-add ecx,BINDLIST.bindSys
+lea ecx,[BIND_LIST.bindSys]
 lea edi,[ecx + BINDSYS.procTotal]
 mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
 mov bl,0
@@ -207,7 +250,14 @@ lea ebp,[SYS_PARMS.summaryCache]
 lea esi,[ebp + SUMMARYCACHE.sizeL1C]
 lea edi,[BIND_LIST.bindCache.l1c]
 mov cl,00000001b
-call HelperSysinfoTopologyCache
+call HelperSysinfoTopologyCache           ; L1 instruction cache
+lea esi,[ebp + SUMMARYCACHE.sizeTrace]
+lea edi,[BIND_LIST.bindCache.l1c]
+mov cl,00000001b
+test [BIND_LIST.bindCache.cacheBitmap],cl
+jnz @f
+call HelperSysinfoTopologyTrace           ; Trace cache
+@@:
 ;---------- Data cache , L1 ---------------------------------------------------; 
 lea esi,[ebp + SUMMARYCACHE.sizeL1D]
 lea edi,[BIND_LIST.bindCache.l1d]
@@ -334,17 +384,17 @@ mov ebx,00000555h       ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
 mov ebp,00010000h
 test al,00000001b
 jz @f
-or ebx,00015000h        ; MMX (3) 
+or ebx,00015000h      ; MMX (3) 
 @@:
 test al,00000010b
 jz @f
-or ebx,00540000h        ; SSE (3) 
+or ebx,00540000h      ; SSE (3) 
 @@:
 test al,10000000b
 jz @f
 test dl,00000010b
 jz @f
-or ebx,15000000h        ; AVX (3) 
+or ebx,15000000h      ; AVX (3) 
 @@:
 test ah,00000010b
 jz @f
@@ -352,48 +402,57 @@ mov cl,dl
 and cl,00011100b
 cmp cl,00011100b
 jne @f
-or ebx,40000000h        ; AVX512 (3), FMA 512, VGATHERQPD 512, VSCATTERQPD 512
+or ebx,40000000h      ; AVX512 (3), FMA 512, VGATHERQPD 512, VSCATTERQPD 512
 or ebp,00001445h 
 @@:
 test ah,01000000b
 jz @f
-bts ebp,4               ; FMA 256
+bts ebp,4             ; FMA 256
 @@:
 test ah,00000001b
 jz @f
-bts ebp,8               ; VGATHERQPD 256
+bts ebp,8             ; VGATHERQPD 256
 @@:
 test ah,10000000b
 jz @f
-bts ebp,14              ; CLZERO (AMD)
+bts ebp,14            ; CLZERO (AMD)
 @@:
 test ah,00000100b
 jz @f
-bts ebp,18              ; Latency by RDRAND
+bts ebp,18            ; Latency by RDRAND
 @@:
 test al,00000100b
 jz @f
-bts ebp,28             ; SSE2 (for vector brief)
+bts ebp,28            ; SSE2 (for vector brief)
 @@:
 bt eax,16
 jnc @f
-bts ebp,30             ; x87 (for vector brief, redundant because run criteria)
+bts ebp,30           ; x87 (for vector brief, redundant because run criteria)
 @@:
-mov ecx,0C0000000h
+mov ecx,0C0000000h   ; Read AVX512, option 15, enable and select bits = 30, 31
 test ebx,ecx
 jnz @f
-mov ecx,03000000h
+mov ecx,003000000h   ; Read AVX256, option 12, enable and select bits = 24, 25
 test ebx,ecx
 jnz @f
-mov ecx,00C00000h
+mov ecx,0000C0000h   ; Read SSE128, option 9, enable and select bits = 18, 19
 test ebx,ecx
 jnz @f
-mov ecx,00003000h
+mov ecx,000003000h   ; Read MMX, option 6, enable and select bits = 12, 13
 test ebx,ecx
 jnz @f
-mov ecx,00000003h
+mov ecx,000000003h   ; Read MOV, option 0, enable and select bits = 0, 1
 @@:
-or ebx,ecx
+or ebx,ecx            ; Select default ASM method by CPU features support check
+
+
+;--- under construction restrictions ---
+; mov rax,0FFFF00FFFFFFFFFFh
+; and rbx,rax
+and ebp,0FFFF00FFh
+;--- under construction restrictions ---
+
+
 mov [edi + BINDLIST.setMemMethod + 0],ebx
 mov [edi + BINDLIST.setMemMethod + 4],ebp
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
@@ -522,6 +581,7 @@ stc      ; CF = 1, means error, AL contain error code
 jmp .done
 
 ;---------- Helper for write cache summary by platform topology WinAPI --------;
+;           For code, data and unified caches.                                 ;
 ;                                                                              ; 
 ; INPUT:   ESI = Source pointer for cache size and count variables             ;
 ;          EDI = Destination pointer for write text string                     ;
@@ -550,6 +610,44 @@ call PoolStringWrite
 pop eax
 mov bl,0
 call DecimalPrint32
+.done:
+mov al,0
+stosb
+ret
+.nodata:
+mov ax,STR_N_A
+call PoolStringWrite
+jmp .done
+
+;---------- Helper for write cache summary by platform topology WinAPI --------;
+;           For trace cache.                                                   ;
+;                                                                              ; 
+; INPUT:   RSI = Source pointer for cache size and count variables             ;
+;          RDI = Destination pointer for write text string                     ;
+;          CL  = Bitmap for set GUI objects (cache items) active               ;      
+;                                                                              ;
+; OUTPUT:  None                                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+HelperSysinfoTopologyTrace:
+mov eax,[esi + 0]
+shr eax,10
+jz .nodata
+cmp dword [esi + 8],0
+jz .nodata
+or [BIND_LIST.bindCache.cacheBitmap],cl
+push eax
+mov ax,STR_TRACE
+call PoolStringWrite
+mov al,' '
+stosb
+pop eax
+mov bl,0
+call DecimalPrint32
+mov al,' '
+stosb
+mov ax,STR_KUOPS
+call PoolStringWrite
 .done:
 mov al,0
 stosb

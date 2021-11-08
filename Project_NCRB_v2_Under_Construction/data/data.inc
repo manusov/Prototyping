@@ -37,9 +37,10 @@ IDS_BINDERS_POOL        = 141
 IDS_CPU_COMMON_POOL     = 142
 IDS_CPU_AVX512_POOL     = 143
 IDS_OS_CONTEXT_POOL     = 144
-IDS_ACPI_DATA_POOL      = 145
-IDS_IMPORT_POOL         = 146
-IDS_FONTS_POOL          = 147
+IDS_INTEL_CACHE         = 145
+IDS_ACPI_DATA_POOL      = 146
+IDS_IMPORT_POOL         = 147
+IDS_FONTS_POOL          = 148
 ;---------- Identifiers for icons ---------------------------------------------;
 IDI_SYSINFO             = 160
 IDI_MEMORY              = 161
@@ -521,8 +522,10 @@ STR_L1_DATA            = STR_L1_CODE + 1
 STR_L2_UNIFIED         = STR_L1_CODE + 2
 STR_L3_UNIFIED         = STR_L1_CODE + 3
 STR_L4_UNIFIED         = STR_L1_CODE + 4
+STR_TRACE              = STR_L1_CODE + 5              
+STR_KUOPS              = STR_L1_CODE + 6
 ;---------- Platform topology by WinAPI ---------------------------------------;
-STR_THREADS            = STR_L4_UNIFIED + 1
+STR_THREADS            = STR_KUOPS + 1
 STR_CORES              = STR_THREADS + 1
 STR_SOCKETS            = STR_THREADS + 2
 STR_PROC_TOTAL         = STR_THREADS + 3
@@ -877,6 +880,9 @@ STR_NAME_KMD32         = STR_RUNTIME_ADDRESS + 1
 STR_NAME_KMD64         = STR_NAME_KMD32 + 1
 STR_DRV_NAME           = STR_NAME_KMD32 + 2
 STR_DRV_DEVICE         = STR_NAME_KMD32 + 3
+;---------- Strings for CPU vendors detection ---------------------------------;
+STR_SIGN_INTEL         = STR_DRV_DEVICE + 1 
+STR_SIGN_AMD           = STR_SIGN_INTEL + 1
 ;---------- Binders numbers for GUI scripts -----------------------------------;
 ; This binders for build GUI objects (widgets) by data from buffer (bindlist).
 BINDER_BUILD_SYSINFO       = 0   
@@ -909,13 +915,15 @@ BINDER_GET_MEMORY          = 18
 ; For ia32/x64 unification, pointers always 64-bit, high dword = 0 for ia32. 
 ; CPU strings at system information screen
 struct BINDCPU
-vendor        db  8   dup ?
+vendor        dq  ?
 tfms          db  15  dup ?
 name          dq  ?    
 tsc           db  32  dup ?
 cpuBitmap     dq  ?
 avx512bitmap  dq  ?
 osBitmap      dq  ?
+secondBitmap  dq  ?
+secondVmm     dq  ?
 ends
 ;---------- ACPI strings at system information screen -------------------------;
 struct BINDACPI
@@ -927,7 +935,6 @@ ends
 ;---------- Cache strings at system information screen ------------------------;
 struct BINDCACHE
 cacheBitmap   db  ?
-trace         db  40 + 1  dup ?
 l1c           db  40 + 1  dup ?
 l1d           db  40 + 1  dup ?
 l2u           db  40 + 1  dup ?
@@ -1152,7 +1159,42 @@ MACRO ENTRY_XCR0 bit
 { DB  05h , bit }
 MACRO PREFIX_XCR0 bit
 { DB  06h , bit }
-
+;---------- List of INTEL-specific cache descriptors for caches detection -----;
+; Macro for decoding Intel cache detection data structures (descriptors) 
+; This actual for CPUs not support function 
+; CPUID 00000004h = Deterministic Cache Info, 
+; Note if runs under Windows XP 32-bit, cache information cannot be detected
+; by Win API GetLogicalProcessorInformation, means required use:
+; CPUID 00000002h = Get Cache Descriptors, with decoding by this data
+MACRO L1T x1, x2
+{           ; 1 = ID for Trace Cache decode 
+DB 1, x1    ; x2 = Cache Descriptor by Intel
+DW x2       ; x2 = Cache Size, KuOps for trace cache 
+}
+MACRO L1I x1, x2
+{           ; 1 = ID for L1 Instruction Cache decode
+DB 2, x1    ; x1 = Cache Descriptor by Intel
+DW x2       ; x2 = Cache Size, kilobytes 
+}
+MACRO L1D x1, x2
+{           ; 2 = ID for L1 Data Cache decode
+DB 3, x1    ; x1 = Cache Descriptor by Intel
+DW x2       ; x2 = Cache Size, kilobytes 
+}
+MACRO L2U x1, x2
+{           ; 3 = ID for L2 Unified Cache decode
+DB 4, x1    ; x1 = Cache Descriptor by Intel
+DW x2       ; x2 = Cache Size, kilobytes 
+}
+MACRO L3U x1, x2
+{           ; 4 = ID for L3 Unified Cache decode
+DB 5, x1    ; x1 = Cache Descriptor by Intel
+DW x2       ; x2 = Cache Size, kilobytes 
+}
+MACRO END_CACHE
+{           ; List terminator
+DB 0        ; 0 = End of list
+}
 ;---------- GUI common definitions --------------------------------------------; 
 CLEARTYPE_QUALITY = 5
 ID_FONT_1         = 0

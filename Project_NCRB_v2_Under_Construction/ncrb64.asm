@@ -51,7 +51,7 @@ RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win64 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.02 for Windows x64 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.03 for Windows x64 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -1161,6 +1161,7 @@ RAW_LIST       DW  IDS_STRINGS_POOL
                DW  IDS_CPU_COMMON_POOL
                DW  IDS_CPU_AVX512_POOL
                DW  IDS_OS_CONTEXT_POOL
+               DW  IDS_INTEL_CACHE
                DW  IDS_ACPI_DATA_POOL
                DW  IDS_IMPORT_POOL
                DW  IDS_FONTS_POOL
@@ -1435,6 +1436,7 @@ lockedBinders              dq ?     ; Pointer to binders pool
 lockedDataCpuCommon        dq ?     ; Data for build common CPU feature bitmap
 lockedDataCpuAvx512        dq ?     ; Data for build AVX512 feature bitmap
 lockedDataOsContext        dq ?     ; Data for build OS context bitmap
+lockedDataIntelCache       dq ?     ; Data for Intel cache descriptors decode
 lockedDataAcpi             dq ?     ; Data base for ACPI tables detection
 lockedImportList           dq ?     ; List for WinAPI dynamical import
 lockedFontList             dq ?     ; List of fonts names
@@ -1503,7 +1505,7 @@ summaryCache      SUMMARYCACHE
 summaryTopology   SUMMARYTOPOLOGY
 ends
 SYS_PARMS SYSPARMS ?
-;---------- Processor detection results ---------------------------------------;
+;---------- Processor detection results by CPUID and RDTSC --------------------;
 struct CPUDATA
 vendorString               db 13 dup ?
 modelString                db 49 dup ?
@@ -1514,6 +1516,25 @@ extractedContextBitmap     dq ?
 tscClockHz                 dq ?
 ends
 CPU_DATA CPUDATA ?
+;---------- Processor detection additional results, cache information ---------;
+; Cache info format
+; Qword = Size, bytes,
+; Word = Maximum threads at this level
+; Word = Maximum APIC IDs per package
+; For Trace Cache size in micro operations, not bytes
+struct CPUCACHEDATA
+cpuidTraceCache            dq  ?          ; Instruction trace cache
+cpuidTraceSmp              dw  ? , ?
+cpuidL1Code                dq  ?          ; L1 instruction cache
+cpuidL1Csmp                dw  ? , ?
+cpuidL1Data                dq  ?          ; L1 data cache
+cpuidL1Dsmp                dw  ? , ?
+cpuidL2Unified             dq  ?          ; L2 unified cache
+cpuidL2Usmp                dw  ? , ?
+cpuidL3Unified             dq  ?          ; L3 unified cache
+cpuidL3Usmp                dw  ? , ?
+ends
+CPU_CACHE_DATA CPUCACHEDATA ?
 ;---------- Temporary ACPI data for don't use BINDLIST at low level -----------;
 ; Copies of ACPI-related fields of BINDLIST
 struct ACPIDATA

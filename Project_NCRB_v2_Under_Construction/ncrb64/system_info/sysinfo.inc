@@ -134,9 +134,47 @@ mov rax,[r15 + CPUDATA.extractedAvx512Bitmap]
 stosq
 mov rax,[r15 + CPUDATA.extractedContextBitmap]
 stosq
+;---------- Set cache summary by CPUID info if topological WinAPI missing -----;
+lea rsi,[CPU_CACHE_DATA]
+lea rdi,[SYS_PARMS.summaryCache]
+mov ecx,5
+.updateCaches:
+mov rax,[rsi + CPUCACHEDATA.cpuidTraceCache]
+mov rdx,[rdi + SUMMARYCACHE.sizeTrace]
+test rax,rax
+jz .noThisCache 
+test rdx,rdx
+jnz .noThisCache
+mov [rdi + SUMMARYCACHE.sizeTrace],rax
+mov [rdi + SUMMARYCACHE.countTrace],1
+.noThisCache:
+add rsi,12
+add rdi,12
+loop .updateCaches
+;---------- Virtualization technology name string, depend on CPU vendor -------;
+; R15 = Pointer for CPU data addressing in the application variables 
+lea rdx,[BIND_LIST.bindCpu]
+mov ax,STR_SIGN_AMD
+mov rsi,[APP_DATA.lockedStrings]
+call IndexString                      ; RSI = Pointer to pattern for detect AMD
+lea rdi,[r15 + CPUDATA.vendorString]  ; RDI = Pointer to CPU signature after CPUID
+mov ecx,12                            ; RCX = CPU signature length
+repe cmpsb
+mov ax,STR_SVM                        ; Show AMD SVM if vendor = AMD
+mov ebx,12                            ; extractedVeaturesBitmap.12 = AMD SVM 
+je .vendorDetected
+mov ax,STR_VMX                        ; Show Intel VMX otherwise
+mov bl,11                             ; extractedVeaturesBitmap.11 = Intel VMX
+.vendorDetected:
+mov rcx,[r15 + CPUDATA.extractedFeaturesBitmap] 
+bt rcx,rbx
+setc bl
+mov [rdx + BINDCPU.secondBitmap],rbx  ; Argument for SET_BOOL script command
+mov rsi,[APP_DATA.lockedStrings]
+call IndexString
+mov [rdx + BINDCPU.secondVmm],rsi     ; Argument for SET_PTR script command 
 ;---------- Operating System data fields visualized at for screen 0 -----------;
-lea rdx,[BIND_LIST]
-add rdx,BINDLIST.bindSys
+lea rdx,[BIND_LIST.bindSys]
 lea rdi,[rdx + BINDSYS.procTotal]
 mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
 mov bl,0
@@ -190,7 +228,14 @@ lea rbp,[SYS_PARMS.summaryCache]
 lea rsi,[rbp + SUMMARYCACHE.sizeL1C]
 lea rdi,[BIND_LIST.bindCache.l1c]
 mov cl,00000001b
-call HelperSysinfoTopologyCache
+call HelperSysinfoTopologyCache           ; L1 instruction cache
+lea rsi,[rbp + SUMMARYCACHE.sizeTrace]
+lea rdi,[BIND_LIST.bindCache.l1c]
+mov cl,00000001b
+test [BIND_LIST.bindCache.cacheBitmap],cl
+jnz @f
+call HelperSysinfoTopologyTrace           ;  cache
+@@:
 ;---------- Data cache , L1 ---------------------------------------------------; 
 lea rsi,[rbp + SUMMARYCACHE.sizeL1D]
 lea rdi,[BIND_LIST.bindCache.l1d]
@@ -313,17 +358,17 @@ mov edx,dword [CPU_DATA.extractedContextBitmap]
 mov rbx,0001000000000555h   ; Latency by LCM, REP MOVS, REP STOS, NOT, MOV (3)
 test al,00000001b
 jz @f
-or rbx,00015000h        ; MMX (3) 
+or rbx,00015000h      ; MMX (3) 
 @@:
 test al,00000010b
 jz @f
-or rbx,00540000h        ; SSE (3) 
+or rbx,00540000h      ; SSE (3) 
 @@:
 test al,10000000b
 jz @f
 test dl,00000010b
 jz @f
-or rbx,15000000h        ; AVX (3) 
+or rbx,15000000h      ; AVX (3) 
 @@:
 test ah,00000010b
 jz @f
@@ -331,48 +376,56 @@ mov cl,dl
 and cl,00011100b
 cmp cl,00011100b
 jne @f
-mov rcx,144540000000h   ; AVX512 (3), FMA 512, VGATHERQPD 512, VSCATTERQPD 512
+mov rcx,144540000000h ; AVX512 (3), FMA 512, VGATHERQPD 512, VSCATTERQPD 512
 or rbx,rcx 
 @@:
 test ah,01000000b
 jz @f
-bts rbx,36              ; FMA 256
+bts rbx,36            ; FMA 256
 @@:
 test ah,00000001b
 jz @f
-bts rbx,40              ; VGATHERQPD 256
+bts rbx,40            ; VGATHERQPD 256
 @@:
 test ah,10000000b
 jz @f
-bts rbx,46              ; CLZERO (AMD)
+bts rbx,46            ; CLZERO (AMD)
 @@:
 test ah,00000100b
 jz @f
-bts rbx,50              ; Latency by RDRAND
+bts rbx,50            ; Latency by RDRAND
 @@:
 test al,00000100b
 jz @f
-bts rbx,60             ; SSE2 (for vector brief)
+bts rbx,60            ; SSE2 (for vector brief)
 @@:
 bt eax,16
 jnc @f
-bts rbx,62             ; x87 (for vector brief, redundant because run criteria)
+bts rbx,62           ; x87 (for vector brief, redundant because run criteria)
 @@:
-mov ecx,0C0000000h
+mov ecx,0C0000000h   ; Read AVX512, option 15, enable and select bits = 30, 31 
 test ebx,ecx
 jnz @f
-mov ecx,03000000h
+mov ecx,003000000h   ; Read AVX256, option 12, enable and select bits = 24, 25
 test ebx,ecx
 jnz @f
-mov ecx,00C00000h
+mov ecx,0000C0000h   ; Read SSE128, option 9, enable and select bits = 18, 19
 test ebx,ecx
 jnz @f
-mov ecx,00003000h
+mov ecx,000003000h   ; Read MMX, option 6, enable and select bits = 12, 13
 test ebx,ecx
 jnz @f
-mov ecx,00000003h
+mov ecx,000000003h   ; Read MOV, option 0, enable and select bits = 0, 1
 @@:
-or rbx,rcx
+or rbx,rcx           ; Select default ASM method by CPU features support check
+
+
+;--- under construction restrictions ---
+mov rax,0FFFF00FFFFFFFFFFh
+and rbx,rax
+;--- under construction restrictions ---
+
+
 mov qword [rdi + BINDLIST.setMemMethod],rbx
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
 ; Plus custom block size
@@ -485,6 +538,7 @@ stc      ; CF = 1, means error, AL contain error code
 jmp .done
 
 ;---------- Helper for write cache summary by platform topology WinAPI --------;
+;           For code, data and unified caches.                                 ;
 ;                                                                              ; 
 ; INPUT:   RSI = Source pointer for cache size and count variables             ;
 ;          RDI = Destination pointer for write text string                     ;
@@ -510,6 +564,44 @@ call PoolStringWrite
 xchg eax,edx
 mov bl,0
 call DecimalPrint32
+.done:
+mov al,0
+stosb
+ret
+.nodata:
+mov ax,STR_N_A
+call PoolStringWrite
+jmp .done
+
+;---------- Helper for write cache summary by platform topology WinAPI --------;
+;           For trace cache.                                                   ;
+;                                                                              ; 
+; INPUT:   RSI = Source pointer for cache size and count variables             ;
+;          RDI = Destination pointer for write text string                     ;
+;          CL  = Bitmap for set GUI objects (cache items) active               ;      
+;                                                                              ;
+; OUTPUT:  None                                                                ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+HelperSysinfoTopologyTrace:
+mov rax,[rsi + 0]
+shr eax,10
+jz .nodata
+cmp dword [rsi + 8],0
+jz .nodata
+or [BIND_LIST.bindCache.cacheBitmap],cl
+push rax
+mov ax,STR_TRACE
+call PoolStringWrite
+mov al,' '
+stosb
+pop rax
+mov bl,0
+call DecimalPrint32
+mov al,' '
+stosb
+mov ax,STR_KUOPS
+call PoolStringWrite
 .done:
 mov al,0
 stosb

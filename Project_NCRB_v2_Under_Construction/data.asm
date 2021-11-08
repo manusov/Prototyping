@@ -492,6 +492,7 @@ IDS_BINDERS_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , bindersPool       , \
 IDS_CPU_COMMON_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuCommonFeatures , \ 
 IDS_CPU_AVX512_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , cpuAvx512Features , \
 IDS_OS_CONTEXT_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , osContextFeatures , \
+IDS_INTEL_CACHE     , LANG_ENGLISH + SUBLANG_DEFAULT , intelCache        , \
 IDS_ACPI_DATA_POOL  , LANG_ENGLISH + SUBLANG_DEFAULT , acpiData          , \
 IDS_IMPORT_POOL     , LANG_ENGLISH + SUBLANG_DEFAULT , importList        , \ 
 IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList 
@@ -585,6 +586,8 @@ DB  'L1 Data'              , 0
 DB  'L2 Unified'           , 0
 DB  'L3 Unified'           , 0
 DB  'L4 Unified'           , 0
+DB  'Trace cache'          , 0
+DB  'KuOps'                , 0
 ;---------- Platform topology by WinAPI ---------------------------------------;
 DB  'Threads'                        , 0
 DB  'Cores'                          , 0
@@ -650,16 +653,6 @@ DB  'Non-temporal copy AVX-512 (VMOVNTDQA+VMOVNTPD)'          , 0
 DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0   
 DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
 DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 14
-;
-; DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0
-; DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
-; DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0
-; DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0
-; DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
-; DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0
-; DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0
-; DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0
-; DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 23 
 ;---------- Modes names for memory and cache benchmarks -----------------------;
 DB  'Nontemporal'                         , 0
 DB  'Force 32x2'                          , 0
@@ -943,6 +936,9 @@ DB  'KMD32.SYS'  , 0
 DB  'KMD64.SYS'  , 0
 DB  'ICR0'       , 0
 DB  '\\.\ICR0'   , 0
+;---------- Strings for CPU vendors detection ---------------------------------;
+DB  'GenuineIntel' , 0
+DB  'AuthenticAMD' , 0
 endres
 ;---------- Raw resource for binders pool -------------------------------------;
 resdata bindersPool
@@ -961,7 +957,7 @@ SET_STRING  STR_AVX              , IDC_SYSINFO_AVX
 SET_STRING  STR_AVX2             , IDC_SYSINFO_AVX2 
 SET_STRING  STR_AVX512F          , IDC_SYSINFO_AVX512F 
 SET_STRING  STR_RDRAND           , IDC_SYSINFO_RDRAND 
-SET_STRING  STR_VMX              , IDC_SYSINFO_VMX_SVM 
+SET_PTR     BINDLIST.bindCpu.secondVmm , IDC_SYSINFO_VMX_SVM 
 SET_STRING  STR_X8664            , IDC_SYSINFO_X8664 
 SET_STRING  STR_AVX512CD         , IDC_SYSINFO_A0 
 SET_STRING  STR_AVX512PF         , IDC_SYSINFO_A1
@@ -1029,7 +1025,7 @@ SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 0 , 7 , IDC_SYSINFO_AVX
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 0 , IDC_SYSINFO_AVX2
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 1 , IDC_SYSINFO_AVX512F
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 2 , IDC_SYSINFO_RDRAND
-SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 3 , IDC_SYSINFO_VMX_SVM
+SET_BOOL    BINDLIST.bindCpu.secondBitmap + 0 , 0 , IDC_SYSINFO_VMX_SVM 
 SET_BOOL    BINDLIST.bindCpu.cpuBitmap + 1 , 5 , IDC_SYSINFO_X8664
 ;---------- CPU AVX512 features bitmap ----------------------------------------;
 SET_BOOL    BINDLIST.bindCpu.avx512bitmap + 0 , 0 , IDC_SYSINFO_A0
@@ -1695,42 +1691,241 @@ ENTRY_XCR0     03   ; BNDREGS
 ENTRY_XCR0     04   ; BNDCSR
 ENTRY_STOP
 endres  
-;---------- Raw resource for dynamical imported functions list ----------------;
-resdata importList
-DB  'IsWow64Process'               , 0      ; This functions from KERNEL32.DLL
-DB  'GlobalMemoryStatusEx'         , 0          
-DB  'GetNativeSystemInfo'          , 0
-DB  'GetLogicalProcessorInformation'   , 0
-DB  'GetLogicalProcessorInformationEx' , 0
-DB  'GetActiveProcessorGroupCount' , 0    
-DB  'GetActiveProcessorCount'      , 0              
-DB  'GetLargePageMinimum'          , 0
-DB  'GetNumaHighestNodeNumber'     , 0
-DB  'GetNumaNodeProcessorMask'     , 0
-DB  'GetNumaAvailableMemoryNode'   , 0
-DB  'GetNumaNodeProcessorMaskEx'   , 0
-DB  'GetNumaAvailableMemoryNodeEx' , 0
-DB  'EnumSystemFirmwareTables'     , 0
-DB  'GetSystemFirmwareTable'       , 0      
-DB  'SetThreadAffinityMask'        , 0
-DB  'SetThreadGroupAffinity'       , 0
-DB  'VirtualAllocExNuma'           , 0 , 0  ; Two zeroes means end of sub-list
-DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              
-DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list
-DB  0                                       ; Third zero means end of list                  
-endres
-;---------- Raw resource for dynamical created fonts list ---------------------;
-resdata fontList
-; parameters sequence:
-; cHeight, cWidth, cWeight, iCharset, iOutPrecision,
-; iClipPrecision, iQuality, iPitchAndFamily  
-DW  17 , 10 , FW_DONTCARE , DEFAULT_CHARSET
-DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
-DB  'Verdana' , 0
-DW  16 , 40 , FW_DONTCARE , DEFAULT_CHARSET
-DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
-DB  'System monospace' , 0
-DW  0
+;---------- List of INTEL-specific cache descriptors for caches detection -----; 
+resdata intelCache
+;---------- List of INTEL-specific cache descriptors for caches detection -----;
+; Data structure for Intel Cache Detection 
+; This actual for CPUs not support function 
+; CPUID 00000004h = Deterministic Cache Info, 
+; Note if runs under Windows XP 32-bit, cache information cannot be detected
+; by Win API GetLogicalProcessorInformation, means required use:
+; CPUID 00000002h = Get Cache Descriptors, with decoding by this data
+;--- This original list imported from Java Cpuid utility ----------------------;
+;    { 0x00, "null descriptor (=unused descriptor)" } ,
+;    { 0x01, "code TLB, 4K pages, 4 ways, 32 entries" } ,
+;    { 0x02, "code TLB, 4M pages, fully, 2 entries" } ,
+;    { 0x03, "data TLB, 4K pages, 4 ways, 64 entries" } ,
+;    { 0x04, "data TLB, 4M pages, 4 ways, 8 entries" } ,
+;    { 0x05, "data TLB, 4M pages, 4 ways, 32 entries" } , 
+;    { 0x06, "code L1 cache, 8 KB, 4 ways, 32 byte lines" } , 
+;    { 0x08, "code L1 cache, 16 KB, 4 ways, 32 byte lines" } , 
+;    { 0x09, "code L1 cache, 32 KB, 4 ways, 64 byte lines" } , 
+;    { 0x0A, "data L1 cache, 8 KB, 2 ways, 32 byte lines" } , 
+;    { 0x0B, "code TLB, 4M pages, 4 ways, 4 entries" } , 
+;    { 0x0C, "data L1 cache, 16 KB, 4 ways, 32 byte lines" } ,
+;    { 0x0D, "data L1 cache, 16 KB, 4 ways, 64 byte lines (ECC)" } , 
+;    { 0x0E, "data L1 cache, 24 KB, 6 ways, 64 byte lines" } , 
+;    { 0x10, "data L1 cache, 16 KB, 4 ways, 32 byte lines (IA-64)" } , 
+;    { 0x15, "code L1 cache, 16 KB, 4 ways, 32 byte lines (IA-64)" } , 
+;    { 0x1A, "code and data L2 cache, 96 KB, 6 ways, 64 byte lines (IA-64)" } , 
+;    { 0x1D, "code and data L2 cache, 128 KB, 2 ways, 64 byte lines" } , 
+;    { 0x21, "code and data L2 cache, 256 KB, 8 ways, 64 byte lines" } , 
+;    { 0x22, "code and data L3 cache, 512 KB, 4 ways (!), 64 byte lines, dual-sectored" } , 
+;    { 0x23, "code and data L3 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored" } , 
+;    { 0x24, "code and data L2 cache, 1024 KB, 16 ways, 64 byte lines" } , 
+;    { 0x25, "code and data L3 cache, 2048 KB, 8 ways, 64 byte lines, dual-sectored" } , 
+;    { 0x29, "code and data L3 cache, 4096 KB, 8 ways, 64 byte lines, dual-sectored" } , 
+;    { 0x2C, "data L1 cache, 32 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x30, "code L1 cache, 32 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x39, "code and data L2 cache, 128 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x3A, "code and data L2 cache, 192 KB, 6 ways, 64 byte lines, sectored" } ,  
+;    { 0x3B, "code and data L2 cache, 128 KB, 2 ways, 64 byte lines, sectored" } ,  
+;    { 0x3C, "code and data L2 cache, 256 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x3D, "code and data L2 cache, 384 KB, 6 ways, 64 byte lines, sectored" } ,  
+;    { 0x3E, "code and data L2 cache, 512 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x40, "no integrated L2 cache (P6 core) or L3 cache (P4 core)" } ,  
+;    { 0x41, "code and data L2 cache, 128 KB, 4 ways, 32 byte lines" } ,  
+;    { 0x42, "code and data L2 cache, 256 KB, 4 ways, 32 byte lines" } ,  
+;    { 0x43, "code and data L2 cache, 512 KB, 4 ways, 32 byte lines" } ,  
+;    { 0x44, "code and data L2 cache, 1024 KB, 4 ways, 32 byte lines" } ,  
+;    { 0x45, "code and data L2 cache, 2048 KB, 4 ways, 32 byte lines" } ,  
+;    { 0x46, "code and data L3 cache, 4096 KB, 4 ways, 64 byte lines" } ,  
+;    { 0x47, "code and data L3 cache, 8192 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x48, "code and data L2 cache, 3072 KB, 12 ways, 64 byte lines" } ,  
+;    { 0x49, "code and data L3 cache, 4096 KB, 16 ways, 64 byte lines (P4) or"
+;           + " code and data L2 cache, 4096 KB, 16 ways, 64 byte lines (Core 2)" } ,   
+;    { 0x4A, "code and data L3 cache, 6144 KB, 12 ways, 64 byte lines" } ,  
+;    { 0x4B, "code and data L3 cache, 8192 KB, 16 ways, 64 byte lines" } ,  
+;    { 0x4C, "code and data L3 cache, 12288 KB, 12 ways, 64 byte lines" } ,  
+;    { 0x4D, "code and data L3 cache, 16384 KB, 16 ways, 64 byte lines" } ,  
+;    { 0x4E, "code and data L2 cache, 6144 KB, 24 ways, 64 byte lines" } ,  
+;    { 0x4F, "code TLB, 4K pages, ???, 32 entries" } ,  
+;    { 0x50, "code TLB, 4K/4M/2M pages, fully, 64 entries" } ,  
+;    { 0x51, "code TLB, 4K/4M/2M pages, fully, 128 entries" } ,  
+;    { 0x52, "code TLB, 4K/4M/2M pages, fully, 256 entries" } ,  
+;    { 0x55, "code TLB, 2M/4M, fully, 7 entries" } ,  
+;    { 0x56, "L0 data TLB, 4M pages, 4 ways, 16 entries" } ,  
+;    { 0x57, "L0 data TLB, 4K pages, 4 ways, 16 entries" } ,  
+;    { 0x59, "L0 data TLB, 4K pages, fully, 16 entries" } ,  
+;    { 0x5A, "L0 data TLB, 2M/4M, 4 ways, 32 entries" } ,  
+;    { 0x5B, "data TLB, 4K/4M pages, fully, 64 entries" } ,  
+;    { 0x5C, "data TLB, 4K/4M pages, fully, 128 entries" } ,  
+;    { 0x5D, "data TLB, 4K/4M pages, fully, 256 entries" } ,  
+;    { 0x60, "data L1 cache, 16 KB, 8 ways, 64 byte lines, sectored" } ,  
+;    { 0x61, "code TLB, 4K pages, fully, 48 entries" } ,  
+;    { 0x63, "data TLB, 2M/4M pages, 4-way, 32-entries, and"
+;           + " data TLB, 1G pages, 4-way, 4 entries" } ,   
+;    { 0x64, "data TLB, 4K pages, 4-way, 512 entries" } ,  
+;    { 0x66, "data L1 cache, 8 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x67, "data L1 cache, 16 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x68, "data L1 cache, 32 KB, 4 ways, 64 byte lines, sectored" } ,  
+;    { 0x6A, "L0 data TLB, 4K pages, 8-way, 64 entries" } ,  
+;    { 0x6B, "data TLB, 4K pages, 8-way, 256 entries" } ,  
+;    { 0x6C, "data TLB, 2M/4M pages, 8-way, 126 entries" } ,  
+;    { 0x6D, "data TLB, 1G pages, fully, 16 entries" } ,  
+;    { 0x70, "trace L1 cache, 12 K킣Ps, 8 ways" } ,  
+;    { 0x71, "trace L1 cache, 16 K킣Ps, 8 ways" } ,  
+;    { 0x72, "trace L1 cache, 32 K킣Ps, 8 ways" } ,  
+;    { 0x73, "trace L1 cache, 64 K킣Ps, 8 ways" } ,  
+;    { 0x76, "code TLB, 2M/4M pages, fully, 8 entries" } ,  
+;    { 0x77, "code L1 cache, 16 KB, 4 ways, 64 byte lines, sectored (IA-64)" } ,  
+;    { 0x78, "code and data L2 cache, 1024 KB, 4 ways, 64 byte lines" } ,  
+;    { 0x79, "code and data L2 cache, 128 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+;    { 0x7A, "code and data L2 cache, 256 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+;    { 0x7B, "code and data L2 cache, 512 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+;    { 0x7C, "code and data L2 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+;    { 0x7D, "code and data L2 cache, 2048 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x7E, "code and data L2 cache, 256 KB, 8 ways, 128 byte lines, sect. (IA-64)" } ,  
+;    { 0x7F, "code and data L2 cache, 512 KB, 2 ways, 64 byte lines" } ,  
+;    { 0x80, "code and data L2 cache, 512 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x81, "code and data L2 cache, 128 KB, 8 ways, 32 byte lines" } ,  
+;    { 0x82, "code and data L2 cache, 256 KB, 8 ways, 32 byte lines" } ,  
+;    { 0x83, "code and data L2 cache, 512 KB, 8 ways, 32 byte lines" } ,  
+;    { 0x84, "code and data L2 cache, 1024 KB, 8 ways, 32 byte lines" } ,  
+;    { 0x85, "code and data L2 cache, 2048 KB, 8 ways, 32 byte lines" } ,  
+;    { 0x86, "code and data L2 cache, 512 KB, 4 ways, 64 byte lines" } ,  
+;    { 0x87, "code and data L2 cache, 1024 KB, 8 ways, 64 byte lines" } ,  
+;    { 0x88, "code and data L3 cache, 2048 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+;    { 0x89, "code and data L3 cache, 4096 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+;    { 0x8A, "code and data L3 cache, 8192 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+;    { 0x8D, "code and data L3 cache, 3072 KB, 12 ways, 128 byte lines (IA-64)" } ,  
+;    { 0x90, "code TLB, 4K...256M pages, fully, 64 entries (IA-64)" } ,  
+;    { 0x96, "data L1 TLB, 4K...256M pages, fully, 32 entries (IA-64)" } ,  
+;    { 0x9B, "data L2 TLB, 4K...256M pages, fully, 96 entries (IA-64)" } ,  
+;    { 0xA0, "data TLB, 4K pages, fully, 32 entries" } ,  
+;    { 0xB0, "code TLB, 4K pages, 4 ways, 128 entries" } ,  
+;    { 0xB1, "code TLB, 4M pages, 4 ways, 4 entries and"
+;           + " code TLB, 2M pages, 4 ways, 8 entries " } ,  
+;    { 0xB2, "code TLB, 4K pages, 4 ways, 64 entries" } ,  
+;    { 0xB3, "data TLB, 4K pages, 4 ways, 128 entries" } ,  
+;    { 0xB4, "data TLB, 4K pages, 4 ways, 256 entries" } ,  
+;    { 0xB5, "code TLB, 4K pages, 8 ways, 64 entries" } ,  
+;    { 0xB6, "code TLB, 4K pages, 8 ways, 128 entries" } ,  
+;    { 0xBA, "data TLB, 4K pages, 4 ways, 64 entries" } ,  
+;    { 0xC0, "data TLB, 4K/4M pages, 4 ways, 8 entries" } ,  
+;    { 0xC1, "L2 code and data TLB, 4K/2M pages, 8 ways, 1024 entries" } ,  
+;    { 0xC2, "data TLB, 2M/4M pages, 4 ways, 16 entries" } ,  
+;    { 0xC3, "L2 code and data TLB, 4K/2M pages, 6 ways, 1536 entries and"
+;           + " L2 code and data TLB, 1G pages, 4 ways, 16 entries" } ,   
+;    { 0xC4, "data TLB, 2M/4M pages, 4-way, 32 entries" } ,  
+;    { 0xCA, "L2 code and data TLB, 4K pages, 4 ways, 512 entries" } ,  
+;    { 0xD0, "code and data L3 cache, 512-kb, 4 ways, 64 byte lines" } ,  
+;    { 0xD1, "code and data L3 cache, 1024-kb, 4 ways, 64 byte lines" } ,  
+;    { 0xD2, "code and data L3 cache, 2048-kb, 4 ways, 64 byte lines" } ,  
+;    { 0xD6, "code and data L3 cache, 1024-kb, 8 ways, 64 byte lines" } ,  
+;    { 0xD7, "code and data L3 cache, 2048-kb, 8 ways, 64 byte lines" } ,  
+;    { 0xD8, "code and data L3 cache, 4096-kb, 8 ways, 64 byte lines" } ,  
+;    { 0xDC, "code and data L3 cache, 1536-kb, 12 ways, 64 byte lines" } ,  
+;    { 0xDD, "code and data L3 cache, 3072-kb, 12 ways, 64 byte lines" } ,  
+;    { 0xDE, "code and data L3 cache, 6144-kb, 12 ways, 64 byte lines" } ,  
+;    { 0xE2, "code and data L3 cache, 2048-kb, 16 ways, 64 byte lines" } ,  
+;    { 0xE3, "code and data L3 cache, 4096-kb, 16 ways, 64 byte lines" } ,  
+;    { 0xE4, "code and data L3 cache, 8192-kb, 16 ways, 64 byte lines" } ,  
+;    { 0xEA, "code and data L3 cache, 12288-kb, 24 ways, 64 byte lines" } ,  
+;    { 0xEB, "code and data L3 cache, 18432-kb, 24 ways, 64 byte lines" } ,  
+;    { 0xEC, "code and data L3 cache, 24576-kb, 24 ways, 64 byte lines" } ,  
+;    { 0xF0, "64 byte prefetching" } ,  
+;    { 0xF1, "128 byte prefetching" } ,  
+;    { 0xFF, "query standard level 0000_0004h instead" } , 
+;    };
+;--- This list contains cache only information from original Java Cpuid code --;
+; TLB and some special information rejected for current purpose.
+CacheDescriptorsDecoder:
+L1I 006h, 8      ; { 0x06, "code L1 cache, 8 KB, 4 ways, 32 byte lines" } , 
+L1I 008h, 16     ; { 0x08, "code L1 cache, 16 KB, 4 ways, 32 byte lines" } , 
+L1I 009h, 32     ; { 0x09, "code L1 cache, 32 KB, 4 ways, 64 byte lines" } , 
+L1D 00Ah, 8      ; { 0x0A, "data L1 cache, 8 KB, 2 ways, 32 byte lines" } , 
+L1D 00Ch, 16     ; { 0x0C, "data L1 cache, 16 KB, 4 ways, 32 byte lines" } ,
+L1D 00Dh, 16     ; { 0x0D, "data L1 cache, 16 KB, 4 ways, 64 byte lines (ECC)" } , 
+L1D 00Eh, 24     ; { 0x0E, "data L1 cache, 24 KB, 6 ways, 64 byte lines" } , 
+L1D 010h, 16     ; { 0x10, "data L1 cache, 16 KB, 4 ways, 32 byte lines (IA-64)" } ,
+L1I 015h, 16     ; { 0x15, "code L1 cache, 16 KB, 4 ways, 32 byte lines (IA-64)" } , 
+L2U 01Ah, 96     ; { 0x1A, "code and data L2 cache, 96 KB, 6 ways, 64 byte lines (IA-64)" } , 
+L2U 01Dh, 128    ; { 0x1D, "code and data L2 cache, 128 KB, 2 ways, 64 byte lines" } , 
+L2U 021h, 256    ; { 0x21, "code and data L2 cache, 256 KB, 8 ways, 64 byte lines" } ,
+L3U 022h, 512    ; { 0x22, "code and data L3 cache, 512 KB, 4 ways (!), 64 byte lines, dual-sectored" } , 
+L3U 023h, 1024   ; { 0x23, "code and data L3 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored" } ,
+L2U 024h, 1024   ; { 0x24, "code and data L2 cache, 1024 KB, 16 ways, 64 byte lines" } , 
+L3U 025h, 2048   ; { 0x25, "code and data L3 cache, 2048 KB, 8 ways, 64 byte lines, dual-sectored" } , 
+L3U 029h, 4096   ; { 0x29, "code and data L3 cache, 4096 KB, 8 ways, 64 byte lines, dual-sectored" } , 
+L1D 02Ch, 32     ; { 0x2C, "data L1 cache, 32 KB, 8 ways, 64 byte lines" } ,  
+L1I 030h, 32     ; { 0x30, "code L1 cache, 32 KB, 8 ways, 64 byte lines" } ,  
+L2U 039h, 128    ; { 0x39, "code and data L2 cache, 128 KB, 4 ways, 64 byte lines, sectored" } ,  
+L2U 03Ah, 192    ; { 0x3A, "code and data L2 cache, 192 KB, 6 ways, 64 byte lines, sectored" } ,  
+L2U 03Bh, 128    ; { 0x3B, "code and data L2 cache, 128 KB, 2 ways, 64 byte lines, sectored" } ,  
+L2U 03Ch, 256    ; { 0x3C, "code and data L2 cache, 256 KB, 4 ways, 64 byte lines, sectored" } ,  
+L2U 03Dh, 384    ; { 0x3D, "code and data L2 cache, 384 KB, 6 ways, 64 byte lines, sectored" } ,  
+L2U 03Eh, 512    ; { 0x3E, "code and data L2 cache, 512 KB, 4 ways, 64 byte lines, sectored" } ,  
+L2U 041h, 128    ; { 0x41, "code and data L2 cache, 128 KB, 4 ways, 32 byte lines" } ,  
+L2U 042h, 256    ; { 0x42, "code and data L2 cache, 256 KB, 4 ways, 32 byte lines" } ,  
+L2U 043h, 512    ; { 0x43, "code and data L2 cache, 512 KB, 4 ways, 32 byte lines" } ,  
+L2U 044h, 1024   ; { 0x44, "code and data L2 cache, 1024 KB, 4 ways, 32 byte lines" } ,  
+L2U 045h, 2048   ; { 0x45, "code and data L2 cache, 2048 KB, 4 ways, 32 byte lines" } ,  
+L3U 046h, 4096   ; { 0x46, "code and data L3 cache, 4096 KB, 4 ways, 64 byte lines" } ,  
+L3U 047h, 8192   ; { 0x47, "code and data L3 cache, 8192 KB, 8 ways, 64 byte lines" } ,  
+L2U 048h, 3072   ; { 0x48, "code and data L2 cache, 3072 KB, 12 ways, 64 byte lines" } ,  
+; L3U 049h, 4096   ; { 0x49, "code and data L3 cache, 4096 KB, 16 ways, 64 byte lines (P4) or"
+;                  ;  + " code and data L2 cache, 4096 KB, 16 ways, 64 byte lines (Core 2)" } ,   
+L3U 04Ah, 6144   ; { 0x4A, "code and data L3 cache, 6144 KB, 12 ways, 64 byte lines" } ,  
+L3U 04Bh, 8192   ; { 0x4B, "code and data L3 cache, 8192 KB, 16 ways, 64 byte lines" } ,  
+L3U 04Ch, 12288  ; { 0x4C, "code and data L3 cache, 12288 KB, 12 ways, 64 byte lines" } ,  
+L3U 04Dh, 16384  ; { 0x4D, "code and data L3 cache, 16384 KB, 16 ways, 64 byte lines" } ,
+L2U 04Eh, 6144   ; { 0x4E, "code and data L2 cache, 6144 KB, 24 ways, 64 byte lines" } ,  
+L1D 060h, 16     ; { 0x60, "data L1 cache, 16 KB, 8 ways, 64 byte lines, sectored" } ,  
+L1D 066h, 8      ; { 0x66, "data L1 cache, 8 KB, 4 ways, 64 byte lines, sectored" } ,  
+L1D 067h, 16     ; { 0x67, "data L1 cache, 16 KB, 4 ways, 64 byte lines, sectored" } ,  
+L1D 068h, 32     ; { 0x68, "data L1 cache, 32 KB, 4 ways, 64 byte lines, sectored" } ,  
+L1T 070h, 12     ; { 0x70, "trace L1 cache, 12 K킣Ps, 8 ways" } ,  
+L1T 071h, 16     ; { 0x71, "trace L1 cache, 16 K킣Ps, 8 ways" } ,  
+L1T 072h, 32     ; { 0x72, "trace L1 cache, 32 K킣Ps, 8 ways" } ,  
+L1T 073h, 64     ; { 0x73, "trace L1 cache, 64 K킣Ps, 8 ways" } ,  
+L1I 077h, 16     ; { 0x77, "code L1 cache, 16 KB, 4 ways, 64 byte lines, sectored (IA-64)" } ,  
+L2U 078h, 1024   ; { 0x78, "code and data L2 cache, 1024 KB, 4 ways, 64 byte lines" } ,  
+L2U 079h, 128    ; { 0x79, "code and data L2 cache, 128 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+L2U 07Ah, 256    ; { 0x7A, "code and data L2 cache, 256 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+L2U 07Bh, 512    ; { 0x7B, "code and data L2 cache, 512 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+L2U 07Ch, 1024   ; { 0x7C, "code and data L2 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored" } ,  
+L2U 07Dh, 2048   ; { 0x7D, "code and data L2 cache, 2048 KB, 8 ways, 64 byte lines" } ,  
+L2U 07Eh, 256    ; { 0x7E, "code and data L2 cache, 256 KB, 8 ways, 128 byte lines, sect. (IA-64)" } ,  
+L2U 07Fh, 512    ; { 0x7F, "code and data L2 cache, 512 KB, 2 ways, 64 byte lines" } ,  
+L2U 080h, 512    ; { 0x80, "code and data L2 cache, 512 KB, 8 ways, 64 byte lines" } ,  
+L2U 081h, 128    ; { 0x81, "code and data L2 cache, 128 KB, 8 ways, 32 byte lines" } ,  
+L2U 082h, 256    ; { 0x82, "code and data L2 cache, 256 KB, 8 ways, 32 byte lines" } ,  
+L2U 083h, 512    ; { 0x83, "code and data L2 cache, 512 KB, 8 ways, 32 byte lines" } ,  
+L2U 084h, 1024   ; { 0x84, "code and data L2 cache, 1024 KB, 8 ways, 32 byte lines" } ,  
+L2U 085h, 2048   ; { 0x85, "code and data L2 cache, 2048 KB, 8 ways, 32 byte lines" } ,  
+L2U 086h, 512    ; { 0x86, "code and data L2 cache, 512 KB, 4 ways, 64 byte lines" } ,  
+L2U 087h, 1024   ; { 0x87, "code and data L2 cache, 1024 KB, 8 ways, 64 byte lines" } ,
+L3U 088h, 2048   ; { 0x88, "code and data L3 cache, 2048 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+L3U 089h, 4096   ; { 0x89, "code and data L3 cache, 4096 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+L3U 08Ah, 8192   ; { 0x8A, "code and data L3 cache, 8192 KB, 4 ways, 64 byte lines (IA-64)" } ,  
+L3U 08Dh, 3072   ; { 0x8D, "code and data L3 cache, 3072 KB, 12 ways, 128 byte lines (IA-64)" } ,  
+L3U 0D0h, 512    ; { 0xD0, "code and data L3 cache, 512-kb, 4 ways, 64 byte lines" } ,  
+L3U 0D1h, 1024   ; { 0xD1, "code and data L3 cache, 1024-kb, 4 ways, 64 byte lines" } ,  
+L3U 0D2h, 2048   ; { 0xD2, "code and data L3 cache, 2048-kb, 4 ways, 64 byte lines" } ,  
+L3U 0D6h, 1024   ; { 0xD6, "code and data L3 cache, 1024-kb, 8 ways, 64 byte lines" } ,  
+L3U 0D7h, 2048   ; { 0xD7, "code and data L3 cache, 2048-kb, 8 ways, 64 byte lines" } ,  
+L3U 0D8h, 4096   ; { 0xD8, "code and data L3 cache, 4096-kb, 8 ways, 64 byte lines" } ,  
+L3U 0DCh, 1536   ; { 0xDC, "code and data L3 cache, 1536-kb, 12 ways, 64 byte lines" } ,  
+L3U 0DDh, 3072   ; { 0xDD, "code and data L3 cache, 3072-kb, 12 ways, 64 byte lines" } ,  
+L3U 0DEh, 6144   ; { 0xDE, "code and data L3 cache, 6144-kb, 12 ways, 64 byte lines" } ,  
+L3U 0E2h, 2048   ; { 0xE2, "code and data L3 cache, 2048-kb, 16 ways, 64 byte lines" } ,  
+L3U 0E3h, 4096   ; { 0xE3, "code and data L3 cache, 4096-kb, 16 ways, 64 byte lines" } ,  
+L3U 0E4h, 8192   ; { 0xE4, "code and data L3 cache, 8192-kb, 16 ways, 64 byte lines" } ,  
+L3U 0EAh, 12288  ; { 0xEA, "code and data L3 cache, 12288-kb, 24 ways, 64 byte lines" } ,  
+L3U 0EBh, 18432  ; { 0xEB, "code and data L3 cache, 18432-kb, 24 ways, 64 byte lines" } ,  
+L3U 0ECh, 24576  ; { 0xEC, "code and data L3 cache, 24576-kb, 24 ways, 64 byte lines" } ,  
+END_CACHE        ; List terminator
 endres
 ;---------- ACPI tables data base ---------------------------------------------; 
 resdata acpiData
@@ -1803,6 +1998,43 @@ DB  'XENV' , 'Xen Project'                                      , 0
 DB  'XSDT' , 'Extended System Description'                      , 0
 DB  0
 endres  
+;---------- Raw resource for dynamical imported functions list ----------------;
+resdata importList
+DB  'IsWow64Process'               , 0      ; This functions from KERNEL32.DLL
+DB  'GlobalMemoryStatusEx'         , 0          
+DB  'GetNativeSystemInfo'          , 0
+DB  'GetLogicalProcessorInformation'   , 0
+DB  'GetLogicalProcessorInformationEx' , 0
+DB  'GetActiveProcessorGroupCount' , 0    
+DB  'GetActiveProcessorCount'      , 0              
+DB  'GetLargePageMinimum'          , 0
+DB  'GetNumaHighestNodeNumber'     , 0
+DB  'GetNumaNodeProcessorMask'     , 0
+DB  'GetNumaAvailableMemoryNode'   , 0
+DB  'GetNumaNodeProcessorMaskEx'   , 0
+DB  'GetNumaAvailableMemoryNodeEx' , 0
+DB  'EnumSystemFirmwareTables'     , 0
+DB  'GetSystemFirmwareTable'       , 0      
+DB  'SetThreadAffinityMask'        , 0
+DB  'SetThreadGroupAffinity'       , 0
+DB  'VirtualAllocExNuma'           , 0 , 0  ; Two zeroes means end of sub-list
+DB  'OpenProcessToken'             , 0      ; This functions from ADVAPI32.DLL              
+DB  'AdjustTokenPrivileges'        , 0 , 0  ; Two zeroes means end of sub-list
+DB  0                                       ; Third zero means end of list                  
+endres
+;---------- Raw resource for dynamical created fonts list ---------------------;
+resdata fontList
+; parameters sequence:
+; cHeight, cWidth, cWeight, iCharset, iOutPrecision,
+; iClipPrecision, iQuality, iPitchAndFamily  
+DW  17 , 10 , FW_DONTCARE , DEFAULT_CHARSET
+DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
+DB  'Verdana' , 0
+DW  16 , 40 , FW_DONTCARE , DEFAULT_CHARSET
+DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
+DB  'System monospace' , 0
+DW  0
+endres
 ;---------- Directory of icon resources ---------------------------------------; 
 resource icons, \
 IDI_SYSINFO     , LANG_NEUTRAL , iSysinfo    , \

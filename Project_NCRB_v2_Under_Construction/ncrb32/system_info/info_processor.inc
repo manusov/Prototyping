@@ -61,13 +61,12 @@ bts edx,31
 stosd
 xchg eax,edx
 stosd
-;------- Build CPU methods features bitmap, for system information screen -----;
-; xor eax,eax    ; *** DEBUG ***
-; stosd          ; *** DEBUG ***
-; stosd          ; *** DEBUG ***
 ;---------- Measure TSC frequency ---------------------------------------------;
 call HelperMeasureTsc
 jc .errorTscFreq      ; Go error if TSC frequency measurement failed
+;---------- Cache detection by CPUID ------------------------------------------;
+lea edi,[CPU_CACHE_DATA]
+call HelperCpuidCache
 ret
 ;---------- Errors handling ---------------------------------------------------;
 .errorCpuid:
@@ -480,3 +479,171 @@ jnc .zero
 bts ebx,ebp
 .zero:
 ret
+
+;---------- Detection CPU Caches by CPUID instruction -------------------------;
+;                                                                              ;
+; INPUT:   EDI = Destination pointer for save cache info                       ;
+;                                                                              ;
+; OUTPUT:  EDI = Input EDI + 60 , buffer size fixed = 60 bytes                 ;
+;          Destination memory at [input EDI] = Results, 0=Not detected         ;
+;          Qword [00-07] = Trace instruction cache size, micro ops             ;
+;          Word  [08-09] = Maximum threads at this level                       ;
+;          Word  [10-11] = Maximum APIC IDs per package                        ;
+;          Qword [12-19] = L1 instruction cache size, bytes                    ;
+;          Word  [20-21] = Maximum threads at this level                       ;
+;          Word  [22-23] = Maximum APIC IDs per package                        ;
+;          Qword [24-31] = L1 data cache size, bytes                           ;
+;          Word  [32-33] = Maximum threads at this level                       ;
+;          Word  [34-35] = Maximum APIC IDs per package                        ;
+;          Qword [36-43] = L2 unified cache size, bytes                        ;
+;          Word  [44-45] = Maximum threads at this level                       ;
+;          Word  [46-47] = Maximum APIC IDs per package                        ;
+;          Qword [48-55] = L3 unified cache size, bytes                        ;
+;          Word  [56-57] = Maximum threads at this level                       ;
+;          Word  [58-59] = Maximum APIC IDs per package                        ; 
+;                                                                              ;
+; Can destroy registers, volatile by Microsoft ia32 calling convention.        ; 
+;------------------------------------------------------------------------------;
+HelperCpuidCache:
+cld                            ; Clear direction, because STOSB used
+push ebx esi ebp
+;---------- Blank results -----------------------------------------------------;
+mov ecx,60
+xor eax,eax                    ; This entire EAX used for CPUID later
+rep stosb
+;---------- Check support CPUID#4 = Deterministic cache info, execute CPUID#0 -;
+; Here EAX=0
+cpuid
+cmp eax,4
+jb .noMoreDeterministicCaches
+;---------- Execute CPUID#4, subfunctions sequence ----------------------------; 
+xor esi,esi                    ; ESI = Subfunctions count
+.cycleCache:
+mov eax,4                      ; EAX = Function
+mov ecx,esi                    ; ECX = Subfunction
+cpuid
+;---------- Select handler = F( Type,Level ) ----------------------------------;
+test al,01Fh                   ; AL.[7-5]=Level, AL.[4-0]=Type
+jz .noMoreDeterministicCaches  ; Go exit if no more caches
+mov dl,12-60                   ; DL = Offset for addressing output data
+cmp al,022h                    ; AL = Selector
+je .storeCache                 ; Go analyse if L1 instruction cache
+mov dl,24-60
+cmp al,021h
+je .storeCache                 ; Go analyse if L1 data cache
+mov dl,36-60
+cmp al,043h
+je .storeCache                 ; Go analyse if L2 Unified cache
+;---------- This patch for Oracle VMBox ---------------------------------------;
+cmp al,41h                     ; Oracle VMBox can map physical L3 Unified cache as virtual L2 Data Cache
+je .storeCache                 ; Go analyse if L2 Data cache (really L3 Unified cache)
+;---------- End of patch for Oracle VMBox -------------------------------------;
+mov dl,48-60
+cmp al,063h                
+je .storeCache                 ; Go analyse if L3 Unified cache
+.nextCache:
+inc esi
+cmp esi,256                    ; This for hang prevent if failure	
+jb .cycleCache
+.noMoreDeterministicCaches:
+;---------- Special support for Intel Trace Cache -----------------------------;
+xor eax,eax
+cpuid
+cmp eax,2
+jb .doneCaches
+mov eax,2       ; EAX = Function = 2 = Get Cache Descriptors
+xor ecx,ecx     ; ECX = Subfunction = 0
+cpuid
+cmp al,1        ; Leaf count must be 1, otherwise skip
+jne .doneCaches
+test eax,eax    ; If bit EAX.31 = 1, means EAX contain invalid data   
+jns @f          ; Go skip clear, if EAX data valid
+xor eax,eax
+@@:
+test ebx,ebx    ; If bit EBX.31 = 1, means EBX contain invalid data
+jns @f          ; Go skip clear, if EBX data valid
+xor ebx,ebx
+@@:
+test ecx,ecx    ; If bit ECX.31 = 1, means ECX contain invalid data
+jns @f          ; Go skip clear, if ECX data valid
+xor ecx,ecx
+@@:
+test edx,edx    ; If bit EDX.31 = 1, means EDX contain invalid data
+jns @f          ; Go skip clear, if EDX data valid
+xor edx,edx
+@@:
+mov ebp,15      ; 4 registers * 4 bytes - 1 unused (AL)
+;---------- Cycle for interpreting cache descriptors --------------------------;
+.cacheDescriptors:
+shrd eax,ebx,8
+shrd ebx,ecx,8
+shrd ecx,edx,8
+shr edx,8
+mov esi,[APP_DATA.lockedDataIntelCache]
+push ecx
+.cacheValues:
+movzx ecx,byte [esi]  ; ECX = Cache type tag by NCRB List, or 0 = Terminator
+jecxz .listDone 
+cmp al,[esi + 1]      ; AL = Descriptor byte, compare with ID by INTEL
+jne .descMismatch
+push eax ecx
+movzx eax,word [esi + 2]       ; EAX = This Cache size, Trace=KuOps, Other=KB
+shl eax,10                     ; EAX = Trace Cache size, uOps or Bytes
+dec ecx
+imul ecx,ecx,12 
+.cacheStore:
+mov dword [edi - 60 + ecx + 0],eax   ; Store Cache size, uOps or Bytes
+mov dword [edi - 60 + ecx + 4],0 
+pop ecx eax
+.descMismatch:
+add esi,4
+jmp .cacheValues        ; Cycle for possible Cache types IDs  
+.listDone:
+pop ecx
+dec ebp
+jnz .cacheDescriptors   ; Cycle for Cache Descriptors array 
+;---------- Exit --------------------------------------------------------------;
+.doneCaches:
+pop ebp esi ebx
+ret
+;---------- Start handling detected cache type/level --------------------------;
+.storeCache:
+movsx edx,dl                   ; Save address offset
+push edx
+;---------- Calculate cache size ----------------------------------------------;
+; Cache size (bytes) = (ways+1)*(partitions+1)*(linesize+1)*(sets+1) =
+; = (EBX[31-22]+1) * (EBX[21-12]+1) * (EBX[11-00]+1) * (ECX+1)
+mov edx,ebx
+shr edx,22                     ; Shift EBX[31-22] = Ways
+and edx,03FFh 
+inc edx
+inc ecx
+imul ecx,edx                   ; Multiply to ECX = Sets
+mov edx,ebx                    
+shr edx,12                     ; Shift EBX[21-12] = Partitions
+and edx,03FFh		     
+inc edx
+imul ecx,edx                   ; Mask EBX[11-00] = Line Size
+and ebx,0FFFh
+inc ebx
+imul ecx,ebx                   ; ECX = Cache size, bytes
+;---------- Store cache size --------------------------------------------------;
+pop edx
+mov dword [edi + edx + 0],ecx
+mov dword [edi + edx + 4],0
+;---------- Extract threads share cache ---------------------------------------;
+mov ebx,eax
+shr eax,14                     ; Logical CPUs: 12 bit [26-14] shift to [11-00]
+shr ebx,26                     ; CPU Cores: 6 bit [31-26] shift to [05-00]
+and ax,0FFFh                   ; Extract Logical CPUs = Threads
+and bx,003Fh                   ; Extrach Cores		  
+inc eax                        ; This because "-1" encoding
+inc ebx                        ; This because "-1" encoding
+;---------- Store threads share cache -----------------------------------------;
+mov [edi + edx + 08],ax
+mov [edi + edx + 10],bx
+;---------- Return to cycle ---------------------------------------------------;
+jmp .nextCache
+
+
+
