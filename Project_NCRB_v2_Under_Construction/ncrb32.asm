@@ -51,7 +51,7 @@ RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win32 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.03 for Windows ia32 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.04 for Windows ia32 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -218,6 +218,36 @@ cmp al,0
 jne @b
 jmp .createFonts
 .doneFonts:
+;---------- Pre-load strings for fast build clks/mbps table texts -------------;
+lea edi,[CLKS_MBPS_TEXTS]
+mov bp,DRAW_TABLE_COUNT
+mov dx,DRAW_TABLE_FIRST_TEXT
+@@:
+mov eax,edx
+mov esi,[APP_DATA.lockedStrings]
+call IndexString
+xchg eax,esi
+stosd
+inc edx
+dec bp
+jnz @b
+;--- Pre-load strings for fast build Bytes/KB/MB/GB/TB/MBPS/nanoseconds -------;
+lea edi,[UNITS_TEXTS]
+mov bp,UNITS_COUNT
+mov dx,UNITS_FIRST_TEXT 
+@@:
+mov eax,edx
+mov esi,[APP_DATA.lockedStrings]
+call IndexString
+xchg eax,esi
+stosd
+inc edx
+dec bp
+jnz @b
+;---------- Pre-load string for write TSC frequency at drawings window --------;
+lea edi,[DRAW_TSC]
+mov ax,STR_MD_TSC_CLOCK_MHZ
+call PoolStringWrite
 ;---------- Load configuration file ncrb.inf ----------------------------------; 
 ; TODO.
 ;---------- Get system information, user mode routines ------------------------;
@@ -1174,6 +1204,8 @@ RAW_LIST       DW  IDS_STRINGS_POOL
                DW  IDS_ACPI_DATA_POOL
                DW  IDS_IMPORT_POOL
                DW  IDS_FONTS_POOL
+               DW  IDS_BRUSHES_POOL
+               DW  IDS_BITMAP_INFO
                DW  0
 ;---------- Libraries for dynamical import ------------------------------------;
 NAME_KERNEL32  DB  'KERNEL32.DLL' , 0      ; Must be sequental list of WinAPI
@@ -1449,6 +1481,8 @@ lockedDataIntelCache       dd ?     ; Data for Intel cache descriptors decode
 lockedDataAcpi             dd ?     ; Data base for ACPI tables detection
 lockedImportList           dd ?     ; List for WinAPI dynamical import
 lockedFontList             dd ?     ; List of fonts names
+lockedBrushesList          dd ?     ; List of color brushes
+lockedBitmapInfo           dd ?     ; Bitmap info header for draw window
 hFont1                     dd ?     ; Handles of created fonts
 hFont2                     dd ?
 hIcon                      dd ?     ; Application icon handle
@@ -1627,36 +1661,7 @@ DYNA_IMPORT DYNAIMPORT ?
 ;---------- GUI objects list --------------------------------------------------;
 align 8
 BIND_LIST BINDLIST ?
-;---------- GUI definitions for draw charts: constants, structures, macro -----;
-; Geometry parameters: Area with drawings Speed = F(Block Size), X parameters
-SUBWINX    = 773    ; Plot sub-window X size, pixels
-GRIDX      = 11     ; Number of vertical lines in the coordinate X-grid
-GRIDBLANKX = 70     ; Coordinate X blank offset for point X=0
-GRIDSTEPX  = 64     ; Coordinate addend for X-grid step
-SHIFTX     = 0      ; X-shift plot sub window in the dialogue window, pixels
-; Continue geometry parameters, Y parameters 
-SUBWINY    = 502    ; Plot sub-window Y size, pixels
-GRIDY      = 10     ; Number of horizontal lines in the coordinate Y-grid
-GRIDBLANKY = 25     ; Coordinate Y blank offset for point Y=0
-GRIDSTEPY  = 48     ; Coordinate addend for Y-grid step
-SHIFTY     = 0      ; Y-shift plot sub window in the dialogue window, pixels
-; Color parameters of Sub-Window with drawings Speed = F(Block Size)
-; Brush color values = 00bbggrrh, bb=blue, gg=green, rr=red, 1 byte per color
-BRUSH_GRID        = 00C8C8C8h         ; Grid with horizontal and vertical lines 
-BRUSH_LINE        = 000101F0h         ; Draw Line Speed = F (Block Size)
-BRUSH_BACKGROUND  = 00F9F9F9h         ; Draw window background
-BRUSH_STATISTICS  = 00E82121h         ; Statistics table lines 
-COLOR_TEXT_VALUES = 00414141h         ; Text front color, grid numeric values print
-COLOR_TEXT_UNITS  = BRUSH_STATISTICS  ; Text front color, units print
-COLOR_TEXT_BACK   = BRUSH_BACKGROUND  ; Text back color
-COLOR_TEXT_INFO   = COLOR_TEXT_UNITS  ; Text front color, system info print
-COLOR_TEXT_DUMP   = 0001B001h         ; Text front color, instruction dump print
-; WinAPI equations for DIB (Device Independent Bitmap)
-DIB_RGB_COLORS    = 00h   ; Means mode: color table contain RGB values
-DIB_PAL_COLORS    = 01h   ; Means mode: color tab. is indexes in the pal. table
-DIB_PAL_INDICES   = 02h   ; Means mode: no color table exist, use default
-CLEARTYPE_QUALITY = 5     ; Quality code for create font and draw at grap. win. 
-; Benchmarks deault Y-sizing parameters
+;---------- Benchmarks deault Y-sizing parameters -----------------------------;
 ; This parameters set for first pass, 
 ; auto adjusted as F(Maximum Detected Speed or Latency) for next passes,
 ; if don't close Window 1 and press Run (Resize) button 
@@ -1749,7 +1754,7 @@ struct GCPARMS
 handleMemDC      dd  ?          ; Handle for Device Context, video controller
 bitmapPointer    dd  ?          ; Bitmap pointer
 handleBitmap     dd  ?          ; Handle of bitmap for graphics draw
-handlesBrushes   dd  4 DUP (?)  ; Handle for color brushes
+handlesBrushes   dd  4 dup (?)  ; Handle for color brushes
 handleFont       dd  ?          ; Handle for font in the drawings window
 handleDC         dd  ?          ; Handle Graphical Device Context
 ends
@@ -1758,6 +1763,23 @@ GC_PARMS GCPARMS ?
 ;---------- Variables for graphics output -------------------------------------;
 PAINT_STRUCT     PAINTSTRUCT    ; Paint control
 GRAPH_RECT       RECT           ; Rectangle definition for visualized area
+;---------- Structure for build clks/mbps table texts -------------------------;
+align 8
+CLKS_MBPS_TEXTS  dd  DRAW_TABLE_COUNT dup (?)
+;---------- Structure for build Bytes/KB/MB/GB/TB/MBPS/nanoseconds texts ------;
+struct UNITSTEXTS
+bytes            dd  ?
+kb               dd  ?
+mb               dd  ?
+gb               dd  ?
+tb               dd  ?
+mbps             dd  ?
+nanoseconds      dd  ?
+ends
+UNITS_TEXTS UNITSTEXTS ?
+;---------- String for write TSC frequency at drawings window -----------------;
+DRAW_TSC       db  DRAW_TSC_STRING_SIZE dup (?)
+DRAW_TSC_VALUE =   DRAW_TSC + TSC_VALUE_OFFSET
 ;---------- Pointers to dynamically allocated memory --------------------------;
 struct ALLOCATOR  ; Allocator for data block with variable base address and size
 objectStart      dd ?

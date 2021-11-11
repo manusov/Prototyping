@@ -41,6 +41,9 @@ IDS_INTEL_CACHE         = 145
 IDS_ACPI_DATA_POOL      = 146
 IDS_IMPORT_POOL         = 147
 IDS_FONTS_POOL          = 148
+IDS_BRUSHES_POOL        = 149
+IDS_BITMAP_INFO         = 150
+IDS_TABLE_TEXTS         = 151
 ;---------- Identifiers for icons ---------------------------------------------;
 IDI_SYSINFO             = 160
 IDI_MEMORY              = 161
@@ -589,16 +592,6 @@ STR_AM_NT_11           = STR_AM_NT_00 + 11
 STR_AM_NT_12           = STR_AM_NT_00 + 12
 STR_AM_NT_13           = STR_AM_NT_00 + 13
 STR_AM_NT_14           = STR_AM_NT_00 + 14  ; # 14
-;
-; STR_AM_NT_15           = STR_AM_NT_00 + 15
-; STR_AM_NT_16           = STR_AM_NT_00 + 16
-; STR_AM_NT_17           = STR_AM_NT_00 + 17
-; STR_AM_NT_18           = STR_AM_NT_00 + 18
-; STR_AM_NT_19           = STR_AM_NT_00 + 19
-; STR_AM_NT_20           = STR_AM_NT_00 + 20
-; STR_AM_NT_21           = STR_AM_NT_00 + 21
-; STR_AM_NT_22           = STR_AM_NT_00 + 22
-; STR_AM_NT_23           = STR_AM_NT_00 + 23
 ;---------- Modes names for memory and cache benchmarks -----------------------;
 STR_NON_TEMPORAL       = STR_AM_NT_14 + 1       ;  STR_AM_NT_23 + 1
 STR_32X2               = STR_NON_TEMPORAL + 1
@@ -811,8 +804,16 @@ STR_MD_NUMA_UNAWARE   = STR_MD_PD_DEFAULT + 11
 STR_MD_NUMA_SINGLE    = STR_MD_PD_DEFAULT + 12
 STR_MD_NUMA_LOCAL     = STR_MD_PD_DEFAULT + 13
 STR_MD_NUMA_REMOTE    = STR_MD_PD_DEFAULT + 14
+STR_MD_CPI            = STR_MD_PD_DEFAULT + 15
+STR_MD_NSPI           = STR_MD_PD_DEFAULT + 16
+STR_MD_MBPS           = STR_MD_PD_DEFAULT + 17
+STR_MD_MINIMUM        = STR_MD_PD_DEFAULT + 18
+STR_MD_MAXIMUM        = STR_MD_PD_DEFAULT + 19
+STR_MD_AVERAGE        = STR_MD_PD_DEFAULT + 20
+STR_MD_MEDIAN         = STR_MD_PD_DEFAULT + 21
+STR_MD_TSC_CLOCK_MHZ  = STR_MD_PD_DEFAULT + 22
 ;---------- Strings for child screen = Vector brief performance report --------;
-STR_VB_CPU_FEATURES    = STR_MD_NUMA_REMOTE + 1  
+STR_VB_CPU_FEATURES    = STR_MD_TSC_CLOCK_MHZ + 1  
 STR_VB_AVX_256         = STR_VB_CPU_FEATURES + 1
 STR_VB_AVX2_256        = STR_VB_CPU_FEATURES + 2
 STR_VB_AVX3_512        = STR_VB_CPU_FEATURES + 3
@@ -902,14 +903,21 @@ BINDER_BUILD_MEMORY_MBPS   = 13
 BINDER_BUILD_MEMORY_NS     = 14
 BINDER_BUILD_MEMORY_DRAW   = 15 
 BINDER_BUILD_VECTOR_BRIEF  = 16  
-;---------- Binders numbers for GUI scripts -----------------------------------;
+;---------- Binders numbers for GUI scripts: set widgets state ----------------;
 ; This binders for set GUI objects (widgets) state by data from buffer
 ; (bindlist), separate from build objects, because required set by
 ; system configuration detection results and by "Set defaults" button.
 BINDER_SET_MEMORY          = 17
-;---------- Binders numbers for GUI scripts -----------------------------------;
+;---------- Binders numbers for GUI scripts: get widgets state ----------------;
 ; This binders for read data from GUI objects (widgets) to buffer (bindlist).
 BINDER_GET_MEMORY          = 18
+;---------- Binders numbers for make widgets dependency -----------------------;
+BINDER_WIDGET_NONTEMPORAL  = 19
+BINDER_WIDGET_FORCE32X2    = 20
+BINDER_WIDGET_PREFETCH     = 21
+BINDER_WIDGET_CUSTOM_SIZE  = 22
+;--- Binder for disable buttons when run benchmarks and enable after ----------;
+BINDER_BUTTONS_ON_OFF      = 23 
 ;---------- List of pointers to strings used by GUI binders -------------------;
 ; This structures used as template for offsets in the bind buffer.
 ; For ia32/x64 unification, pointers always 64-bit, high dword = 0 for ia32. 
@@ -971,23 +979,7 @@ bindSrat      BINDACPI      ?
 bindCache     BINDCACHE     ?
 bindTopology  BINDTOPOLOGY  ?
 bindSys       BINDSYS       ?
-;---------- Other screens - text blocks viewers -------------------------------;
-; set widgets from bindlist buffer
-TEXT_SCREEN_COUNT = 11
-; this 11 pointers MUST BE SEQUENTAL, because accessed in the cycle
-viewOs         dq  ?
-viewNative     dq  ?
-viewTp         dq  ?
-viewTpSum      dq  ?
-viewEt         dq  ?
-viewEtSum      dq  ?
-viewNuma       dq  ?
-viewGroup      dq  ?
-viewAcpi       dq  ?
-viewAcpiSum    dq  ?
-viewAffCpu     dq  ?
-; end of sequental group of pointers
-;---------- Memory and cache benchmarks screen --------------------------------;
+;---------- Memory and cache benchmarks screen, part 1 of 3 -------------------;
 ; get widgets state to bindlist buffer
 ; 1 bit per switch: enable or disable
 getMemMethod   dd  ?
@@ -1010,9 +1002,8 @@ getBlkStop     dq  ?
 getBlkStep     dd  ?
 getBlkDist     dd  ?
 blockSizeEdit  dq  ?
-;---------- Memory and cache benchmarks screen --------------------------------; 
-; set widgets state by system information
-; in the bindlist buffer
+;---------- Memory and cache benchmarks screen, part 2 of 3 -------------------; 
+; set widgets state by system information in the bindlist buffer
 ; also used by vector brief benchmark scenario
 ; 2 bits per switch: enable-disable and checked-unchecked
 setMemMethod   dd  ? , ?
@@ -1034,9 +1025,33 @@ setBlkStart    dq  ?
 setBlkStop     dq  ?
 setBlkStep     dd  ?
 setBlkDist     dd  ?
+;---------- Memory and cache benchmarks screen, part 3 of 3 -------------------;
+; This fields used for individual widgets control for make widgets dependency
+; when switched.
+; 1) "Nontemporal" option depend on assembler method and object (cache/DRAM).
+; 2) "Force 32x2"  option depend on assembler method.
+; 3) "Prefetch"    option depend on assembler method and object (cache/DRAM).
+; 4) "Custom block size" numeric field depend on custom block size selected.
+scratchPad     db  8 dup (?)
+;---------- Other screens - text blocks viewers -------------------------------;
+; set widgets from bindlist buffer
+TEXT_SCREEN_COUNT = 11
+; this 11 pointers MUST BE SEQUENTAL, because accessed in the cycle
+viewOs         dq  ?
+viewNative     dq  ?
+viewTp         dq  ?
+viewTpSum      dq  ?
+viewEt         dq  ?
+viewEtSum      dq  ?
+viewNuma       dq  ?
+viewGroup      dq  ?
+viewAcpi       dq  ?
+viewAcpiSum    dq  ?
+viewAffCpu     dq  ?
+; end of sequental group of pointers
 ;---------- Vector brief benchmark results screen support ---------------------;
-VB_REPORT_COUNT  EQU  14  
-VB_REPORT_STEP   EQU  41
+VB_REPORT_COUNT  =  14  
+VB_REPORT_STEP   =  41
 vbSse128read   db  40 + 1  dup ?  ; Benchmark results for SSE128 Read
 vbSse128write  db  40 + 1  dup ?  ; Benchmark results for SSE128 Write
 vbSse128copy   db  40 + 1  dup ?  ; Benchmark results for SSE128 Copy 
@@ -1199,3 +1214,42 @@ DB 0        ; 0 = End of list
 CLEARTYPE_QUALITY = 5
 ID_FONT_1         = 0
 ID_FONT_2         = 1
+;--- Geometry parameters for area with drawings Speed = F( Block Size ) -------;
+; Geometry X parameters
+SUBWINX    = 773    ; Plot sub-window X size, pixels
+GRIDX      = 11     ; Number of vertical lines in the coordinate X-grid
+GRIDBLANKX = 70     ; Coordinate X blank offset for point X=0
+GRIDSTEPX  = 64     ; Coordinate addend for X-grid step
+SHIFTX     = 0      ; X-shift plot sub window in the dialogue window, pixels
+; Geometry Y parameters 
+SUBWINY    = 502    ; Plot sub-window Y size, pixels
+GRIDY      = 10     ; Number of horizontal lines in the coordinate Y-grid
+GRIDBLANKY = 25     ; Coordinate Y blank offset for point Y=0
+GRIDSTEPY  = 48     ; Coordinate addend for Y-grid step
+SHIFTY     = 0      ; Y-shift plot sub window in the dialogue window, pixels
+;--- Color parameters of Sub-Window with drawings Speed = F( Block Size ) -----; 
+; Brush color values = 00bbggrrh, bb=blue, gg=green, rr=red, 1 byte per color
+BRUSH_GRID        = 00C8C8C8h         ; Grid with horizontal and vertical lines 
+BRUSH_LINE        = 000101F0h         ; Draw Line Speed = F (Block Size)
+BRUSH_BACKGROUND  = 00F9F9F9h         ; Draw window background
+BRUSH_STATISTICS  = 00E82121h         ; Statistics table lines 
+COLOR_TEXT_VALUES = 00414141h         ; Text front color, grid numeric values print
+COLOR_TEXT_UNITS  = BRUSH_STATISTICS  ; Text front color, units print
+COLOR_TEXT_BACK   = BRUSH_BACKGROUND  ; Text back color
+COLOR_TEXT_INFO   = COLOR_TEXT_UNITS  ; Text front color, system info print
+COLOR_TEXT_DUMP   = 0001B001h         ; Text front color, instruction dump print
+;---------- WinAPI equations for DIB ( Device Independent Bitmap ) ------------;
+DIB_RGB_COLORS    = 00h   ; Means mode: color table contain RGB values
+DIB_PAL_COLORS    = 01h   ; Means mode: color tab. is indexes in the pal. table
+DIB_PAL_INDICES   = 02h   ; Means mode: no color table exist, use default
+;---------- Equations for build clks/mbps table texts -------------------------;
+DRAW_TABLE_FIRST_TEXT = STR_MD_CPI
+DRAW_TABLE_UP_COUNT   = 3
+DRAW_TABLE_LEFT_COUNT = 4
+DRAW_TABLE_COUNT      = DRAW_TABLE_UP_COUNT + DRAW_TABLE_LEFT_COUNT
+;---------- Equations for build units texts -----------------------------------;
+UNITS_FIRST_TEXT      = STR_UNITS_BYTES 
+UNITS_COUNT           = 7
+;---------- Equations for write TSC frequency at drawings window --------------;
+DRAW_TSC_STRING_SIZE  = 32
+TSC_VALUE_OFFSET      = 19

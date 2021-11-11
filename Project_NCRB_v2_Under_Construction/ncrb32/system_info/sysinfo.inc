@@ -196,6 +196,10 @@ mov dword [edx + BINDCPU.secondVmm + 4],0
 lea ecx,[BIND_LIST.bindSys]
 lea edi,[ecx + BINDSYS.procTotal]
 mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
+test eax,eax
+jnz @f
+mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
+@@:
 mov bl,0
 call DecimalPrint32
 mov al,0
@@ -294,6 +298,10 @@ mov al,0
 stosb
 lea edi,[edx + BINDLIST.bindTopology.sockets]
 mov eax,[ecx + SUMMARYTOPOLOGY.sockets]
+test eax,eax
+jnz @f
+inc eax
+@@:
 call DecimalPrint32
 mov al,0
 stosb
@@ -444,15 +452,9 @@ jnz @f
 mov ecx,000000003h   ; Read MOV, option 0, enable and select bits = 0, 1
 @@:
 or ebx,ecx            ; Select default ASM method by CPU features support check
-
-
-;--- under construction restrictions ---
-; mov rax,0FFFF00FFFFFFFFFFh
-; and rbx,rax
+; UNDER CONSTRUCTION RESTRICTIONS
 and ebp,0FFFF00FFh
-;--- under construction restrictions ---
-
-
+; UNDER CONSTRUCTION RESTRICTIONS
 mov [edi + BINDLIST.setMemMethod + 0],ebx
 mov [edi + BINDLIST.setMemMethod + 4],ebp
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
@@ -544,9 +546,10 @@ je @f
 inc ebx
 @@:
 mov word [edi + BINDLIST.setMemLpages],bx
-;---------- Benchmark options, unconditionally set ----------------------------;
+;---------- Benchmark options, set unconditionally when defaults set ----------;
+mov word [edi + BINDLIST.setMemOption],00000001b  ; Nontemporal = on, Force x32 = off
 mov word [edi + BINDLIST.setMemAccess],00000010b  ; Access step
-mov word [edi + BINDLIST.setMemPref],00000010b    ; 01010101b  ; Prefetch modes
+mov word [edi + BINDLIST.setMemPref],000000010b   ; Prefetch modes
 mov word [edi + BINDLIST.setMemMeas],11010101b    ; Measure precision modes
 mov word [edi + BINDLIST.setMemPix],00010111b     ; Pixels approximation modes
 ;---------- Text blocks for viewers -------------------------------------------;

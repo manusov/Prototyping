@@ -495,7 +495,9 @@ IDS_OS_CONTEXT_POOL , LANG_ENGLISH + SUBLANG_DEFAULT , osContextFeatures , \
 IDS_INTEL_CACHE     , LANG_ENGLISH + SUBLANG_DEFAULT , intelCache        , \
 IDS_ACPI_DATA_POOL  , LANG_ENGLISH + SUBLANG_DEFAULT , acpiData          , \
 IDS_IMPORT_POOL     , LANG_ENGLISH + SUBLANG_DEFAULT , importList        , \ 
-IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList 
+IDS_FONTS_POOL      , LANG_ENGLISH + SUBLANG_DEFAULT , fontList          , \
+IDS_BRUSHES_POOL    , LANG_ENGLISH + SUBLANG_DEFAULT , brushesList       , \ 
+IDS_BITMAP_INFO     , LANG_ENGLISH + SUBLANG_DEFAULT , bitmapInfo
 ;---------- Raw resource for strings pool -------------------------------------;
 resdata stringsPool
 ;---------- Brief names for application sheets --------------------------------; 
@@ -850,21 +852,29 @@ DB  'brief adaptive'                        , 0
 DB  'careful adaptive'                      , 0
 DB  '  + 1000 ms measure CPUCLK + heating'  , 0
 ;---------- Strings for child screen = Memory and cache performance draw ------;
-DB  'PD default'    , 0
-DB  'PD medium'     , 0
-DB  'PD long'       , 0
-DB  ' '             , 0
-DB  'PD ?'          , 0
-DB  'Resize'        , 0
-DB  'Silent'        , 0
-DB  'Threads='      , 0
-DB  '4K pages'      , 0
-DB  'Large pages'   , 0
-DB  ' '             , 0
-DB  'NUMA unaware'  , 0
-DB  'NUMA single'   , 0
-DB  'NUMA local'    , 0
-DB  'NUMA remote'   , 0
+DB  'PD default'          , 0
+DB  'PD medium'           , 0
+DB  'PD long'             , 0
+DB  ' '                   , 0
+DB  'PD ?'                , 0
+DB  'Resize'              , 0
+DB  'Silent'              , 0
+DB  'Threads='            , 0
+DB  '4K pages'            , 0
+DB  'Large pages'         , 0
+DB  ' '                   , 0
+DB  'NUMA unaware'        , 0
+DB  'NUMA single'         , 0
+DB  'NUMA local'          , 0
+DB  'NUMA remote'         , 0
+DB  'CPI'                 , 0
+DB  'nsPI'                , 0
+DB  'MBPS'                , 0
+DB  'minimum'             , 0
+DB  'maximum'             , 0
+DB  'average'             , 0
+DB  'median'              , 0
+DB  'TSC clock (MHz)  = ' , 0
 ;---------- Strings for child screen = Vector brief performance report --------;
 DB  'Processor features, detect by CPUID:'            , 0
 DB  'AVX 256-bit'                                     , 0
@@ -1465,7 +1475,7 @@ SET_INFO    BINDLIST.vbX87cos                     , IDC_VB_FCOS_V
 SET_INFO    BINDLIST.vbX87sincos                  , IDC_VB_FSINCOS_V 
 SET_STRING  STR_OK                                , IDB_VB_OK             
 BIND_STOP
-;---------- Continue, binders numbers for GUI scripts -------------------------;
+;---------- Continue, binders for GUI scripts ---------------------------------;
 ; This binders for set GUI objects (widgets) state by data from buffer
 ; (bindlist), separate from build objects, because required set by
 ; system configuration detection results and by "Set defaults" button.
@@ -1524,12 +1534,6 @@ SET_SWITCH  BINDLIST.setMemAccess + 0 , 2 , IDB_MEMORY_SK_63
 SET_SWITCH  BINDLIST.setMemAccess + 0 , 4 , IDB_MEMORY_SK_4095
 SET_SWITCH  BINDLIST.setMemAccess + 0 , 6 , IDB_MEMORY_SK_CSTM
 SET_SWITCH  BINDLIST.setMemLpages + 0 , 0 , IDB_MEMORY_LP
-SET_SWITCH  BINDLIST.setMemPref   + 0 , 0 , IDB_MEMORY_NO_PF
-SET_SWITCH  BINDLIST.setMemPref   + 0 , 2 , IDB_MEMORY_DEF_PF
-SET_SWITCH  BINDLIST.setMemPref   + 0 , 4 , IDB_MEMORY_MED_PF
-SET_SWITCH  BINDLIST.setMemPref   + 0 , 6 , IDB_MEMORY_LNG_PF
-SET_SWITCH  BINDLIST.setMemPref   + 1 , 0 , IDB_MEMORY_BLK_PF
-SET_SWITCH  BINDLIST.setMemPref   + 1 , 2 , IDB_MEMORY_CST_PF
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 0 , IDB_MEMORY_NO_PF
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 2 , IDB_MEMORY_DEF_PF
 SET_SWITCH  BINDLIST.setMemPref   + 0 , 4 , IDB_MEMORY_MED_PF
@@ -1630,6 +1634,39 @@ GET_HEX64   IDE_MEMORY_M_START  , BINDLIST.getBlkStart
 GET_HEX64   IDE_MEMORY_M_STOP   , BINDLIST.getBlkStop
 GET_DEC32   IDE_MEMORY_SK_SIZE  , BINDLIST.getBlkStep
 GET_DEC32   IDE_MEMORY_PF_SIZE  , BINDLIST.getBlkDist
+BIND_STOP
+;--- Continue, binder for widgets dependency support: "Nontemporal" widget ----;
+SET_SWITCH  BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_NONTEMP
+BIND_STOP
+;--- Continue, binder for widgets dependency support: "Force 32x2" widget -----;
+SET_SWITCH  BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_FORCE32
+BIND_STOP
+;--- Continue, binder for widgets dependency support: "Prefetch" widget(s) ----;
+SET_SWITCH  BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_NO_PF
+SET_SWITCH  BINDLIST.scratchPad + 0 , 2 , IDB_MEMORY_DEF_PF
+SET_SWITCH  BINDLIST.scratchPad + 0 , 4 , IDB_MEMORY_MED_PF
+SET_SWITCH  BINDLIST.scratchPad + 0 , 6 , IDB_MEMORY_LNG_PF
+SET_SWITCH  BINDLIST.scratchPad + 1 , 0 , IDB_MEMORY_BLK_PF
+SET_SWITCH  BINDLIST.scratchPad + 1 , 2 , IDB_MEMORY_CST_PF
+BIND_STOP
+;--- Continue, binder for widgets dependency support: "Custom size" widget ----;
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDE_MEMORY_B_SIZE
+BIND_STOP
+;--- Continue, binder for disable buttons when run bench. and enable after ----;
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_SYSINFO_VBRF
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_SYSINFO_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_DRAW
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_RUN
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_DEFAULTS
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_MEMORY_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_OS_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_NAT_OS_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_TOPOL_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_TOPOL_EX_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_NUMA_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_P_GROUPS_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_ACPI_CANCEL
+SET_BOOL    BINDLIST.scratchPad + 0 , 0 , IDB_A_CPUID_CANCEL
 BIND_STOP
 endres
 ;---------- CPU common features bitmap builder script -------------------------;
@@ -2034,6 +2071,38 @@ DW  16 , 40 , FW_DONTCARE , DEFAULT_CHARSET
 DW  OUT_TT_ONLY_PRECIS  , CLIP_DEFAULT_PRECIS , CLEARTYPE_QUALITY , FIXED_PITCH
 DB  'System monospace' , 0
 DW  0
+endres
+;---------- Raw resource for color brushes used in the drawings window --------;
+resdata brushesList
+; Brush color values = 00bbggrrh, bb=blue, gg=green, rr=red, 1 byte per color
+; Used for graphics window, drawings Y=F(X)
+DD  BRUSH_GRID         ; Grid with horizontal and vertical lines 
+DD  BRUSH_LINE         ; Draw Line Speed = F (Block Size)
+DD  BRUSH_BACKGROUND   ; Draw window background
+DD  BRUSH_STATISTICS   ; Statistics table lines
+endres
+;---------- Raw resource for bitmap used in the drawings window ---------------;
+resdata bitmapInfo
+; BITMAPINFOHEADER descriptor structure ( for Win32/Win64 )
+; This structure used when initializing graphics window context, drawings Y=F(X)
+;--------------------------------------------------------------
+; Name		          Size    Comments
+;--------------------------------------------------------------
+; biSize           dd ?   Number of bytes
+; biWidth          dd ?   Width
+; biHeight         dd ?   Height
+; biPlanes         dw ?   Bit Planes
+; biBitCount       dw ?   Bits Per Pixel
+; biCompression    dd ?   Compression Mode
+; biSizeImage      dd ?   Image size, not required for uncompressed
+; biXPelsPerMeter  dd ?   X pixels per meter, here not required
+; biYPelsPerMeter  dd ?   Y pixels per meter, here not required
+; biClrUsed        dd ?   Number of colors used, here not required (true color)
+; biClrImportant   dd ?   Number of important colors, 0=All, here not used
+;                         Important colors - used for visualization.
+;                         0 means all colors used for visualization.
+;--------------------------------------------------------------
+BITMAPINFOHEADER 40,SUBWINX,SUBWINY,1,32,BI_RGB,0,0,0,0,0
 endres
 ;---------- Directory of icon resources ---------------------------------------; 
 resource icons, \

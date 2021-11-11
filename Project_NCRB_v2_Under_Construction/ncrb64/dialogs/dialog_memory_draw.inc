@@ -70,7 +70,7 @@ call [CreateCompatibleDC]          ; Create compatible Device Context for buffer
 mov [GC_PARMS.handleMemDC],rax     ; Store handle
 mov rsi,rax                        ; RSI = Store handle for later use
 xchg rcx,rax                       ; Parm#1 = RCX = Handle to a Device Context
-lea rdx,[BitmapInfo]               ; Parm#2 = RDX = Pointer to Bitmap Descriptor
+mov rdx,[APP_DATA.lockedBitmapInfo]  ; Parm#2 = RDX = Pointer to Bitmap Descriptor
 mov r8d,DIB_RGB_COLORS             ; Parm#3 = R8  = Type of color data
 lea r9,[GC_PARMS.bitmapPointer]    ; Parm#4 = R9  = Pointer to Bitmap Pointer variable
 xor eax,eax                        ; RAX = 0 for compact push 0
@@ -85,9 +85,9 @@ xchg rdx,rax                       ; Parm#2 = RDX = Handle to a Bitmap
 call [SelectObject]
 ;---------- Create brushes ----------------------------------------------------;
 cld
-lea rsi,[BrushesList]              ; RSI = Pointer to color data
-lea rdi,[GC_PARMS.handlesBrushes]  ; RDI = Pointer for store brushes handles
-mov ebp,4                          ; EBP = Number of brushes
+mov rsi,[APP_DATA.lockedBrushesList] ; RSI = Pointer to color data
+lea rdi,[GC_PARMS.handlesBrushes]    ; RDI = Pointer for store brushes handles
+mov ebp,4                            ; EBP = Number of brushes
 @@:
 lodsd                              ; EAX = Color, RSI+4, select next color 
 xchg ecx,eax                       ; Parm#1 = RCX = Color
@@ -619,13 +619,13 @@ mov rcx,rsi                  ; Parm#1 = RCX = Handle to a Device Context
 mov edx,COLOR_TEXT_UNITS     ; Parm#2 = RDX = Text front color value = 00bbggrrh
 call [SetTextColor]
 mov eax,[DRAW_PARMS.selectUnits]
-lea r12,[U_B]                ; R12 = Pointer to text string, Cache&RAM mode
+mov r12,[UNITS_TEXTS.bytes]       ; R12 = Pointer to text string, Cache&RAM mode
 cmp al,0
 je @f
-lea r12,[U_KB]
+mov r12,[UNITS_TEXTS.kb]
 cmp al,1
 je @f
-lea r12,[U_MB]
+mov r12,[UNITS_TEXTS.mb]
 @@:
 mov edx,SUBWINX-49   ; Parm#2 = RDX = X coordinate up/left corner
 mov r8d,SUBWINY-43   ; Parm#3 = R8  = Y coordinate up/left corner
@@ -633,10 +633,10 @@ mov r9d,SUBWINX-13   ; Parm#4 = R9  = X coordinate down/right corner
 mov eax,SUBWINY-25   ; RAX = Transit for Parm#5 = Y coordinate down/right corner
 call HelperTextConstDraw
 ;---------- Prepare for Y-units, use color from previous step -----------------;
-lea r12,[U_MBPS]             ; R12 = Pointer to text string , Mode = Cache&RAM
+mov r12,[UNITS_TEXTS.mbps]   ; R12 = Pointer to text string , Mode = Cache&RAM
 cmp [DRAW_PARMS.selectMode],0
 je @f
-lea r12,[U_NS]
+mov r12,[UNITS_TEXTS.nanoseconds]
 @@:
 mov edx,7                    ; Parm#2 = RDX = X coordinate up/left corner
 mov r8d,5                    ; Parm#3 = R8 = Y coordinate up/left corner
@@ -644,38 +644,36 @@ mov r9d,40+7+20 + 24         ; Parm#4 = R9 = X coordinate down/right corner
 mov eax,18+5                 ; RAX = Transit for Parm#5 = Y coordinate down/right corner
 call HelperTextConstDraw
 ;---------- Print statistics table, lines and texts ---------------------------;
-; Horizontal sequence of strings:  CPI, nsPI, MBPS
-lea r14,[DrawTableUp]      ; R14 = Pointer to text strings short pointers table
-mov edx,522                ; RDX = X coordinate up/left corner
-mov r8d,27                 ; R8 = Y coordinate up/left corner
-mov r9d,522 + 40           ; R9 = X coordinate down/right corner
-mov eax,27 + 17            ; RAX = Y coordinate down/right corner
+;---------- Horizontal sequence of strings:  CPI, nsPI, MBPS ------------------;
+lea r14,[CLKS_MBPS_TEXTS]      ; R14 = Pointer to text strings pointers table
+mov r13d,DRAW_TABLE_UP_COUNT   ; R13 = Strings count
+mov edx,522                    ; RDX = X coordinate up/left corner
+mov r8d,27                     ; R8 = Y coordinate up/left corner
+mov r9d,522 + 40               ; R9 = X coordinate down/right corner
+mov eax,27 + 17                ; RAX = Y coordinate down/right corner
 @@:
-movzx rcx,word [r14]       ; Get 16-bit compact-encoded offset
-add r14,2                  ; Update pointer to next offset
-jrcxz @f                   ; Go exit if terminator (0) detected
-lea r12,[rcx + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
+mov r12,[r14]                  ; R12 = Pointer to text string
+add r14,8                      ; Update pointer to next offset
 call HelperTextConstDraw
-add edx,64                 ; Shift 64 points right, X+64
-add r9d,64                 ; Shift 64 points right, X+64
-jmp @b                     ; cycle for: CPI, nsPI, MBPS 
+add edx,64                     ; Shift 64 points right, X+64
+add r9d,64                     ; Shift 64 points right, X+64
+dec r13d
+jnz @b                         ; cycle for: CPI, nsPI, MBPS 
+;---------- Vertical sequence of strings: maximum, minimum, average, median ---;
+; R14 = Pointer to continue of text strings pointers table
+mov r13d,DRAW_TABLE_LEFT_COUNT ; R13 = Strings count
+mov edx,458                    ; RDX = X coordinate up/left corner
+mov r8d,27 + 19                ; R8 = Y coordinate up/left corner
+mov r9d,458 + 60               ; R9 = X coordinate down/right corner
+mov eax,27 + 19 + 17           ; RAX = Y coordinate down/right corner
 @@:
-;---------- Vertical sequence of strings:  maximum, minimum, average, median --;
-lea r14,[DrawTableLeft]    ; R14 = Pointer to text strings short pointers table
-mov edx,458                   ; RDX = X coordinate up/left corner
-mov r8d,27 + 19               ; R8 = Y coordinate up/left corner
-mov r9d,458 + 60              ; R9 = X coordinate down/right corner
-mov eax,27 + 19 + 17          ; RAX = Y coordinate down/right corner
-@@:
-movzx rcx,word [r14]          ; Get 16-bit compact-encoded offset
-add r14,2                     ; Update pointer to next offset
-jrcxz @f                      ; Go exit if terminator (0) detected
-lea r12,[rcx + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
+mov r12,[r14]                  ; Get pointer to text string
+add r14,8                      ; Update pointer to next offset
 call HelperTextConstDraw
-add r8d,15                    ; Shift 15 points down, Y+15
-add eax,15                    ; Shift 15 points down, Y+15
-jmp @b                        ; cycle for: maximum, minimum, average, median
-@@:
+add r8d,15                     ; Shift 15 points down, Y+15
+add eax,15                     ; Shift 15 points down, Y+15
+dec r13d
+jnz @b                         ; cycle for: maximum, minimum, average, median
 ;---------- Lines of table, up horizontal line and left vertical line ---------;
 mov [rdi + RECT.left],519
 mov [rdi + RECT.top],27 + 17
@@ -740,7 +738,7 @@ jnz .AsmDump
 .skipAsmDump:
 ;---------- TSC clock frequency -----------------------------------------------;
 push rbx rdi
-lea rdi,[DrawValueTSC]
+lea rdi,[DRAW_TSC_VALUE]
 mov word [rdi],0000h + '?'         ; This char '?' used if error
 mov rax,[MEM_OPB.tscFrequencyMHz]  ; RAX = TSC Frequency, MHz
 test rax,rax                       ; Frequency = 0 means error
@@ -758,7 +756,7 @@ mov edx,SUBWINX - 187        ; Parm#2 = RDX = X coordinate up/left corner
 mov r8d,6                    ; Parm#3 = R8 = Y coordinate up/left corner
 mov r9d,SUBWINX - 5          ; Parm#4 = R9 = X coordinate down/right corner
 mov eax,6+18                 ; RAX = Transit for Parm#5 = Y coordinate down/right corner
-lea r12,[DrawTextTSC]        ; R12 = Pointer to text string
+lea r12,[DRAW_TSC]           ; R12 = Pointer to text string
 call HelperTextConstDraw
 ;---------- This text strings must be updated at each visualization tick ------;
 .RedrawTexts:

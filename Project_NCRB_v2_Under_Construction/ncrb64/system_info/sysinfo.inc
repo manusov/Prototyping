@@ -177,6 +177,10 @@ mov [rdx + BINDCPU.secondVmm],rsi     ; Argument for SET_PTR script command
 lea rdx,[BIND_LIST.bindSys]
 lea rdi,[rdx + BINDSYS.procTotal]
 mov eax,[OS_DATA.activeProcessorCount]      ; Processors total
+test eax,eax
+jnz @f
+mov eax,[OS_DATA.systemInfo.dwNumberOfProcessors]
+@@:
 mov bl,0
 call DecimalPrint32
 mov al,0
@@ -272,6 +276,10 @@ mov al,0
 stosb
 lea rdi,[rdx + BINDLIST.bindTopology.sockets]
 mov eax,[r8 + SUMMARYTOPOLOGY.sockets]
+test eax,eax
+jnz @f
+inc eax
+@@:
 call DecimalPrint32
 mov al,0
 stosb
@@ -418,14 +426,10 @@ jnz @f
 mov ecx,000000003h   ; Read MOV, option 0, enable and select bits = 0, 1
 @@:
 or rbx,rcx           ; Select default ASM method by CPU features support check
-
-
-;--- under construction restrictions ---
+; UNDER CONSTRUCTION RESTRICTIONS
 mov rax,0FFFF00FFFFFFFFFFh
 and rbx,rax
-;--- under construction restrictions ---
-
-
+; UNDER CONSTRUCTION RESTRICTIONS
 mov qword [rdi + BINDLIST.setMemMethod],rbx
 ;--- Benchmark objects: cache memory, DRAM or user-defined block size ---------;
 ; Plus custom block size
@@ -502,9 +506,10 @@ je @f
 inc ebx
 @@:
 mov word [rdi + BINDLIST.setMemLpages],bx
-;---------- Benchmark options, unconditionally set ----------------------------;
+;---------- Benchmark options, set unconditionally when defaults set ----------;
+mov word [rdi + BINDLIST.setMemOption],00000001b  ; Nontemporal = on, Force x32 = off
 mov word [rdi + BINDLIST.setMemAccess],00000010b  ; Access step
-mov word [rdi + BINDLIST.setMemPref],00000010b    ; 01010101b  ; Prefetch modes
+mov word [rdi + BINDLIST.setMemPref],000000010b   ; Prefetch modes
 mov word [rdi + BINDLIST.setMemMeas],11010101b    ; Measure precision modes
 mov word [rdi + BINDLIST.setMemPix],00010111b     ; Pixels approximation modes
 ;---------- Text blocks for viewers -------------------------------------------;

@@ -89,6 +89,7 @@ jmp .copyAcpi
 .sratFound:
 or byte [ebx],00000100b
 lea ebx,[ACPI_DATA.tempSrat]
+;---------- Unified ACPI table header parse -----------------------------------;
 .copyAcpi:
 lea esi,[edx + 10]
 lea edi,[ebx + BINDACPI.oem]
@@ -107,6 +108,7 @@ mov ax,0000 + 'h'
 stosw 
 cmp ebp,'SRAT'
 je .sratParse
+;---------- MADT ( Multiple APIC description Table ) parse --------------------;
 .madtParse:        ; Interpreting ACPI MADT table, get number of APICs
 lea esi,[edx + 44] ; ESI = Pointer to APIC list in the MADT
 mov ecx,[edx + 4]
@@ -129,6 +131,7 @@ movzx eax,byte [esi + 1] ; RAX = Size of structure, for skip it and access next
 add esi,eax
 cmp esi,ecx
 jb .madtScanApics  ; Cycle for scan structures in the MADT
+;--- Write text results of MADT parse, string at system information screen ----;
 push ebx edi
 lea edi,[ebx + BINDACPI.comment]
 mov ax,STR_LOCAL_APICS
@@ -146,8 +149,115 @@ mov al,0
 stosb
 pop ebx
 jmp .skipTable
+;---------- SRAT ( System/Static Resource Affinity Table Table ) parse --------;
 .sratParse:
-; UNDER CONSTRUCTION.
+push ebx
+lea esi,[edx + 44]   ; ESI = Pointer to APIC list in the MADT
+mov ebx,[edx + 04]
+add ebx,edx          ; EBX = Table limit
+;--- Push local variables, qword [esp] = port R8, dword [esp + 8] = port R9D --;
+; port R8 = domains bitmap, port R9D = wrong domain number flag
+push 0 0 0
+;---------- Pre-blank registers used as counters ------------------------------;
+xor ecx,ecx                   ; ECX = Counter of CPUs (SRAT)
+xor edx,edx                   ; EDX = Counter of RAMs (SRAT)
+;---------- Cycle for scan nodes ----------------------------------------------;
+.sratScanNodes:
+mov al,[esi]
+mov dword [esp + 08],-1          ; Error marker, set
+cmp al,2
+ja .exitSrat
+mov dword [esp + 08],0           ; Error marker, clear
+;---------- Detect processor affinity structure -------------------------------;
+cmp al,0                         ; 0 = Processor affinity structure
+jne @f                           ; Go skip if not a CPU
+test byte [esi + 04],00000001b   ; Check Flags.Enable
+jz @f                            ; Go skip if entry disabled
+inc ecx                          ; CPUs +1
+mov ebp,[esi + 09]
+and ebp,00FFFFFFh
+shl ebp,24                       ; This component, bits[31-08] only for CPUs
+@@:
+;---------- Detect memory affinity structure ----------------------------------; 
+cmp al,1                         ; 1 = Memory affinity structure
+jne @f
+test byte [esi + 28],00000001b   ; Check Flags.Enable
+jz @f                            ; Go skip if entry disabled
+inc edx                          ; RAMs +1
+xor ebp,ebp                      ; This component, bits[31-08]=0 for RAMs
+@@:
+mov al,[esi + 02]                ; AL = NUMA Proximity Domain number
+and eax,00011111b                ; Select bits for 32-bit half-mask
+push ecx
+xor ecx,ecx
+bts ecx,eax
+test byte [esi + 02],00100000b 
+jnz .labelHigh
+or [esp + 00 + 04 + 00],ecx
+jmp .labelDone
+.labelHigh:
+or [esp + 00 + 04 + 04],ecx
+.labelDone:
+pop ecx
+cmp byte [esi + 02],63
+jbe @f
+mov dword [esp + 08], -1   ; Mark output as invalid if Domain Number > 63
+@@:
+;---------- Make of cycle for scan nodes ---------------------------------------;
+movzx eax,byte [esi + 01]  ; EAX = Size of structure, for skip it and access next
+mov dword [esp + 08],-1    ; Error marker, set
+cmp al,0
+je .exitSrat
+add esi,eax
+cmp esi,ebx
+jb .sratScanNodes          ; Cycle for scan structures
+;---------- End of cycle for scan nodes ---------------------------------------;
+xor eax,eax              ; Number of NUMA nodes
+mov bl,64
+mov esi,[esp + 00]       ; EBP:ESI = domains bitmap
+mov ebp,[esp + 04]
+.scanOnes:               ; This cycle for count "1" bits = Number of NUMA nodes
+shrd esi,ebp,1           ; CF=1(C) if current bit =1
+jnc @f
+inc eax                  ; Counter +1 if "1" detected
+@@:
+shr ebp,1
+dec bl
+jnz .scanOnes
+.exitSrat:
+or eax,[esp + 08]        ; This is checks for invalid number
+;---------- Remove stack frame ------------------------------------------------;
+add esp,12
+pop ebx
+;--- Write text results of SRAT parse, string at system information screen ----;
+push edx ecx eax                   ; EDX = RAMs, ECX = CPUs, EAX = NUMA domains
+lea edi,[ebx + BINDACPI.comment]
+mov ax,STR_DOMAINS
+call PoolStringWrite 
+mov bl,0
+pop eax
+cmp eax,-1
+je .badDomains
+call DecimalPrint32
+jmp .doneDomains
+.badDomains:
+mov ax,'? '
+stosw
+.doneDomains:
+mov ax,', '
+stosw
+mov ax,STR_CPUS
+call PoolStringWrite 
+pop eax
+call DecimalPrint32
+mov ax,', '
+stosw
+mov ax,STR_RAMS
+call PoolStringWrite 
+pop eax
+call DecimalPrint32
+mov al,0
+stosb
 .skipTable:
 ;--- end of addition for show ACPI tables MADT and SRAT at screen 0 -----------;
 pop ebp edx ebx edi esi ecx

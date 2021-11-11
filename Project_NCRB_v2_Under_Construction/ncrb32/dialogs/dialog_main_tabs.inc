@@ -75,12 +75,158 @@ jmp .processed
 mov eax,PARM_WPARAM
 cmp ax,IDB_SYSINFO_CANCEL    ; Detect click "Exit" button in the child window
 je .wmclose
+cmp ax,IDB_MEMORY_CANCEL
+je .wmclose
+cmp ax,IDB_OS_CANCEL
+je .wmclose
+cmp ax,IDB_NAT_OS_CANCEL
+je .wmclose
+cmp ax,IDB_TOPOL_CANCEL
+je .wmclose
+cmp ax,IDB_TOPOL_EX_CANCEL
+je .wmclose
+cmp ax,IDB_NUMA_CANCEL
+je .wmclose
+cmp ax,IDB_P_GROUPS_CANCEL
+je .wmclose
+cmp ax,IDB_ACPI_CANCEL
+je .wmclose
+cmp ax,IDB_A_CPUID_CANCEL
+je .wmclose
 cmp ax,IDB_MEMORY_RUN
 je .memoryRun
 cmp ax,IDB_MEMORY_DRAW
 je .memoryDraw
 cmp ax,IDB_SYSINFO_VBRF
 je .vectorBriefRun
+cmp ax,IDB_MEMORY_DEFAULTS
+je .memoryDefaults
+;---------- Detect events for make widgets dependency -------------------------;
+;---------- Widget "Nontemporal" ----------------------------------------------;
+lea edi,[BIND_LIST]                           ; RDI = Pointer to GUI BINDLIST
+mov si,ax                                     ; SI  = Checkbox ID
+mov ax,BINDER_GET_MEMORY
+call Binder                                   ; Read current state of widgets
+cmp si,IDB_MEMORY_ASM_A0
+jb @f
+cmp si,IDB_MEMORY_ASM_A8
+jbe .ntOff
+@@:
+cmp si,IDB_MEMORY_ASM_B0
+jb @f
+cmp si,IDB_MEMORY_ASM_B8
+jbe .ntOn 
+@@:
+cmp si,IDB_MEMORY_ASM_C0
+jb @f
+cmp si,IDB_MEMORY_ASM_C7
+jbe .ntOff 
+@@:
+cmp si,IDB_MEMORY_DRAM
+je  .ntOn 
+cmp si,IDB_MEMORY_L1
+jb @f
+cmp si,IDB_MEMORY_CUSTOM
+jbe  .ntOff 
+@@:
+jmp .processed
+;---------- Continue for widget "Nontemporal", handling events ----------------;
+.ntOff:
+mov cl,00000000b
+jmp @f
+.ntOn:
+mov cl,00000000b
+test [edi + BINDLIST.getMemObject],00010000b  ; Check object type is DRAM
+jz @f
+mov cl,00000010b
+@@:
+test [edi + BINDLIST.getMemMethod],0003FE00h  ; Check asm method: SSE/AVX/AVX512
+jz @f
+setnz ch
+or cl,ch
+cmp cl,00000010b   ; Prevent situation not supported and enabled
+jnz @f
+mov cl,00000000b
+@@:
+mov [edi + BINDLIST.scratchPad],cl
+mov ax,BINDER_WIDGET_NONTEMPORAL
+call Binder
+;---------- Widget(s) "Prefetch" ----------------------------------------------;
+cmp si,IDB_MEMORY_ASM_B0
+je .prOn
+cmp si,IDB_MEMORY_ASM_B3
+je .prOn
+cmp si,IDB_MEMORY_ASM_B6
+je .prOn
+cmp si,IDB_MEMORY_ASM_A0
+jb @f
+cmp si,IDB_MEMORY_ASM_C7
+jbe .prOff
+@@:
+cmp si,IDB_MEMORY_DRAM
+je .prOn
+cmp si,IDB_MEMORY_L1
+jb @f 
+cmp si,IDB_MEMORY_CUSTOM
+jbe .prOff
+@@:
+jmp .processed
+;---------- Continue for widget "Prefetch", handling events -------------------;
+.prOff:
+mov cx,0000000000000010b
+jmp @f
+.prOn:
+mov cx,0000000000000010b
+test [edi + BINDLIST.getMemMethod],00009200h  ; Check Read SSE/AVX/AVX512
+jz @f
+test [edi + BINDLIST.getMemObject],00010000b  ; Check object type is DRAM
+jz @f
+mov cx,0000000001011101b
+@@:
+mov word [edi + BINDLIST.scratchPad],cx
+mov ax,BINDER_WIDGET_PREFETCH
+call Binder
+;---------- Widget(s) "Custom block size" -------------------------------------;
+cmp si,IDB_MEMORY_CUSTOM
+je .csOn
+cmp si,IDB_MEMORY_L1
+jb @f
+cmp si,IDB_MEMORY_DRAM
+jbe .csOff
+@@:
+jmp .widgetForce32x2
+;---------- Continue for widget "Custom block size", handling events ----------;
+.csOff:
+mov cl,00000000b
+jmp @f
+.csOn:
+mov cl,00000001b
+@@:
+mov [edi + BINDLIST.scratchPad],cl
+mov ax,BINDER_WIDGET_CUSTOM_SIZE
+call Binder
+;---------- Widget "Force 32x2" -----------------------------------------------;
+.widgetForce32x2:
+cmp si,IDB_MEMORY_ASM_C6
+je .f32on
+cmp si,IDB_MEMORY_ASM_C7
+je .f32on 
+cmp si,IDB_MEMORY_ASM_A0
+jb @f
+cmp si,IDB_MEMORY_ASM_C5
+jbe .f32off
+@@:
+jmp .processed
+;---------- Continue for widget "Force 32x2", handling events -------------------;
+.f32on:
+mov cl,00000001b
+jmp @f
+.f32off:
+mov cl,00000000b
+@@:
+mov [edi + BINDLIST.scratchPad],cl
+mov ax,BINDER_WIDGET_FORCE32X2
+call Binder
 jmp .processed
 ;---------- Handler for "Run" button ------------------------------------------;
 .memoryRun:
@@ -120,6 +266,23 @@ push DialogProcChildVectorBrief
 push ebx
 push IDD_CHILD_VECTOR_BRIEF
 jmp .entryDialog
+;---------- Handler for "Defaults" button -------------------------------------;
+.memoryDefaults:
+mov ax,BINDER_SET_MEMORY
+call Binder
+jmp .processed
+;---------- Handler for runtime errors ----------------------------------------;
+.runtimeError:
+mov esi,[APP_DATA.lockedStrings]
+movzx eax,al
+add eax,STR_RUNTIME_ALLOC
+call IndexString       ; Return ESI = Selected string address 
+push MB_ICONERROR      ; Parm#4 = Attributes
+push PROGRAM_NAME      ; Parm#3 = Pointer to title (caption) string
+push esi               ; Parm#2 = Pointer to string: error name 
+push ebx               ; Parm#1 = Parent Window = NULL
+call [MessageBox]  
+jmp .processed
 ;---------- WM_CLOSE handler: close window ------------------------------------;
 .wmclose:
 mov ecx,[edi + APPDATA.hMain]
@@ -136,15 +299,3 @@ mov eax,1
 pop edi esi ebx ebp
 ret 16
 
-;---------- Handler for runtime errors ----------------------------------------;
-.runtimeError:
-mov esi,[APP_DATA.lockedStrings]
-movzx eax,al
-add eax,STR_RUNTIME_ALLOC
-call IndexString       ; Return ESI = Selected string address 
-push MB_ICONERROR      ; Parm#4 = Attributes
-push PROGRAM_NAME      ; Parm#3 = Pointer to title (caption) string
-push esi               ; Parm#2 = Pointer to string: error name 
-push ebx               ; Parm#1 = Parent Window = NULL
-call [MessageBox]  
-jmp .processed

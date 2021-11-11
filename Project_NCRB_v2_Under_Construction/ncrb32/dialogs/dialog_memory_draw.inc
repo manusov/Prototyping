@@ -66,7 +66,7 @@ push eax                         ; Parm#6 = Offset in the file-mapping object, n
 push eax                         ; Parm#5 = Handle to file-mapping object, not used here
 push [GC_PARMS.bitmapPointer]    ; Parm#4 = Pointer to Bitmap Pointer variable
 push DIB_RGB_COLORS              ; Parm#3 = Type of color data
-push BitmapInfo                  ; Parm#2 = Pointer to Bitmap Descriptor
+push [APP_DATA.lockedBitmapInfo] ; Parm#2 = Pointer to Bitmap Descriptor
 push esi                         ; Parm#1 = Handle to a Device Context
 call [CreateDIBSection]
 mov [GC_PARMS.handleBitmap],eax              
@@ -75,9 +75,9 @@ push esi                         ; Parm#1 = Handle to a Device Context
 call [SelectObject]
 ;---------- Create brushes ----------------------------------------------------;
 cld
-lea esi,[BrushesList]             ; ESI = Pointer to color data
-lea edi,[GC_PARMS.handlesBrushes] ; EDI = Pointer for store brushes handles
-mov ebp,4                         ; EBP = Number of brushes
+mov esi,[APP_DATA.lockedBrushesList] ; ESI = Pointer to color data
+lea edi,[GC_PARMS.handlesBrushes]    ; EDI = Pointer for store brushes handles
+mov ebp,4                            ; EBP = Number of brushes
 @@:
 lodsd                            ; EAX = Color, RSI+4, select next color 
 push eax                         ; Parm#1 = Color
@@ -613,13 +613,13 @@ push COLOR_TEXT_UNITS     ; Parm#2 = Text front color value = 00bbggrrh
 push [GC_PARMS.handleMemDC]        ; Parm#1 = Handle to a Device Context
 call [SetTextColor]
 mov eax,[DRAW_PARMS.selectUnits]
-lea esi,[U_B]             ; ESI = Pointer to text string, size units select
+mov esi,[UNITS_TEXTS.bytes]   ; ESI = Pointer to text string, size units select
 cmp al,0
 je @f
-lea esi,[U_KB]
+mov esi,[UNITS_TEXTS.kb]
 cmp al,1
 je @f
-lea esi,[U_MB]
+mov esi,[UNITS_TEXTS.mb]
 @@:
 mov edx,SUBWINX-49        ; EDX = X coordinate up/left corner
 mov ecx,SUBWINY-43        ; ECX = Y coordinate up/left corner
@@ -627,10 +627,10 @@ mov ebx,SUBWINX-13        ; EBX = X coordinate down/right corner
 mov eax,SUBWINY-25        ; EAX = Y coordinate down/right corner
 call HelperTextConstDraw
 ;---------- Prepare for Y-units, use color from previous step -----------------;
-lea esi,[U_MBPS]             ; ESI = Pointer to text string, performance units 
+mov esi,[UNITS_TEXTS.mbps]   ; ESI = Pointer to text string, performance units 
 cmp [DRAW_PARMS.selectMode],0
 je @f
-lea esi,[U_NS]
+mov esi,[UNITS_TEXTS.nanoseconds]
 @@:
 mov edx,7                  ; EDX = X coordinate up/left corner
 mov ecx,5                  ; ECX = Y coordinate up/left corner
@@ -638,40 +638,36 @@ mov ebx,40+7+20 + 24       ; EBX = X coordinate down/right corner
 mov eax,18+5               ; EAX = Y coordinate down/right corner
 call HelperTextConstDraw
 ;---------- Print statistics table, lines and texts ---------------------------;
-; Horizontal sequence of strings:  CPI, nsPI, MBPS
-lea edi,[DrawTableUp]      ; EDI = Pointer to text strings short pointers table
-mov edx,522                ; RDX = X coordinate up/left corner
-mov ecx,27                 ; ECX = Y coordinate up/left corner
-mov ebx,522 + 40           ; EBX = X coordinate down/right corner
-mov eax,27 + 17            ; EAX = Y coordinate down/right corner
+;---------- Horizontal sequence of strings:  CPI, nsPI, MBPS ------------------;
+lea edi,[CLKS_MBPS_TEXTS]      ; EDI = Pointer to text strings pointers table
+mov ebp,DRAW_TABLE_UP_COUNT    ; EBP = Strings count
+mov edx,522                    ; EDX = X coordinate up/left corner
+mov ecx,27                     ; ECX = Y coordinate up/left corner
+mov ebx,522 + 40               ; EBX = X coordinate down/right corner
+mov eax,27 + 17                ; EAX = Y coordinate down/right corner
 @@:
-movzx ebp,word [edi]       ; Get 16-bit compact-encoded offset
-add edi,2                  ; Update pointer to next offset
-test ebp,ebp
-jz @f                         ; Go exit if terminator (0) detected
-lea esi,[ebp + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
+mov esi,[edi]                  ; ESI = Pointer to text string
+add edi,4                      ; Update pointer to next offset
 call HelperTextConstDraw
-add edx,64                 ; Shift 64 points right, X+64
-add ebx,64                 ; Shift 64 points right, X+64
-jmp @b                     ; cycle for: CPI, nsPI, MBPS 
+add edx,64                     ; Shift 64 points right, X+64
+add ebx,64                     ; Shift 64 points right, X+64
+dec ebp
+jnz @b                         ; cycle for:  CPI, nsPI, MBPS 
+;---------- Vertical sequence of strings: maximum, minimum, average, median ---;
+; EDI = Pointer to continue of text strings pointers table
+mov ebp,DRAW_TABLE_LEFT_COUNT  ; EBP = Strings count
+mov edx,458                    ; EDX = X coordinate up/left corner
+mov ecx,27 + 19                ; ECX = Y coordinate up/left corner
+mov ebx,458 + 60               ; EBX = X coordinate down/right corner
+mov eax,27 + 19 + 17           ; EAX = Y coordinate down/right corner
 @@:
-;---------- Vertical sequence of strings:  maximum, minimum, average, median --;
-lea edi,[DrawTableLeft]    ; EDI = Pointer to text strings short pointers table
-mov edx,458                ; RDX = X coordinate up/left corner
-mov ecx,27 + 19            ; ECX = Y coordinate up/left corner
-mov ebx,458 + 60           ; EBX = X coordinate down/right corner
-mov eax,27 + 19 + 17       ; EAX = Y coordinate down/right corner
-@@:
-movzx ebp,word [edi]       ; Get 16-bit compact-encoded offset
-add edi,2                  ; Update pointer to next offset
-test ebp,ebp
-jz @f                         ; Go exit if terminator (0) detected
-lea esi,[ebp + BasePointGui]  ; Convert compact offs. to 64-bit absolute address
+mov esi,[edi]                  ; ESI = Pointer to text string
+add edi,4                      ; Update pointer to next offset
 call HelperTextConstDraw
 add ecx,15                    ; Shift 15 points down, Y+15
 add eax,15                    ; Shift 15 points down, Y+15
-jmp @b                        ; cycle for: maximum, minimum, average, median
-@@:
+dec ebp
+jnz @b                        ; cycle for:  maximum, minimum, average, median
 ;---------- lines of table, up horizontal line and left vertical line ---------;
 lea ebx,[GRAPH_RECT]
 mov [ebx + RECT.left],519
@@ -742,7 +738,7 @@ dec ebp
 jnz .AsmDump 
 .skipAsmDump:
 ;---------- TSC clock frequency -----------------------------------------------;
-lea edi,[DrawValueTSC]
+lea edi,[DRAW_TSC_VALUE]
 mov word [edi],0000h + '?'                   ; This char '?' used if error
 mov eax,dword [MEM_OPB.tscFrequencyMHz + 0]  ; EDX:EAX = TSC Frequency, MHz
 mov edx,dword [MEM_OPB.tscFrequencyMHz + 4]
@@ -761,7 +757,7 @@ mov edx,SUBWINX - 187       ; EDX = X coordinate up/left corner
 mov ecx,6                   ; ECX = Y coordinate up/left corner
 mov ebx,SUBWINX - 5         ; EBX = X coordinate down/right corner
 mov eax,6+18                ; EAX = Y coordinate down/right corner
-lea esi,[DrawTextTSC]       ; ESI = Pointer to text string
+lea esi,[DRAW_TSC]          ; ESI = Pointer to text string
 call HelperTextConstDraw
 ;---------- This text strings must be updated at each visualization tick ------;
 .RedrawTexts:
