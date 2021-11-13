@@ -22,6 +22,15 @@ mov [edi + MEMUPB.runContext],eax  ; Setup run context for memory allocation mul
 mov eax,[esi + BINDLIST.getMemMethod]  ; TODO. Optimize offsets size by nested structures.
 bsf eax,eax
 mov [edi + MEMUPB.optionAsm],eax 
+;---------- Checkbox "Nontemporal ---------------------------------------------;
+mov al,[esi + BINDLIST.getMemOption]
+and eax,0011b
+mov ecx,eax
+and eax,0001b
+mov [edi + MEMUPB.optionNontemp],eax
+;---------- Checkbox "Force 32x2 (yet for ia32 version only) ------------------;
+shr ecx,1
+mov [edi + MEMUPB.optionForce32],ecx
 ;---------- Option prefetch ---------------------------------------------------;
 movzx eax,[esi + BINDLIST.getMemPref]
 bsf eax,eax
@@ -92,7 +101,7 @@ movzx eax,[esi + BINDLIST.getMemPix]
 bsf eax,eax
 mov [edi + MEMUPB.optionApprox],eax 
 ;---------- Option user-defined block -----------------------------------------;
-mov eax,dword [esi + BINDLIST.blockSizeEdit]
+mov eax,dword [esi + BINDLIST.getBlkCustom]
 mov [edi + MEMUPB.customBlockStart],eax
 ret
 ;---- Execute simple run benchmark scenario and build text data for visual ----;
@@ -147,12 +156,18 @@ lea edi,[ebp + BINDLIST.mrMethod]
 mov eax,[ebx + MEMIPB.updatedAsm]
 mov cx,STR_AM_NT_00
 cmp [ebx + MEMIPB.nonTemporalMode],0
-jne @f
+jne .doneNT
 mov cx,STR_AM_IA32_00
 cmp al,5
-jbe @f
+jbe .done3264
 mov cx,STR_AM_X64_00
-@@:
+.done3264:
+cmp eax,LATENCY_MODE
+jb .doneNT
+cmp [ebx + MEMIPB.force32mode],0
+je .doneNT
+add eax,LATENCY_MODE_COUNT
+.doneNT:
 add ax,cx
 call PoolStringWrite
 mov al,0
@@ -213,7 +228,7 @@ stosb
 ;---------- Build Prefetch distance string ------------------------------------;
 lea edi,[ebp + BINDLIST.mrDistance]
 mov eax,[ebx + MEMIPB.updatedDistance]
-add ax,STR_MR_PD_00
+add ax,STR_MR_PFDST_00
 call PoolStringWrite
 mov al,0
 stosb

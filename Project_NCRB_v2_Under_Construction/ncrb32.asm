@@ -45,13 +45,13 @@ include 'win32a.inc'               ; FASM definitions
 include 'data\data.inc'            ; NCRB project global definitions
 ;---------- Global application and version description definitions ------------;
 RESOURCE_DESCRIPTION    EQU 'NCRB Win32 edition ( UNDER CONSTRUCTION )'
-RESOURCE_VERSION        EQU '0.0.0.1'
+RESOURCE_VERSION        EQU '2.0.5.0'
 RESOURCE_COMPANY        EQU 'https://github.com/manusov'
 RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win32 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.04 for Windows ia32 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.05 for Windows ia32 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -1243,6 +1243,7 @@ VALUE_BUFFER_LIMIT  = 128 * 1024
 ; TODO. Add new methods, update AM_BYTE_COUNT, LATENCY_MODE, plus see below.
 AM_BYTE_COUNT       =  26     ; 26 bytes per methods primary list
 LATENCY_MODE        =  24     ; modes ID = 24, 25 for latency measurement.  TODO. USE TRANSLATION FOR TEMPORAL/NONTEMPORAL, THIS VALUE = 24*2=48.
+LATENCY_MODE_COUNT  =  2      ; Force 32x2 addend (this yet for ia32 version only)
 READ_SSE128_MODE    =  9      ; for add information about prefetch distance
 READ_AVX256_MODE    =  12     ; for add information about prefetch distance
 READ_AVX512_MODE    =  15     ; for add information about prefetch distance
@@ -1252,6 +1253,12 @@ READ_AVX512_MODE    =  15     ; for add information about prefetch distance
 ASM_ARGUMENT_LIMIT  =  AM_BYTE_COUNT - 1
 ; 45 names for assembler methods, result of AM_Selector translation
 ASM_RESULT_LIMIT    =  45 + 1
+; "Nontemporal" checkbox
+NONTEMPORAL_OFF     =  0
+NONTEMPORAL_ON      =  1
+; "Force 32x2" checkbox
+FORCE_32_OFF        =  0
+FORCE_32_ON         =  1
 ; Parallel threads option
 PARALLEL_LIMIT      =  2
 PARALLEL_NOT_SUP    =  0
@@ -1267,10 +1274,10 @@ TARGET_DRAM         =  4
 TARGET_CUSTOM       =  5
 ; PD = Prefetch distance
 PD_LIMIT            =  3
-PD_DEFAULT          =  0
-PD_MEDIUM           =  1
-PD_LONG             =  2
-PD_NOT_USED         =  3
+PD_NOT_USED         =  0
+PD_DEFAULT          =  1
+PD_MEDIUM           =  2
+PD_LONG             =  3
 ; HT = Hyper Threading
 HT_LIMIT            =  2
 HT_NOT_SUPPORTED    =  0
@@ -1377,6 +1384,8 @@ NUMA_LIST              DB  NUMA_LIST_SIZE    dup ?
 ; Test USER parameters, loaded from GUI widgets settings.
 struct MEMUPB
 optionAsm         dd  ?    ; Select test ASM method, one of procedures
+optionNontemp     dd  ?    ; Checkbox "Nontemporal"
+optionForce32     dd  ?    ; Checkbox "Force 32x2"
 optionDistance    dd  ?    ; Prefetch distance for non-temporal read: 0=default, 1=medium, 2=long
 optionTarget      dd  ?    ; Objects { L1, L2, L3, L4, DRAM, CUSTOM }
 optionParallel    dd  ?    ; Parallel { GRAY_NOT_SUP, DISABLED, ENABLED }
@@ -1432,6 +1441,7 @@ adaptiveProduct   dq  ?    ; Size * Repeats = Product , practic calc: Repeats = 
 ; Additionsl system information and management flags
 applicationMode   dd  ?    ; 0 = ia32 under Win32, 1 = x64, 2 = ia32 under Win64
 nonTemporalMode   dd  ?    ; 1 means performance pattern replaced by non-temporal patterns list
+force32mode       dd  ?    ; 1 means force 32x2 mode for latency measurement (yet for ia32 version only)
 sseSupported      dd  ?    ; Separate flag for save/restore SSE registers at child thread, 0=No, 1=Yes
 threadStop        dd  ?    ; Flag for stop child threads
 ends

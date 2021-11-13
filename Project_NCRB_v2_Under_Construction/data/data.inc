@@ -541,7 +541,7 @@ STR_OS_AVAILABLE       = STR_OS_PHYSICAL + 1
 STR_OS_MIN_LARGE       = STR_OS_PHYSICAL + 2
 ;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
-; Part 1 of 2, temporal variant.
+; Part 1 of 3, temporal variant.
 STR_AM_IA32_00         = STR_OS_MIN_LARGE + 1  
 STR_AM_IA32_01         = STR_AM_IA32_00 + 1   
 STR_AM_IA32_02         = STR_AM_IA32_00 + 2 
@@ -574,10 +574,12 @@ STR_AM_22              = STR_AM_IA32_00 + 28
 STR_AM_23              = STR_AM_IA32_00 + 29
 STR_AM_LCM             = STR_AM_IA32_00 + 30
 STR_AM_RDRAND          = STR_AM_IA32_00 + 31
+STR_AM_LCM_32X2        = STR_AM_IA32_00 + 32
+STR_AM_RDRAND_32X2     = STR_AM_IA32_00 + 33
 ;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
-; Part 2 of 2, non-temporal variant.
-STR_AM_NT_00           = STR_AM_RDRAND + 1  ; # 0
+; Part 2 of 3, non-temporal variant.
+STR_AM_NT_00           = STR_AM_RDRAND_32X2 + 1  ; # 0
 STR_AM_NT_01           = STR_AM_NT_00 + 1
 STR_AM_NT_02           = STR_AM_NT_00 + 2
 STR_AM_NT_03           = STR_AM_NT_00 + 3
@@ -591,9 +593,20 @@ STR_AM_NT_10           = STR_AM_NT_00 + 10
 STR_AM_NT_11           = STR_AM_NT_00 + 11
 STR_AM_NT_12           = STR_AM_NT_00 + 12
 STR_AM_NT_13           = STR_AM_NT_00 + 13
-STR_AM_NT_14           = STR_AM_NT_00 + 14  ; # 14
+STR_AM_NT_14           = STR_AM_NT_00 + 14       ; # 14
+;---------- Assembler instructions names for memory and cache benchmarks ------;
+; This strings also used as sequental pool when method name visual.
+; Part 3 of 3, non-temporal variant, medium and long prefetch distance
+; Note same strings used, 
+; prefetch distance comment show as separate additional string
+STR_AM_NT_15           = STR_AM_NT_00 + 15       ; # 15
+STR_AM_NT_16           = STR_AM_NT_00 + 16
+STR_AM_NT_17           = STR_AM_NT_00 + 17
+STR_AM_NT_18           = STR_AM_NT_00 + 18
+STR_AM_NT_19           = STR_AM_NT_00 + 19
+STR_AM_NT_20           = STR_AM_NT_00 + 20       ; # 20       
 ;---------- Modes names for memory and cache benchmarks -----------------------;
-STR_NON_TEMPORAL       = STR_AM_NT_14 + 1       ;  STR_AM_NT_23 + 1
+STR_NON_TEMPORAL       = STR_AM_NT_20 + 1
 STR_32X2               = STR_NON_TEMPORAL + 1
 ;---------- Target objects names for memory and cache benchmark ---------------;
 STR_MEMORY_L1          = STR_32X2 + 1
@@ -779,39 +792,39 @@ STR_MR_NUMA_04         = STR_MR_FIRST + 39
 STR_MR_PG_00           = STR_MR_FIRST + 40   ; PG option strings
 STR_MR_PG_01           = STR_MR_FIRST + 41
 STR_MR_PG_02           = STR_MR_FIRST + 42  
-STR_MR_PD_00           = STR_MR_FIRST + 43   ; Prefetch distance option strings          
-STR_MR_PD_01           = STR_MR_FIRST + 44
-STR_MR_PD_02           = STR_MR_FIRST + 45
-STR_MR_PD_03           = STR_MR_FIRST + 46
+STR_MR_PFDST_00        = STR_MR_FIRST + 43   ; Prefetch distance option strings          
+STR_MR_PFDST_01        = STR_MR_FIRST + 44
+STR_MR_PFDST_02        = STR_MR_FIRST + 45
+STR_MR_PFDST_03        = STR_MR_FIRST + 46
 STR_MR_MEASURE_00      = STR_MR_FIRST + 47   ; Measurement options strings
 STR_MR_MEASURE_01      = STR_MR_FIRST + 48
 STR_MR_MEASURE_02      = STR_MR_FIRST + 49
 STR_MR_MEASURE_03      = STR_MR_FIRST + 50
 STR_MR_PLUS_TIME       = STR_MR_FIRST + 51 
 ;---------- Strings for child screen = Memory and cache performance draw ------;
-STR_MD_PD_DEFAULT     = STR_MR_PLUS_TIME + 1
-STR_MD_PD_MEDIUM      = STR_MD_PD_DEFAULT + 1
-STR_MD_PD_LONG        = STR_MD_PD_DEFAULT + 2
-STR_MD_PD_NOT_USED    = STR_MD_PD_DEFAULT + 3
-STR_MD_PD_UNKNOWN     = STR_MD_PD_DEFAULT + 4 
-STR_MD_RESIZE         = STR_MD_PD_DEFAULT + 5 
-STR_MD_SILENT         = STR_MD_PD_DEFAULT + 6   
-STR_MD_THREADS        = STR_MD_PD_DEFAULT + 7 
-STR_MD_4K_PAGES       = STR_MD_PD_DEFAULT + 8
-STR_MD_LARGE_PAGES    = STR_MD_PD_DEFAULT + 9
-STR_MD_NUMA_OFF       = STR_MD_PD_DEFAULT + 10
-STR_MD_NUMA_UNAWARE   = STR_MD_PD_DEFAULT + 11
-STR_MD_NUMA_SINGLE    = STR_MD_PD_DEFAULT + 12
-STR_MD_NUMA_LOCAL     = STR_MD_PD_DEFAULT + 13
-STR_MD_NUMA_REMOTE    = STR_MD_PD_DEFAULT + 14
-STR_MD_CPI            = STR_MD_PD_DEFAULT + 15
-STR_MD_NSPI           = STR_MD_PD_DEFAULT + 16
-STR_MD_MBPS           = STR_MD_PD_DEFAULT + 17
-STR_MD_MINIMUM        = STR_MD_PD_DEFAULT + 18
-STR_MD_MAXIMUM        = STR_MD_PD_DEFAULT + 19
-STR_MD_AVERAGE        = STR_MD_PD_DEFAULT + 20
-STR_MD_MEDIAN         = STR_MD_PD_DEFAULT + 21
-STR_MD_TSC_CLOCK_MHZ  = STR_MD_PD_DEFAULT + 22
+STR_MD_PD_NOT_USED    = STR_MR_PLUS_TIME + 1
+STR_MD_PD_DEFAULT     = STR_MD_PD_NOT_USED + 1 
+STR_MD_PD_MEDIUM      = STR_MD_PD_NOT_USED + 2
+STR_MD_PD_LONG        = STR_MD_PD_NOT_USED + 3
+STR_MD_PD_UNKNOWN     = STR_MD_PD_NOT_USED + 4 
+STR_MD_RESIZE         = STR_MD_PD_NOT_USED + 5 
+STR_MD_SILENT         = STR_MD_PD_NOT_USED + 6   
+STR_MD_THREADS        = STR_MD_PD_NOT_USED + 7 
+STR_MD_4K_PAGES       = STR_MD_PD_NOT_USED + 8
+STR_MD_LARGE_PAGES    = STR_MD_PD_NOT_USED + 9
+STR_MD_NUMA_OFF       = STR_MD_PD_NOT_USED + 10
+STR_MD_NUMA_UNAWARE   = STR_MD_PD_NOT_USED + 11
+STR_MD_NUMA_SINGLE    = STR_MD_PD_NOT_USED + 12
+STR_MD_NUMA_LOCAL     = STR_MD_PD_NOT_USED + 13
+STR_MD_NUMA_REMOTE    = STR_MD_PD_NOT_USED + 14
+STR_MD_CPI            = STR_MD_PD_NOT_USED + 15
+STR_MD_NSPI           = STR_MD_PD_NOT_USED + 16
+STR_MD_MBPS           = STR_MD_PD_NOT_USED + 17
+STR_MD_MINIMUM        = STR_MD_PD_NOT_USED + 18
+STR_MD_MAXIMUM        = STR_MD_PD_NOT_USED + 19
+STR_MD_AVERAGE        = STR_MD_PD_NOT_USED + 20
+STR_MD_MEDIAN         = STR_MD_PD_NOT_USED + 21
+STR_MD_TSC_CLOCK_MHZ  = STR_MD_PD_NOT_USED + 22
 ;---------- Strings for child screen = Vector brief performance report --------;
 STR_VB_CPU_FEATURES    = STR_MD_TSC_CLOCK_MHZ + 1  
 STR_VB_AVX_256         = STR_VB_CPU_FEATURES + 1
@@ -1001,7 +1014,6 @@ getBlkStart    dq  ?
 getBlkStop     dq  ?
 getBlkStep     dd  ?
 getBlkDist     dd  ?
-blockSizeEdit  dq  ?
 ;---------- Memory and cache benchmarks screen, part 2 of 3 -------------------; 
 ; set widgets state by system information in the bindlist buffer
 ; also used by vector brief benchmark scenario

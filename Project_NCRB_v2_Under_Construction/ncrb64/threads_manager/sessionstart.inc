@@ -67,48 +67,33 @@ cmp eax,ASM_ARGUMENT_LIMIT
 ja .limit
 cmp edx,TARGET_LIMIT
 ja .limit
-;---------- Select prefetch distance for non-temporal optimization ------------;
-mov ecx,AM_BYTE_COUNT * 1                           ; RCX = Selector for table
-push rax
-mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED
-mov eax,[rsi + MEMUPB.optionDistance]
-cmp eax,PD_DEFAULT
-jne @f
-mov [rdi + MEMIPB.updatedDistance],eax
-@@:
-cmp eax,PD_MEDIUM
-jne @f
-mov [rdi + MEMIPB.updatedDistance],eax
-mov ecx,AM_BYTE_COUNT * 2
-@@:
-cmp eax,PD_LONG
-jne @f
-mov [rdi + MEMIPB.updatedDistance],eax
-mov ecx,AM_BYTE_COUNT * 3
-@@:
-pop rax
-;--- Remove prefetch distance option if associated methods not detected -------;
-cmp eax,READ_SSE128_MODE
-je @f
-cmp eax,READ_AVX256_MODE
-je @f
-cmp eax,READ_AVX512_MODE
-je @f
-mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED
-@@: 
-;---------- Remove non-temporal optimization if object type not a DRAM --------;
+;---------- Select non-temporal optimization mode -----------------------------;
 mov ch,0               ; CH = 0 , means TEMPORAL mode
-cmp edx,TARGET_DRAM
+mov ebp,[rsi + MEMUPB.optionNontemp]
+mov [rdi + MEMIPB.nonTemporalMode],ebp
+cmp ebp,NONTEMPORAL_ON
 je .ntMode
 mov [rdi + MEMIPB.updatedDistance],PD_NOT_USED  ; Remove prefetch distance option if not a DRAM
 jmp .doneMode
+;---------- Select prefetch distance for non-temporal optimization ------------;
 .ntMode:
+mov ecx,[rsi + MEMUPB.optionDistance]
+mov [rdi + MEMIPB.updatedDistance],ecx
+cmp ecx,PD_LONG
+ja @f
+sub ecx,PD_DEFAULT
+jb @f
+imul ecx,ecx,AM_BYTE_COUNT
+add rax,rcx
+@@:
+;---------- Continue after executed or skipped distance selection -------------; 
 mov cl,[NON_TEMPORAL_TRANSLATOR + rax]
 cmp cl,0FFh
 je .doneMode
 mov ch,1               ; CH = 1 , means NON TEMPORAL mode
 mov al,cl
 jmp .doneMode
+;---------- End of nontemporal and prefetch distance branches -----------------;
 .limit:
 xor eax,eax
 .doneMode:

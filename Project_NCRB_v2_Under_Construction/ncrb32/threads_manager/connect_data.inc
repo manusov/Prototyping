@@ -77,6 +77,7 @@ DQ  ADAPTIVE_SLOW
 ; Value in this table = non-temporal pattern ID
 ; for replace if non-temporal access, or FFh if no replace.
 NON_TEMPORAL_TRANSLATOR:
+;---------- Default prefetch distance -----------------------------------------;
 DB  0FFh   ; 0  = Pattern_Read_MOV32    , don't replace
 DB  0FFh   ; 1  = Pattern_Write_MOV32   , don't replace 
 DB  0FFh   ; 2  = Pattern_Copy_MOV32    , don't replace
@@ -103,4 +104,57 @@ DB  0FFh   ; 22 = Reserved for Scatter write AVX512           , don't replace
 DB  0FFh   ; 23 = Reserved for Cache optimized write (CLZERO) , don't replace
 DB  0FFh   ; 24 = Pattern_Latency_LCM ( LATENCY_MODE )        , don't replace
 DB  0FFh   ; 25 = Pattern_Latency_RDRAND ( LATENCY_MODE + 1 ) , don't replace
-
+;---------- Medium prefetch distance ------------------------------------------;
+DB  0FFh
+DB  0FFh 
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  15     ; 9  = Pattern_Read_SSE128   , translate to Pattern_NtpRead_M_SSE128
+DB  0
+DB  1 
+DB  17     ; 12 = Pattern_Read_AVX256   , translate to Pattern_NtpRead_M_AVX256        
+DB  2 
+DB  3  
+DB  19     ; 15 = Pattern_Read_AVX512   , translate to Pattern_NtRead_M_AVX512 
+DB  4 
+DB  5 
+DB  0FFh
+DB  0FFh
+DB  0FFh 
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+;---------- Long prefetch distance --------------------------------------------;
+DB  0FFh
+DB  0FFh 
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  16     ; 9  = Pattern_Read_SSE128   , translate to Pattern_NtpRead_L_SSE128
+DB  0
+DB  1 
+DB  18     ; 12 = Pattern_Read_AVX256   , translate to Pattern_NtpRead_L_AVX256        
+DB  2 
+DB  3  
+DB  20     ; 15 = Pattern_Read_AVX512   , translate to Pattern_NtRead_L_AVX512 
+DB  4 
+DB  5 
+DB  0FFh
+DB  0FFh
+DB  0FFh 
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh
+DB  0FFh

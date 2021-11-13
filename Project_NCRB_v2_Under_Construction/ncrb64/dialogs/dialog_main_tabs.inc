@@ -140,28 +140,36 @@ jb @f
 cmp si,IDB_MEMORY_CUSTOM
 jbe  .ntOff 
 @@:
+cmp si,IDB_MEMORY_NONTEMP
+jne @f
+mov cl,[rdi + BINDLIST.getMemOption]
+and cl,00000001b
+shl cl,1
+jz .prOff
+jmp .prOn
+@@:
 jmp .processed
 ;---------- Continue for widget "Nontemporal", handling events ----------------;
 .ntOff:
 mov cl,00000000b
+test [rdi + BINDLIST.getMemMethod],0003FE00h  ; Check asm method: SSE/AVX/AVX512
+jz @f
+mov cl,00000001b
 jmp @f
 .ntOn:
 mov cl,00000000b
-test [rdi + BINDLIST.getMemObject],00010000b  ; Check object type is DRAM
-jz @f
-mov cl,00000010b
-@@:
 test [rdi + BINDLIST.getMemMethod],0003FE00h  ; Check asm method: SSE/AVX/AVX512
 jz @f
-setnz ch
-or cl,ch
-cmp cl,00000010b   ; Prevent situation not supported and enabled
-jnz @f
-mov cl,00000000b
+mov cl,00000001b
+test [rdi + BINDLIST.getMemObject],00010000b  ; Check object type is DRAM
+jz @f
+mov cl,00000011b
 @@:
 mov [rdi + BINDLIST.scratchPad],cl
+push rcx
 mov ax,BINDER_WIDGET_NONTEMPORAL
 call Binder
+pop rcx          ; Bits: CL.0 = NTflag availability, CL.1 = NTflag state
 ;---------- Widget(s) "Prefetch" ----------------------------------------------;
 cmp si,IDB_MEMORY_ASM_B0
 je .prOn
@@ -184,17 +192,17 @@ jbe .prOff
 jmp .processed
 ;---------- Continue for widget "Prefetch", handling events -------------------;
 .prOff:
-mov cx,0000000000000010b
+mov dx,0000000000000010b
 jmp @f
 .prOn:
-mov cx,0000000000000010b
+mov dx,0000000000000010b
 test [rdi + BINDLIST.getMemMethod],00009200h  ; Check Read SSE/AVX/AVX512
 jz @f
-test [rdi + BINDLIST.getMemObject],00010000b  ; Check object type is DRAM
+test cl,00000010b                             ; Check NONTEMPORAL just set/clear
 jz @f
-mov cx,0000000001011101b
+mov dx,0000000001011100b
 @@:
-mov word [rdi + BINDLIST.scratchPad],cx
+mov word [rdi + BINDLIST.scratchPad],dx
 mov ax,BINDER_WIDGET_PREFETCH
 call Binder
 ;---------- Widget(s) "Custom block size" -------------------------------------;

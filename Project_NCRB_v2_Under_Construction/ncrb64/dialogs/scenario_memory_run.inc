@@ -22,6 +22,10 @@ mov [rdi + MEMUPB.runContext],eax  ; Setup run context for memory allocation mul
 mov eax,[rsi + BINDLIST.getMemMethod]
 bsf eax,eax
 mov [rdi + MEMUPB.optionAsm],eax 
+;---------- Checkbox "Nontemporal ---------------------------------------------;
+mov al,[rsi + BINDLIST.getMemOption]
+and eax,0001b
+mov [rdi + MEMUPB.optionNontemp],eax
 ;---------- Option prefetch ---------------------------------------------------;
 movzx eax,[rsi + BINDLIST.getMemPref]
 bsf eax,eax
@@ -92,7 +96,7 @@ movzx eax,[rsi + BINDLIST.getMemPix]
 bsf eax,eax
 mov [rdi + MEMUPB.optionApprox],eax 
 ;---------- Option user-defined block -----------------------------------------;
-mov rax,[rsi + BINDLIST.blockSizeEdit]
+mov rax,[rsi + BINDLIST.getBlkCustom]
 mov [rdi + MEMUPB.customBlockStart],rax
 ret
 ;---- Execute simple run benchmark scenario and build text data for visual ----;
@@ -200,7 +204,7 @@ stosb
 ;---------- Build Prefetch distance string ------------------------------------;
 lea rdi,[r14 + BINDLIST.mrDistance]
 mov eax,[r12 + MEMIPB.updatedDistance]
-add ax,STR_MR_PD_00
+add ax,STR_MR_PFDST_00
 call PoolStringWrite
 mov al,0
 stosb

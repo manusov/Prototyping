@@ -67,48 +67,43 @@ cmp eax,ASM_ARGUMENT_LIMIT
 ja .limit
 cmp edx,TARGET_LIMIT
 ja .limit
-;---------- Select prefetch distance for non-temporal optimization ------------;
-mov ecx,AM_BYTE_COUNT * 1                           ; ECX = Selector for table
-push eax
-mov [edi + MEMIPB.updatedDistance],PD_NOT_USED
-mov eax,[esi + MEMUPB.optionDistance]
-cmp eax,PD_DEFAULT
-jne .L20
-mov [edi + MEMIPB.updatedDistance],eax
-.L20:
-cmp eax,PD_MEDIUM
-jne .L21
-mov [edi + MEMIPB.updatedDistance],eax
-add ecx,AM_BYTE_COUNT * 2
-.L21:
-cmp eax,PD_LONG
-jne .L22
-mov [edi + MEMIPB.updatedDistance],eax
-add ecx,AM_BYTE_COUNT * 3
-.L22:
-pop eax
 ;--- Remove prefetch distance option if associated methods not detected -------;
-cmp eax,READ_SSE128_MODE
-je .L40
-cmp eax,READ_AVX256_MODE
-je .L40
-cmp eax,READ_AVX512_MODE
-je .L40
-mov [edi + MEMIPB.updatedDistance],PD_NOT_USED
-.L40: 
-;---------- Remove non-temporal optimization if object type not a DRAM --------;
+; This is redundant because GUI restrictions.
+; cmp eax,READ_SSE128_MODE
+; je .L40
+; cmp eax,READ_AVX256_MODE
+; je .L40
+; cmp eax,READ_AVX512_MODE
+; je .L40
+; mov [edi + MEMIPB.updatedDistance],PD_NOT_USED
+; .L40: 
+;---------- Select non-temporal optimization mode -----------------------------;
 mov ch,0               ; CH = 0 , means TEMPORAL mode
-cmp edx,TARGET_DRAM
+mov ebp,[esi + MEMUPB.optionNontemp]
+mov [edi + MEMIPB.nonTemporalMode],ebp
+cmp ebp,NONTEMPORAL_ON
 je .ntMode
 mov [edi + MEMIPB.updatedDistance],PD_NOT_USED  ; Remove prefetch distance option if not a DRAM
 jmp .doneMode
+;---------- Select prefetch distance for non-temporal optimization ------------;
 .ntMode:
+mov ecx,[esi + MEMUPB.optionDistance]
+mov [edi + MEMIPB.updatedDistance],ecx
+cmp ecx,PD_LONG
+ja @f
+sub ecx,PD_DEFAULT
+jb @f
+imul ecx,ecx,AM_BYTE_COUNT
+add eax,ecx
+@@:
+;---------- Continue after executed or skipped distance selection -------------; 
 mov cl,[NON_TEMPORAL_TRANSLATOR + eax]
 cmp cl,0FFh
 je .doneMode
 mov ch,1               ; CH = 1 , means NON TEMPORAL mode
 mov al,cl
 jmp .doneMode
+;---------- End of nontemporal and prefetch distance branches -----------------;
 .limit:
 xor eax,eax
 .doneMode:
@@ -117,6 +112,8 @@ mov [edi + MEMIPB.updatedAsm],eax       ; Select assembler method ID
 mov [edi + MEMIPB.updatedTarget],edx    ; Select target object (Cache/DRAM/Custom)
 movzx ecx,ch
 mov [edi + MEMIPB.nonTemporalMode],ecx
+mov edx,[esi + MEMUPB.optionForce32]
+mov [edi + MEMIPB.force32mode],edx
 ;---------- Setup asm routine address -----------------------------------------;
 ; set address and memory dump region, 
 ; note here EAX valid after previous fragment
@@ -138,6 +135,10 @@ jmp .doneDump
 ;---------- Latency branch ----------------------------------------------------;
 .latencyDump:             ; this branch for latency patterns
 sub eax,LATENCY_MODE      ; first latency method ID must be 0
+test edx,edx
+jz .skip32x2 
+add eax,LATENCY_MODE_COUNT
+.skip32x2:
 push eax
 call GetLatencyPattern
 mov [edi + MEMIPB.walkRoutine],eax  

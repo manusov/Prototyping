@@ -55,7 +55,7 @@ stosb
 ;--- Down comments strings, prefetch distance ( default, medium, long, N/A ) --;
 lea rdi,[r14 + BINDLIST.mdPrefetch]
 mov eax,[rbx + MEMIPB.updatedDistance]
-add ax,STR_MD_PD_DEFAULT
+add ax,STR_MD_PD_NOT_USED
 call PoolStringWrite
 mov al,0
 stosb

@@ -47,7 +47,7 @@ include 'win32a.inc'
 include 'data\data.inc'
 ;---------- Global application and version description definitions ------------;
 RESOURCE_DESCRIPTION  EQU  'NCRB universal resource library for Win32 and Win64'
-RESOURCE_VERSION      EQU  '0.0.0.1'
+RESOURCE_VERSION      EQU  '2.0.5.0'
 RESOURCE_COMPANY      EQU  'https://github.com/manusov'
 RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
 ;------------------------------------------------------------------------------;
@@ -604,7 +604,7 @@ DB  'Available'            , 0
 DB  'Minimum large page'   , 0
 ;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
-; Part 1 of 2, temporal variant.
+; Part 1 of 3, temporal variant.
 DB  'Read x86 (MOV)'                      , 0
 DB  'Write x86 (MOV)'                     , 0
 DB  'Copy x86 (MOV)'                      , 0
@@ -637,9 +637,11 @@ DB  'Scatter write AVX-512 (VSCATTERQPD)' , 0
 DB  'Cache optimized write (CLZERO)'      , 0
 DB  'Latency (LCM)'                       , 0  
 DB  'Latency (RDRAND)'                    , 0
+DB  'Latency 32x2 (LCM)'                  , 0
+DB  'Latency 32x2 (RDRAND)'               , 0
 ;---------- Assembler instructions names for memory and cache benchmarks ------;
 ; This strings also used as sequental pool when method name visual.
-; Part 2 of 2, non-temporal variant.
+; Part 2 of 3, non-temporal variant, default prefetch distance
 DB  'Non-temporal write SSE-128 (MOVNTPS)'                    , 0  ; # 0   
 DB  'Non-temporal copy SSE-128 (MOVAPS+MOVNTPS)'              , 0
 DB  'Non-temporal write AVX-256 (VMOVNTPD)'                   , 0
@@ -655,6 +657,17 @@ DB  'Non-temporal copy AVX-512 (VMOVNTDQA+VMOVNTPD)'          , 0
 DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0   
 DB  'Non-temporal copy SSE-128 (PREFETCHNTA+MOVAPS+MOVNTPS)'  , 0
 DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 14
+;---------- Assembler instructions names for memory and cache benchmarks ------;
+; This strings also used as sequental pool when method name visual.
+; Part 3 of 3, non-temporal variant, medium and long prefetch distance
+; Note same strings used, 
+; prefetch distance comment show as separate additional string
+DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0  ; # 15   
+DB  'Non-temporal read SSE-128 (PREFETCHNTA+MOVAPS)'          , 0  ; # 16
+DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 17
+DB  'Non-temporal read AVX-256 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 18
+DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 19   
+DB  'Non-temporal read AVX-512 (PREFETCHNTA+VMOVAPD)'         , 0  ; # 20 
 ;---------- Modes names for memory and cache benchmarks -----------------------;
 DB  'Nontemporal'                         , 0
 DB  'Force 32x2'                          , 0
@@ -842,20 +855,20 @@ DB  'force non-optimal (remote domains)'    , 0
 DB  'not supported'                         , 0   ; PG option strings
 DB  'no control (current group only)'       , 0
 DB  'force optimal (all groups)'            , 0  
-DB  'default'                               , 0   ; Prefetch distance option strings          
+DB  'not used by this test'                 , 0   ; Prefetch distance option strings
+DB  'default'                               , 0          
 DB  'medium'                                , 0
 DB  'long'                                  , 0
-DB  'not used by this test'                 , 0
 DB  'brief'                                 , 0   ; Measurement options strings
 DB  'careful'                               , 0
 DB  'brief adaptive'                        , 0
 DB  'careful adaptive'                      , 0
 DB  '  + 1000 ms measure CPUCLK + heating'  , 0
 ;---------- Strings for child screen = Memory and cache performance draw ------;
+DB  ' '                   , 0
 DB  'PD default'          , 0
 DB  'PD medium'           , 0
 DB  'PD long'             , 0
-DB  ' '                   , 0
 DB  'PD ?'                , 0
 DB  'Resize'              , 0
 DB  'Silent'              , 0
@@ -1586,7 +1599,7 @@ GET_SWITCH  IDB_MEMORY_ASM_C5   , BINDLIST.getMemMethod + 2 , 7
 GET_SWITCH  IDB_MEMORY_ASM_C6   , BINDLIST.getMemMethod + 3 , 0
 GET_SWITCH  IDB_MEMORY_ASM_C7   , BINDLIST.getMemMethod + 3 , 1
 GET_SWITCH  IDB_MEMORY_NONTEMP  , BINDLIST.getMemOption + 0 , 0
-GET_SWITCH  IDB_MEMORY_FORCE32  , BINDLIST.getMemOption + 0 , 2
+GET_SWITCH  IDB_MEMORY_FORCE32  , BINDLIST.getMemOption + 0 , 1
 GET_SWITCH  IDB_MEMORY_L1       , BINDLIST.getMemObject + 0 , 0
 GET_SWITCH  IDB_MEMORY_L2       , BINDLIST.getMemObject + 0 , 1
 GET_SWITCH  IDB_MEMORY_L3       , BINDLIST.getMemObject + 0 , 2

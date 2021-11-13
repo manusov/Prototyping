@@ -25,6 +25,7 @@
 ; TODO. PRE-BLANK RESULTS, OTHERWISE CAN SHOW PREVIOUS RESULTS WHEN ERROR.
 ; TODO. RUNTIME ERROR REPORTING.
 ; TODO. SOURCE STYLE: ".exit:", no ".Exit:", "L" labels names change.
+; TODO. CPU UTILIZATION AFTER DRAW CHART DONE.
 
 DrawSessionStart:
 pushad
@@ -44,12 +45,18 @@ lea edi,[ebp + BINDLIST.mdAsm]
 mov eax,[ebx + MEMIPB.updatedAsm]
 mov cx,STR_AM_NT_00
 cmp [ebx + MEMIPB.nonTemporalMode],0
-jne @f
+jne .doneNT
 mov cx,STR_AM_IA32_00
 cmp al,5
-jbe @f
+jbe .done3264
 mov cx,STR_AM_X64_00
-@@:
+.done3264:
+cmp eax,LATENCY_MODE
+jb .doneNT
+cmp [ebx + MEMIPB.force32mode],0
+je .doneNT
+add eax,LATENCY_MODE_COUNT
+.doneNT:
 add ax,cx
 call PoolStringWrite
 mov al,0
@@ -57,7 +64,7 @@ stosb
 ;--- Down comments strings, prefetch distance ( default, medium, long, N/A ) --; 
 lea edi,[ebp + BINDLIST.mdPrefetch]
 mov eax,[ebx + MEMIPB.updatedDistance]
-add ax,STR_MD_PD_DEFAULT
+add ax,STR_MD_PD_NOT_USED
 call PoolStringWrite
 mov al,0
 stosb
