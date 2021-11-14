@@ -48,8 +48,14 @@ mov r9,[rsi + MEMIPB.walkRoutine]       ; R9  = Pointer to pattern routine
 call ThreadsUpdatePattern  ; replace list build pattern to list walk pattern
 .bwmode:
 ;---------- Get start time point, by OS timer API ( alternative of TSC ) ------;
+lea rcx,[rsp + 32]       ; RCX = Pointer to updated variable, OS timer, 64-bit
+call [GetSystemTimeAsFileTime]
+mov rbx,[rsp + 32]
+.sync:
 lea rcx,[rsp + 32]  ; RCX = Pointer to updated variable, OS timer, 64-bit
 call [GetSystemTimeAsFileTime]
+cmp rbx,[rsp + 32]
+je .sync            ; Wait for next change for detect start of interval
 ;---------- Measurement pattern -----------------------------------------------;
 lea rcx,[THREAD_LIST]                  ; RCX = Pointer to threads list
 mov edx,[rsi + MEMIPB.updatedThreads]  ; EDX = number of threads
@@ -58,10 +64,10 @@ mov al,MSG_RUNTIME_TIMINGS             ; AL = error status, valid if CF=1 only
 jc .exit
 mov [rdi + MEMOPB.tscTimerDelta],rax   ; Store delta-TSC, units = TSC clocks
 ;---------- Get stop time point, by OS timer API ( alternative of TSC ) -------;
-lea rcx,[rsp+40]  ; RCX = Pointer to updated variable, OS timer, 64-bit
+lea rcx,[rsp + 40]  ; RCX = Pointer to updated variable, OS timer, 64-bit
 call [GetSystemTimeAsFileTime]
-mov rax,[rsp+40]  ; RAX = Time at this point
-sub rax,[rsp+32]  ; Subtract time before target fragment execution
+mov rax,[rsp + 40]  ; RAX = Time at this point
+sub rax,[rsp + 32]  ; Subtract time before target fragment execution
 mov [rdi + MEMOPB.osTimerDelta],rax    ; Store delta-OS timer, units = 100 ns 
 ;---------- Done --------------------------------------------------------------;
 clc            ; CF=0 means no errors

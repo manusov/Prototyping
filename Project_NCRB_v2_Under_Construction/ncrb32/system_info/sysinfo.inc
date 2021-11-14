@@ -136,8 +136,12 @@ mov ax,STR_MHZ
 call PoolStringWrite
 pop ebx edi
 ;---------- CPU instructions and OS context management features bitmaps -------; 
+; Include SSE support flag for context management at thread callback routine.
 mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 0]
 stosd
+and eax,0010b  ; Bit EAX.1 = SSE support flag
+shr eax,1
+mov [SYS_PARMS.sseSupported],eax
 mov eax,dword [ebx + CPUDATA.extractedFeaturesBitmap + 4]
 stosd
 mov eax,dword [ebx + CPUDATA.extractedAvx512Bitmap + 0]

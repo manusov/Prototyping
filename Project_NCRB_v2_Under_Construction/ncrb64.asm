@@ -45,13 +45,13 @@ include 'win64a.inc'               ; FASM definitions
 include 'data\data.inc'            ; NCRB project global definitions
 ;---------- Global application and version description definitions ------------;
 RESOURCE_DESCRIPTION    EQU 'NCRB Win64 edition ( UNDER CONSTRUCTION )'
-RESOURCE_VERSION        EQU '2.0.5.0'
+RESOURCE_VERSION        EQU '2.0.6.0'
 RESOURCE_COMPANY        EQU 'https://github.com/manusov'
 RESOURCE_COPYRIGHT      EQU '(C) 2021 Ilya Manusov'
 PROGRAM_NAME_TEXT       EQU 'NUMA CPU&RAM Benchmarks for Win64 ( UNDER CONSTRUCTION )'
 ABOUT_CAP_TEXT          EQU 'Program info'
 ABOUT_TEXT_1            EQU 'NUMA CPU&RAM Benchmarks'
-ABOUT_TEXT_2            EQU 'v2.00.05 for Windows x64 ( UNDER CONSTRUCTION )'
+ABOUT_TEXT_2            EQU 'v2.00.06 for Windows x64 ( UNDER CONSTRUCTION )'
 ABOUT_TEXT_3            EQU RESOURCE_COPYRIGHT 
 ;---------- Global identifiers definitions ------------------------------------;
 ID_EXE_ICON             = 100      ; This application icon
@@ -1389,6 +1389,7 @@ optionApprox      dd  ?    ; Approximation for X { 0=none, 1=X16, 2=X32 }
 runContext        dd  ?    ; Run context: 0 = "Run simple" , 1 = "Run drawings" 
 customBlockStart  dq  ?    ; Override start block size, or 0=default
 ends
+align 8
 MEM_UPB MEMUPB ?
 ;--- Memory and Cache Benchmark Input Parameters Block (IPB) definitions ------;
 ; This variables used for build input parameters for Memory/Math performance
@@ -1433,9 +1434,9 @@ adaptiveProduct   dq  ?    ; Size * Repeats = Product , practic calc: Repeats = 
 applicationMode   dd  ?    ; 0 = ia32 under Win32, 1 = x64, 2 = ia32 under Win64
 nonTemporalMode   dd  ?    ; 1 means performance pattern replaced by non-temporal patterns list
 force32mode       dd  ?    ; 1 means force 32x2 mode for latency measurement (yet for ia32 version only)
-sseSupported      dd  ?    ; Separate flag for save/restore SSE registers at child thread, 0=No, 1=Yes
 threadStop        dd  ?    ; Flag for stop child threads
 ends
+align 8
 MEM_IPB MEMIPB ?
 ;--- Memory and Cache Benchmark Output Parameters Block (OPB) definitions -----;
 ; This variables used for collect output results of Memory/Math 
@@ -1450,6 +1451,7 @@ tscPeriodNs       dq  ?    ; TSC period, nanoseconds, as double precision
 osTimerDelta      dq  ?    ; delta time at units = 100 ns, 64-bit long integer 
 tscTimerDelta     dq  ?    ; delta time at units = 1 TSC clk., 64-bit long int. 
 ends
+align 8
 MEM_OPB MEMOPB ?
 ;---------- Vector Brief Output Parameters Block (OPB) definitions ------------;
 ; Here OPB only, because no input parameters for vector brief.
@@ -1469,6 +1471,7 @@ dtAvx512sqrt    dq  ?      ; TSC clocks per AVX512 Square Root pattern
 dtX87cos        dq  ?      ; TSC clocks per x87 Cosine (FCOS) pattern
 dtX87sincos     dq  ?      ; TSC clocks per x87 Sine+Cosine (FSINCOS) pattern 
 ends
+align 8
 VECBR_OPB VECBROPB  ?
 ;---------- Key data for GUI application with resources -----------------------;  
 struct APPDATA

@@ -135,12 +135,6 @@ mov ax,STR_MR_APP_TYPE_64
 call PoolStringWrite          ; TODO. Make this 3 instructions as subroutine or complex parametrize with 2 offsets
 mov al,0
 stosb
-
-; TODO. Add strings for nontemporal variants.
-; STR_AM_IA32_00
-; STR_AM_X64_00
-; STR_AM_06
-
 ;---------- Build Assembler method string -------------------------------------;
 lea rdi,[r14 + BINDLIST.mrMethod]
 mov eax,[r12 + MEMIPB.updatedAsm]

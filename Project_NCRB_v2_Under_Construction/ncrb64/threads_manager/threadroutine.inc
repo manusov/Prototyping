@@ -13,7 +13,7 @@ ThreadRoutineSingleGroup:  ; Entry thread with save CPU context and stack alignm
 push rbx rsi rdi rbp r12 r13 r14 r15
 mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
-cmp [MEM_IPB.sseSupported],0     ; TODO. SUPPORT THIS VARIABLE.
+cmp [SYS_PARMS.sseSupported],0
 je @f                            ; Skip this operation if SSE not supported
 sub rsp,10*16                    ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6         ; non-volatile by convention, note ALIGN16
@@ -68,7 +68,7 @@ call [SetEvent]                    ; Call WinAPI function
 ;---------- Return from thread to OS caller -----------------------------------;
 add rsp,32 + 8
 pop rax
-cmp [MEM_IPB.sseSupported],0
+cmp [SYS_PARMS.sseSupported],0
 jz @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]
@@ -101,7 +101,7 @@ ThreadRoutineMultiGroup:  ; Entry thread with save CPU context and stack alignme
 push rbx rsi rdi rbp r12 r13 r14 r15
 mov rax,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
-cmp [MEM_IPB.sseSupported],0
+cmp [SYS_PARMS.sseSupported],0
 je @f                         ; Skip this operation if SSE not supported
 sub rsp,10*16                 ; 10 128-bit SSE registers XMM6-XMM15 must be
 movaps [rsp + 16*0],xmm6      ; non-volatile by convention, note ALIGN16
@@ -157,7 +157,7 @@ call [SetEvent]                    ; Call WinAPI function
 ;---------- Return from thread to OS caller -----------------------------------;
 add rsp,32 + 8
 pop rax
-cmp [MEM_IPB.sseSupported],0
+cmp [SYS_PARMS.sseSupported],0
 je @f                         ; Skip this operation if SSE not supported
 movaps xmm6,[rsp + 16*0]
 movaps xmm7,[rsp + 16*1]

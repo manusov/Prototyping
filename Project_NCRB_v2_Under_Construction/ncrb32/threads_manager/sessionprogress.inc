@@ -48,6 +48,13 @@ call ThreadsUpdatePattern  ; replace list build pattern to list walk pattern
 mov eax,esp        ; EAX = Pointer to updated variable, OS timer, 64-bit
 push eax           ; Parm#1 = Pointer to updated variable, OS timer, 64-bit 
 call [GetSystemTimeAsFileTime]
+mov ebx,[esp]
+.sync:
+mov eax,esp
+push eax
+call [GetSystemTimeAsFileTime]
+cmp ebx,[esp]
+je .sync          ; Wait for next change for detect start of interval
 ;---------- Measurement pattern -----------------------------------------------;
 lea ecx,[THREAD_LIST]                   ; ECX = Pointer to threads list
 mov edx,[esi + MEMIPB.updatedThreads]   ; EDX = number of threads
