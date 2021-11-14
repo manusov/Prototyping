@@ -99,7 +99,7 @@ stosb
 ;---------- Down comments strings, normal or large pages ----------------------;
 lea edi,[ebp + BINDLIST.mdPages]
 mov eax,[ebx + MEMIPB.updatedLP]
-add ax,STR_MD_4K_PAGES
+add ax,STR_MD_LP_NOT_USED
 call PoolStringWrite
 mov al,0
 stosb

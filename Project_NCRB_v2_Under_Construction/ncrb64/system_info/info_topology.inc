@@ -67,7 +67,7 @@ sub rcx,rsi
 test cl,00011111b
 jnz .error
 shr ecx,5
-jz .error
+jz .exit          ; jz .error
 push rsi rcx 0 0  ; Include local variables
 mov rdi,rbp
 .scanRelations:
@@ -191,6 +191,7 @@ call HelperCacheSummary
 mov al,0
 stosb
 mov rbp,rdi
+.exit:
 mov [DYNA_PTR.textTopology2.objectStop],rbp
 clc
 ret

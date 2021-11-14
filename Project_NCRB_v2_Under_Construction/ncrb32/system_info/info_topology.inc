@@ -69,7 +69,7 @@ test edx,edx
 jnz .error
 xchg ecx,eax
 test ecx,ecx
-jz .error
+jz .exit                 ; jz .error
 mov edi,ebp
 push ebx ecx esi 0 0 0   ; Include local variables
 mov esi,ebx
@@ -200,6 +200,7 @@ mov al,0
 stosb
 mov ebp,edi
 pop esi
+.exit:
 mov [DYNA_PTR.textTopology2.objectStop],ebp
 clc
 ret

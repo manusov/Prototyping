@@ -67,6 +67,7 @@ jc .errorTscFreq      ; Go error if TSC frequency measurement failed
 ;---------- Cache detection by CPUID ------------------------------------------;
 lea edi,[CPU_CACHE_DATA]
 call HelperCpuidCache
+clc
 ret
 ;---------- Errors handling ---------------------------------------------------;
 .errorCpuid:

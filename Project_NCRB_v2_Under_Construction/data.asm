@@ -47,7 +47,7 @@ include 'win32a.inc'
 include 'data\data.inc'
 ;---------- Global application and version description definitions ------------;
 RESOURCE_DESCRIPTION  EQU  'NCRB universal resource library for Win32 and Win64'
-RESOURCE_VERSION      EQU  '2.0.6.0'
+RESOURCE_VERSION      EQU  '2.0.7.0'
 RESOURCE_COMPANY      EQU  'https://github.com/manusov'
 RESOURCE_COPYRIGHT    EQU  '(C) 2021 Ilya Manusov'
 ;------------------------------------------------------------------------------;
@@ -865,7 +865,7 @@ DB  'brief adaptive'                        , 0
 DB  'careful adaptive'                      , 0
 DB  '  + 1000 ms measure CPUCLK + heating'  , 0
 ;---------- Strings for child screen = Memory and cache performance draw ------;
-DB  ' '                   , 0
+DB  ' '                   , 0  ; This for prefetch distance not available
 DB  'PD default'          , 0
 DB  'PD medium'           , 0
 DB  'PD long'             , 0
@@ -873,6 +873,7 @@ DB  'PD ?'                , 0
 DB  'Resize'              , 0
 DB  'Silent'              , 0
 DB  'Threads='            , 0
+DB  ' '                   , 0  ; This for large pages not available
 DB  '4K pages'            , 0
 DB  'Large pages'         , 0
 DB  ' '                   , 0
