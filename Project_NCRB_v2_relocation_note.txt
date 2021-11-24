@@ -1,0 +1,14 @@
+Project NCRB v2 relocated to:  
+https://github.com/manusov/NCRBv2
+
+source:  
+https://github.com/manusov/NCRBv2/tree/master/asm
+
+executables:  
+https://github.com/manusov/NCRBv2/tree/master/exe
+
+screens:  
+https://github.com/manusov/NCRBv2/tree/master/results
+
+See also NCRB v1 (legacy code):  
+https://github.com/manusov/NumaCpuAndRamBenchmarks
