@@ -1,0 +1,51 @@
+Storage Performance Engine v0.11 for Windows, x64 edition.
+
+Display console messages     = on
+Generate report file         = on
+Wait key press from user     = on
+Measurement scenario         = mbps
+File creation mode           = group
+File count                   = 10
+File size                    = 100 MB
+File I/O block size          = 10 MB
+File I/O repeats             = 1
+File data generation         = none
+Read synchronization         = on
+Write synchronization        = on
+Copy synchronization         = on
+Delay before read, ms        = 0
+Delay before write, ms       = 0
+Delay before copy, ms        = 0
+OS API optimization hints    = none
+Mixed read part              = 0
+Mixed write part             = 0
+NUMA aware                   = off
+NUMA node selected           = 0
+CPU affinity mask (0=None)   = 0000000000000000h
+Source file path             = g:\temp\src.bin
+Destination file path        = g:\temp\dst.bin
+
+Measure CPU clock frequency... 2497.15 MHz (400.45 ps)
+OS API functions detection... done
+Pointer to function VirtualAllocExNuma = 00007FFFC8C04240h
+Pointer to function SetThreadAffinityMask = 0000000000000000h
+Memory allocation... done
+Allocated memory base = 0000000000580000h
+Allocated memory size = 0000000000A03000h (10252 KB)
+Set CPU affinity mask... done
+Original affinity mask = 0000000000000000h
+Set affinity mask = 0000000000000000h
+Initialize file IO... done
+
+Write... done
+Copy... done
+Read... done
+Delete... done
+
+Restore CPU affinity mask... done
+Release memory... done
+
+Read speed = 186.94 MBPS
+Write speed = 175.04 MBPS
+Copy speed = 59.78 MBPS
+
