@@ -46,7 +46,7 @@ ret
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 .wminitdialog:
-; Locked because capture disabled.
+; Locked because WS_CAPTION + WS_SYSMENU disabled.
 ; mov r9,[hIcons + 0]
 ; mov r8d,ICON_SMALL
 ; mov edx,WM_SETICON 
@@ -89,11 +89,13 @@ jmp .statusOne
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
 .wmclose:
-
 ; TODO. Check all created objects for unselect, close, delete requirements.
 ;       Inspect initialization code for this.
-
 mov rcx,[r14 + PROGRESSBOX.hFont]
+jrcxz @f
+call [DeleteObject]
+@@:
+mov rcx,[r14 + PROGRESSBOX.hPen]
 jrcxz @f
 call [DeleteObject]
 @@:
@@ -218,6 +220,11 @@ call [EndPaint]
 jmp .statusZero
 
 ;---------- Local subroutines -------------------------------------------------;
+
+
+; TODO.
+; FULL REDESIGN REQUIRED. CAN DRAW ELLIPSE BY WINAPI.
+; BOOL WINAPI ARC.
 
 HelperCircleExternal:
 push rbp

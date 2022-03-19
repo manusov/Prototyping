@@ -252,7 +252,9 @@ call [FillRect]
 ;mov rcx,r13
 ;call [SelectObject]
 ;@@:
+
 mov rdx,rsi
 mov rcx,rbx
 call [EndPaint]
+
 jmp .statusZero

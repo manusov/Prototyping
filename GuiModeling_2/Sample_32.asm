@@ -71,7 +71,7 @@ IDB_EXIT               =  405
 IDB_OK                 =  406
 
 RESOURCE_DESCRIPTION  equ 'About Box sample (ia32)'
-RESOURCE_VERSION      equ '0.0.0.7'
+RESOURCE_VERSION      equ '0.0.0.8'
 RESOURCE_COMPANY      equ 'https://github.com/manusov'
 RESOURCE_COPYRIGHT    equ '(C) 2022 Ilya Manusov'
 
@@ -696,9 +696,32 @@ mov [esp],edi
 popad
 ret
 
+;---------- Copy text string terminated by 00h --------------------------------;
+; Note last byte 00h not copied.                                               ;
+;                                                                              ;
+; INPUT:   ESI = Source address                                                ;
+;          EDI = Destination address                                           ;
+;                                                                              ;
+; OUTPUT:  ESI = Modified by copy                                              ;
+;          EDI = Modified by copy                                              ;
+;          Memory at [Input EDI] modified                                      ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+StringWrite:
+cld
+.cycle:
+lodsb
+cmp al,0
+je .exit
+stosb
+jmp .cycle
+.exit:
+ret
+
 ; Connect modules under debug.
 include 'Draw_32.inc'
-include 'Progress_32.inc'
+; include 'Progress_32_1.inc'
+  include 'Progress_32_2.inc'
 
 
 section '.data' data readable writeable
@@ -712,6 +735,8 @@ line5       DB  'Developed with Flat Assembler.'              , 0
 linkGitHub  DB  'https://github.com/manusov?tab=repositories' , 0
 linkFasm    DB  'https://flatassembler.net/'                  , 0
 msgShell    DB  'Shell error.'                                , 0
+
+lineProgress  DB  'Please wait...'                            , 0
 
 struct LINECONST
 pointer   dd ?
@@ -803,6 +828,10 @@ struct PROGRESSBOX
 hCursor      dd          ?
 hFont        dd          ?
 hFontBack    dd          ?
+
+hFont1       dd          ?
+hFont2       dd          ?
+
 msg          MSG         ?
 ps           PAINTSTRUCT ?
 rect         RECT        ?
@@ -811,7 +840,12 @@ tm           TEXTMETRIC  ?
 ; additions for progress window
 hPen                dd  ?          ; pen for progress percentage cycle
 progressPercentage  dd  ?          ; percentage integer value, 0-100
-progressString      db  5 dup (?)  ; maximum string length = 5 , if "100%",0
+
+; TODO. Can be same field for progressString and operationString, 40 bytes.
+
+progressString      db  5  dup (?)   ; maximum string length = 5 , if "100%",0
+operationString     db  40 dup (?)  
+
 oldPoint         POINT  ?
 alpha               dq  ?
 delta               dq  ?
@@ -826,6 +860,10 @@ vrbp                dd  ?
 ends
 align 8
 PROGRESS_BOX PROGRESSBOX ?
+
+; TODO. Use stack variables for remove this variables.
+vr10d               dd  ?
+vr11d               dd  ?
 
 
 section '.idata' import data readable writeable
@@ -868,9 +906,15 @@ dialogitem 'BUTTON', 'Open modal'    , IDB_CHILD_1, 120, 102, 75, 13, WS_VISIBLE
 dialogitem 'BUTTON', 'Open modeless' , IDB_CHILD_2, 120, 117, 75, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem 'BUTTON', 'Exit'          , IDB_EXIT   , 120, 132, 75, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog 
-dialog progressChild, 'Please wait...', 100, 100, 90,  85, \
-       WS_VISIBLE, 0, 0, 'Verdana', 10
+
+;dialog progressChild, 'Please wait...', 100, 100, 90,  85, \
+;       WS_VISIBLE, 0, 0, 'Verdana', 10
+;enddialog 
+
+dialog progressChild, '', 220, 120, 80,  80, \
+       WS_BORDER + WS_POPUP + WS_VISIBLE, 0, 0, 'Verdana', 10
 enddialog 
+
 dialog drawChild, 'Draw', 100, 100, 387, 278, \
        WS_CAPTION + WS_SYSMENU + WS_VISIBLE, 0, 0, 'Verdana', 10
 enddialog 

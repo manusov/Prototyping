@@ -71,7 +71,7 @@ IDB_EXIT               =  405
 IDB_OK                 =  406
 
 RESOURCE_DESCRIPTION  equ 'Dialog Boxes sample (x64)'
-RESOURCE_VERSION      equ '0.0.0.7'
+RESOURCE_VERSION      equ '0.0.0.8'
 RESOURCE_COMPANY      equ 'https://github.com/manusov'
 RESOURCE_COPYRIGHT    equ '(C) 2022 Ilya Manusov'
 
@@ -371,7 +371,7 @@ push rax                     ; Parm#6  = Italic, here=0=none
 push FW_DONTCARE             ; Parm#5  = Weight of the font
 sub rsp,32                   ; Create parameters shadow
 call [CreateFont]
-add rsp,32+80                ; Remove parameters shadow and 10 parameters
+add rsp,32 + 80              ; Remove parameters shadow and 10 parameters
 mov [r14 + ABOUTBOX.hFont],rax 
 jmp .statusOne
 
@@ -736,22 +736,48 @@ jnz .mainCycle       ; Cycle if (unsigned) quotient still > 0
 pop rdx rcx rbx rax
 ret
 
+;---------- Copy text string terminated by 00h --------------------------------;
+; Note last byte 00h not copied.                                               ;
+;                                                                              ;
+; INPUT:   RSI = Source address                                                ;
+;          RDI = Destination address                                           ;
+;                                                                              ;
+; OUTPUT:  RSI = Modified by copy                                              ;
+;          RDI = Modified by copy                                              ;
+;          Memory at [Input RDI] modified                                      ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
+StringWrite:
+cld
+.cycle:
+lodsb
+cmp al,0
+je .exit
+stosb
+jmp .cycle
+.exit:
+ret
+
 ; Connect modules under debug.
 include 'Draw_64.inc'
-include 'Progress_64.inc'
+; include 'Progress_64_1.inc'
+; include 'Progress_64_2.inc'
+  include 'Progress_64_3.inc'
 
 
 section '.data' data readable writeable
 ; constants
-appCtrl     INITCOMMONCONTROLSEX  8, 0
-line1       DB  'NUMA CPU&RAM Benchmarks.'                    , 0
-line2       DB  'v2.02.02 for Windows x64.'                   , 0
-line3       DB  '(C) 2022 Ilya Manusov.'                      , 0
-line4       DB  'More at GitHub.'                             , 0
-line5       DB  'Developed with Flat Assembler.'              , 0
-linkGitHub  DB  'https://github.com/manusov?tab=repositories' , 0
-linkFasm    DB  'https://flatassembler.net/'                  , 0
-msgShell    DB  'Shell error.'                                , 0
+appCtrl       INITCOMMONCONTROLSEX  8, 0
+line1         DB  'NUMA CPU&RAM Benchmarks.'                    , 0
+line2         DB  'v2.02.02 for Windows x64.'                   , 0
+line3         DB  '(C) 2022 Ilya Manusov.'                      , 0
+line4         DB  'More at GitHub.'                             , 0
+line5         DB  'Developed with Flat Assembler.'              , 0
+linkGitHub    DB  'https://github.com/manusov?tab=repositories' , 0
+linkFasm      DB  'https://flatassembler.net/'                  , 0
+msgShell      DB  'Shell error.'                                , 0
+
+lineProgress  DB  'Please wait...'                              , 0
 
 struct LINECONST
 pointer   dq ?
@@ -839,25 +865,36 @@ ends
 align 8
 DRAW_POINTS DRAWPOINTS ?
 
+; TODO. Inspect unused fields in this structure.
 struct PROGRESSBOX
 hCursor      dq          ?
 hFont        dq          ?
 hFontBack    dq          ?
+
+hFont1       dq          ?
+hFont2       dq          ?
+
 msg          MSG         ?
 ps           PAINTSTRUCT ?
 rect         RECT        ?
 sz           SIZE        ?
 tm           TEXTMETRIC  ?
 ; additions for progress window
-hPen                dq  ?          ; pen for progress percentage cycle
-progressPercentage  dd  ?          ; percentage integer value, 0-100
-progressString      db  5 dup (?)  ; maximum string length = 5 , if "100%",0
+hPen                dq  ?            ; pen for progress percentage cycle
+progressPercentage  dd  ?            ; percentage integer value, 0-100
+
+; TODO. Can be same field for progressString and operationString, 40 bytes.
+
+progressString      db  5  dup (?)   ; maximum string length = 5 , if "100%",0
+operationString     db  40 dup (?)  
+
 oldPoint         POINT  ?
 alpha               dq  ?
 delta               dq  ?
 a                   dd  ?
 b                   dd  ?
 c                   dd  ?
+
 ends
 align 8
 PROGRESS_BOX PROGRESSBOX ?
@@ -903,8 +940,8 @@ dialogitem 'BUTTON', 'Open modal'    , IDB_CHILD_1, 120, 102, 75, 13, WS_VISIBLE
 dialogitem 'BUTTON', 'Open modeless' , IDB_CHILD_2, 120, 117, 75, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 dialogitem 'BUTTON', 'Exit'          , IDB_EXIT   , 120, 132, 75, 13, WS_VISIBLE + BS_DEFPUSHBUTTON + BS_FLAT
 enddialog 
-dialog progressChild, 'Please wait...', 100, 100, 90,  85, \
-       WS_VISIBLE, 0, 0, 'Verdana', 10
+dialog progressChild, '', 220, 120, 80,  80, \
+       WS_BORDER + WS_POPUP + WS_VISIBLE, 0, 0, 'Verdana', 10
 enddialog 
 dialog drawChild, 'Draw', 100, 100, 387, 278, \
        WS_CAPTION + WS_SYSMENU + WS_VISIBLE, 0, 0, 'Verdana', 10
