@@ -1,0 +1,1 @@
+D:\IntelSDE\sde -future -- DumpAmx64.exe
