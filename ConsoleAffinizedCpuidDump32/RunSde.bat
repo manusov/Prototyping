@@ -1,0 +1,1 @@
+D:\IntelSDE\sde -future -- DumpCpuid32.exe
