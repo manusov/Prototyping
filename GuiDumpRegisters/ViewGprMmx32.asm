@@ -628,7 +628,7 @@ LockedStrings  DD  ?
 LockedBinders  DD  ?
 align 4096 
 INFO_BUFFER    DB  INFO_SIZE DUP (?)
-NISC_BUFFER    DB  MISC_SIZE DUP (?)  
+MISC_BUFFER    DB  MISC_SIZE DUP (?)  
 
 section '.idata' import data readable writeable
 library kernel32 , 'kernel32.dll', \
@@ -682,7 +682,7 @@ enddialog
 resource raws, ID_GUI_STRINGS, LANG_ENGLISH + SUBLANG_DEFAULT, guistrings, \
                ID_GUI_BINDERS, LANG_ENGLISH + SUBLANG_DEFAULT, guibinders
 resdata guistrings
-DB  'GPR32 and MMX (ia32 v0.0)', 0
+DB  'GPR32 and MMX (ia32 v0.01)', 0
 DB  'EAX', 0
 DB  'EBX', 0
 DB  'ECX', 0

@@ -249,7 +249,7 @@ BUFFER_N_K5       = BUFFER_N_K0 + TEXT_PER_K * 5
 BUFFER_N_K6       = BUFFER_N_K0 + TEXT_PER_K * 6
 BUFFER_N_K7       = BUFFER_N_K0 + TEXT_PER_K * 7
 BIND_APP_GUI      = 0
-X_SIZE            = 599
+X_SIZE            = 770
 Y_SIZE            = 242
 COUNT_GPR         = 8
 COUNT_MMX         = 8
@@ -257,7 +257,6 @@ COUNT_AVX512      = 8
 COUNT_K           = 8
 COUNT_VECTOR      = 8
 TEXT_PER_REG      = 17
-TEXT_PER_DOUBLE   = 12
 TEXT_PER_MM       = 4
 TEXT_PER_ZMM      = 6
 TEXT_PER_K        = 3
@@ -284,6 +283,8 @@ format PE GUI 4.0
 entry start
 section '.code' code readable executable
 start:
+
+;---------- Initialization ----------------------------------------------------;
 
 cld
 push AppControl
@@ -334,6 +335,8 @@ test eax,eax
 jz .guifailed
 mov [LockedBinders],eax
 
+;---------- Check required CPU and OS features presence -----------------------;
+
 mov ebx,21
 pushf
 pop eax
@@ -377,49 +380,76 @@ and al,11100110b
 cmp al,11100110b
 jne .osFailed
 
-finit
-fldpi
-fld1
-fldpi
-fchs
-fld1
-fchs
-sub esp,32
-fstp qword [esp + 00]
-fstp qword [esp + 08]
-fstp qword [esp + 16]
-fstp qword [esp + 24]
-movupd xmm0,[esp + 00]
-movupd xmm1,[esp + 16]
-add esp,32
-lea eax,[.X0]
-vmovupd ymm0,[eax + 00]
-vmovupd zmm7,[eax + 32] 
-jmp .skipData
-.X0  DQ  1234567891.234
-     DQ  12345678912.345    
-     DQ  123456712345.89
-     DQ  1234567891239.154
-     DQ  -1.0 , 2.0 , -3.0 , 4.0
-     DQ  -5.0 , 6.0 , -7.0 , 8.0
-.skipData:
+;---------- Code pattern for debug example ------------------------------------;
 
-mov eax,esp
-mov ebx,2
-mov ecx,3
-mov edx,4
-mov ebp,011111111h
-mov esi,055555555h
-mov edi,0AAAAAAAAh
+; Clear general purpose registers (GPR)
+xor eax,eax
+xor ebx,ebx
+xor ecx,ecx
+xor edx,edx
+xor esi,esi
+xor edi,edi
+xor ebp,ebp
 
-movd mm0,esi
-psllq mm0,32
-movd mm1,edi
-por mm0,mm1
-movd mm7,ebp
+; Clear MMX registers
+pxor mm0,mm0
+pxor mm1,mm1
+pxor mm2,mm2
+pxor mm3,mm3
+pxor mm4,mm4
+pxor mm5,mm5
+pxor mm6,mm6
+pxor mm7,mm7
 
-kmovw k0,esi
-kmovw k7,edi
+; Clear AVX512 predicate registers
+kxorw k0,k0,k0
+kxorw k1,k1,k1
+kxorw k2,k2,k2
+kxorw k3,k3,k3
+kxorw k4,k4,k4
+kxorw k5,k5,k5
+kxorw k6,k6,k6
+kxorw k7,k7,k7
+
+; Clear AVX512 vector registers
+; ZMM0-ZMM7 actual at 32-bit context, ZMM8-ZMM31 accessible at x64 only
+vzeroall
+
+; Generate patterns and load to ZMM registers
+; Assume MISC_BUFFER aligned by 64
+lea ebx,[MISC_BUFFER]
+cld
+mov edi,ebx
+mov ecx,16
+mov eax,11111111h
+rep stosd
+mov ecx,16
+mov eax,22222222h
+rep stosd
+xor ecx,ecx
+@@:
+mov eax,ecx
+stosd
+xor eax,eax
+stosd
+inc ecx
+cmp ecx,8
+jb @b
+vmovapd zmm0,[ebx + 00]
+vmovapd zmm1,[ebx + 64]
+vmovapd zmm7,[ebx + 128]
+; Load predicate mask
+mov eax,00005555h
+kmovw k1,eax
+; Load initial values
+vmovapd zmm4,zmm0
+vmovapd zmm5,zmm0
+; Example predicate masking with save masked operands
+vmovapd zmm4{k1},zmm1
+; Example predicate masking with clear masked operands 
+vmovapd zmm5{k1}{z},zmm1
+
+;---------- Dump registers ----------------------------------------------------;
 
 push edi esi ebp
 lea ebp,[esp + 4*3] 
@@ -465,24 +495,7 @@ mov bp,COUNT_VECTOR
 mov eax,[ebx + 0]
 mov edx,[ebx + 4]
 add ebx,8
-push ebx edi
-mov esi,edi
-mov bx,0800h
-call DoublePrint
-mov al,0
-stosb
-xchg eax,edi
-pop edi ebx
-sub eax,edi
-add edi,TEXT_PER_REG - 1
-cmp eax,TEXT_PER_DOUBLE
-jle .doubleDone
-cmp eax,TEXT_PER_DOUBLE + 9
-jle .doubleCorrection
-mov word [esi + 00],0000h + '?' 
-.doubleCorrection:
-mov byte [esi + TEXT_PER_DOUBLE],0
-.doubleDone:
+call HexPrint64
 mov al,0
 stosb
 dec bp
@@ -568,6 +581,8 @@ cmp ecx,COUNT_K
 jb .kNames
 emms
 
+;---------- Show dialogue window, wait user events, exit ----------------------;
+
 push 0 0 
 push DialogProc
 push HWND_DESKTOP
@@ -602,6 +617,8 @@ push 0
 call [MessageBox]  
 push 2           
 call [ExitProcess]
+
+;---------- Callback procedure for dialogue window ----------------------------;
 
 DialogProc:
 push ebp ebx esi edi
@@ -642,6 +659,8 @@ mov eax,1
 mov esp,ebp
 pop edi esi ebx ebp
 ret 16
+
+;---------- Helpers subroutines -----------------------------------------------;
 
 StringWrite:
 cld
@@ -977,6 +996,8 @@ mov [esp],edi
 popad
 ret
 
+;---------- Data, import, resources and applixation manifest ------------------;
+
 section '.data' data readable writeable
 MsgErrorGUI    DB  'GUI initialization failed.',0
 MsgErrorCPU    DB  'CPU feature not supported or locked:'           , 0Dh, 0Ah
@@ -1001,7 +1022,7 @@ Predicates64   DB  ?
 align 4096 
 ZMM_BUFFER     DB  ZMM_BUFFER_SIZE  DUP (?)
 INFO_BUFFER    DB  INFO_BUFFER_SIZE DUP (?)
-NISC_BUFFER    DB  MISC_BUFFER_SIZE DUP (?)  
+MISC_BUFFER    DB  MISC_BUFFER_SIZE DUP (?)  
 
 section '.idata' import data readable writeable
 library kernel32 , 'kernel32.dll', \
@@ -1043,22 +1064,22 @@ dialogitem 'STATIC', '', IDR_K4_NAME       ,   5, 199,  28,  8, WS_VISIBLE + SS_
 dialogitem 'STATIC', '', IDR_K5_NAME       ,   5, 208,  28,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_K6_NAME       ,   5, 217,  28,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_K7_NAME       ,   5, 226,  28,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_EAX_VALUE     , 34,   9,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_EBX_VALUE     , 34,  18,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ECX_VALUE     , 34,  27,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_EDX_VALUE     , 34,  36,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ESP_VALUE     , 34,  45,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_EBP_VALUE     , 34,  54,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ESI_VALUE     , 34,  63,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_EDI_VALUE     , 34,  72,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM0_VALUE     , 34,  86,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM1_VALUE     , 34,  95,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM2_VALUE     , 34, 104,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM3_VALUE     , 34, 113,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM4_VALUE     , 34, 122,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM5_VALUE     , 34, 131,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM6_VALUE     , 34, 140,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_MM7_VALUE     , 34, 149,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_EAX_VALUE     ,  34,   9,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_EBX_VALUE     ,  34,  18,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ECX_VALUE     ,  34,  27,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_EDX_VALUE     ,  34,  36,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ESP_VALUE     ,  34,  45,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_EBP_VALUE     ,  34,  54,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ESI_VALUE     ,  34,  63,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_EDI_VALUE     ,  34,  72,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM0_VALUE     ,  34,  86,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM1_VALUE     ,  34,  95,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM2_VALUE     ,  34, 104,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM3_VALUE     ,  34, 113,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM4_VALUE     ,  34, 122,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM5_VALUE     ,  34, 131,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM6_VALUE     ,  34, 140,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_MM7_VALUE     ,  34, 149,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_K0_VALUE      ,  34, 163,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_K1_VALUE      ,  34, 172,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_K2_VALUE      ,  34, 181,  82,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
@@ -1075,75 +1096,78 @@ dialogitem 'STATIC', '', IDR_ZMM4_NAME     , 122,  45,  37,  8, WS_VISIBLE + SS_
 dialogitem 'STATIC', '', IDR_ZMM5_NAME     , 122,  54,  37,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_ZMM6_NAME     , 122,  63,  37,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
 dialogitem 'STATIC', '', IDR_ZMM7_NAME     , 122,  72,  37,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_0_VALUE  , 535,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_1_VALUE  , 482,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_2_VALUE  , 429,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_3_VALUE  , 376,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_4_VALUE  , 320,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_5_VALUE  , 267,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_6_VALUE  , 214,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM0_7_VALUE  , 161,   9,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_0_VALUE  , 535,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_1_VALUE  , 482,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_2_VALUE  , 429,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_3_VALUE  , 376,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_4_VALUE  , 320,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_5_VALUE  , 267,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_6_VALUE  , 214,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM1_7_VALUE  , 161,  18,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_0_VALUE  , 535,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_1_VALUE  , 482,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_2_VALUE  , 429,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_3_VALUE  , 376,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_4_VALUE  , 320,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_5_VALUE  , 267,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_6_VALUE  , 214,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM2_7_VALUE  , 161,  27,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_0_VALUE  , 535,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_1_VALUE  , 482,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_2_VALUE  , 429,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_3_VALUE  , 376,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_4_VALUE  , 320,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_5_VALUE  , 267,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_6_VALUE  , 214,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM3_7_VALUE  , 161,  36,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_0_VALUE  , 535,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_1_VALUE  , 482,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_2_VALUE  , 429,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_3_VALUE  , 376,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_4_VALUE  , 320,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_5_VALUE  , 267,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_6_VALUE  , 214,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM4_7_VALUE  , 161,  45,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_0_VALUE  , 535,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_1_VALUE  , 482,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_2_VALUE  , 429,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_3_VALUE  , 376,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_4_VALUE  , 320,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_5_VALUE  , 267,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_6_VALUE  , 214,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM5_7_VALUE  , 161,  54,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_0_VALUE  , 535,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_1_VALUE  , 482,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_2_VALUE  , 429,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_3_VALUE  , 376,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_4_VALUE  , 320,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_5_VALUE  , 267,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_6_VALUE  , 214,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM6_7_VALUE  , 161,  63,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_0_VALUE  , 535,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_1_VALUE  , 482,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_2_VALUE  , 429,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_3_VALUE  , 376,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_4_VALUE  , 320,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_5_VALUE  , 267,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_6_VALUE  , 214,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
-dialogitem 'STATIC', '', IDR_ZMM7_7_VALUE  , 161,  72,  52,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_0_VALUE  , 689,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_1_VALUE  , 614,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_2_VALUE  , 539,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_3_VALUE  , 464,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_4_VALUE  , 386,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_5_VALUE  , 311,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_6_VALUE  , 236,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM0_7_VALUE  , 161,   9,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+
+dialogitem 'STATIC', '', IDR_ZMM1_0_VALUE  , 689,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_1_VALUE  , 614,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_2_VALUE  , 539,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_3_VALUE  , 464,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_4_VALUE  , 386,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_5_VALUE  , 311,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_6_VALUE  , 236,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM1_7_VALUE  , 161,  18,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+
+dialogitem 'STATIC', '', IDR_ZMM2_0_VALUE  , 689,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_1_VALUE  , 614,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_2_VALUE  , 539,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_3_VALUE  , 464,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_4_VALUE  , 386,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_5_VALUE  , 311,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_6_VALUE  , 236,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM2_7_VALUE  , 161,  27,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_0_VALUE  , 689,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_1_VALUE  , 614,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_2_VALUE  , 539,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_3_VALUE  , 464,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_4_VALUE  , 386,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_5_VALUE  , 311,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_6_VALUE  , 236,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM3_7_VALUE  , 161,  36,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_0_VALUE  , 689,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_1_VALUE  , 614,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_2_VALUE  , 539,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_3_VALUE  , 464,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_4_VALUE  , 386,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_5_VALUE  , 311,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_6_VALUE  , 236,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM4_7_VALUE  , 161,  45,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_0_VALUE  , 689,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_1_VALUE  , 614,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_2_VALUE  , 539,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_3_VALUE  , 464,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_4_VALUE  , 386,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_5_VALUE  , 311,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_6_VALUE  , 236,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM5_7_VALUE  , 161,  54,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_0_VALUE  , 689,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_1_VALUE  , 614,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_2_VALUE  , 539,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_3_VALUE  , 464,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_4_VALUE  , 386,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_5_VALUE  , 311,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_6_VALUE  , 236,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM6_7_VALUE  , 161,  63,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_0_VALUE  , 689,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_1_VALUE  , 614,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_2_VALUE  , 539,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_3_VALUE  , 464,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_4_VALUE  , 386,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_5_VALUE  , 311,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_6_VALUE  , 236,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+dialogitem 'STATIC', '', IDR_ZMM7_7_VALUE  , 161,  72,  74,  8, WS_VISIBLE + SS_SUNKEN + SS_CENTER + SS_CENTERIMAGE
+
 enddialog
 resource raws, ID_GUI_STRINGS, LANG_ENGLISH + SUBLANG_DEFAULT, guistrings, \
                ID_GUI_BINDERS, LANG_ENGLISH + SUBLANG_DEFAULT, guibinders
 resdata guistrings
-DB  'GPR32, MMX and AVX512 (ia32 v0.0)', 0
+DB  'GPR32, MMX and AVX512 as hex (ia32 v0.01)', 0
 DB  'EAX', 0
 DB  'EBX', 0
 DB  'ECX', 0
