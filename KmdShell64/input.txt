@@ -1,0 +1,5 @@
+display = on         ; on = console output enabled, off = disabled
+report  = on         ; on = save report to file output.txt enabled, off = disabled
+waitkey = on         ; on = wait "Press ENTER" after operation, off = no waiting
+start   = 0FFFFFF00
+stop    = 0FFFFFFFF
