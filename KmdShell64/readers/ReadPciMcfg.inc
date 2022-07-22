@@ -1,0 +1,3 @@
+ReadPciMcfg:
+ret
+

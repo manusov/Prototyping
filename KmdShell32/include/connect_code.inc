@@ -16,6 +16,9 @@ xor eax,eax
 mov ERROR_STRING_1,eax
 mov ERROR_STRING_2,eax
 mov ERROR_CODE,eax
+;---------- Skip if inconsistent action selector option -----------------------;
+cmp [OptionAction],OPTION_ACTION_LIMIT
+ja .kmdReturn
 ;---------- Check WoW64 for select 32 or 64-bit driver ------------------------;
 mov esi,isWoW64
 mov dword [esi],0
@@ -34,46 +37,28 @@ push esi
 push eax
 call ebp
 @@:
-;---------- Try load kernel mode driver kmd64.sys -----------------------------;
+;---------- Load driver -------------------------------------------------------;
 mov ecx,ebx
 call LoadKernelModeDriver
 test eax,eax
 jz .kmdLoadError
-;----------- Blank buffer -----------------------------------------------------;
+;---------- Blank buffer, also required for prevent page faults at ring 0 -----;
 push edi
 add edi,KERNEL_BUFFER_OFFSET
-mov ecx,dword [OptionStopAddress]
-sub ecx,dword [OptionStartAddress]
-inc ecx 
-mov al,11h
+mov ecx,KERNEL_BLOCK_LIMIT / 4 
+mov eax,11111111h
 cld
-push ecx
-rep stosb
-pop ecx edi
-;---------- Operation with KMD ------------------------------------------------;
-mov edx,Query
-mov [edx + RZDriverIOQuery.IOCODE],RZ_DRIVER_QUERY_MAP_IO_SPACE
-mov eax,dword [OptionStartAddress]
-mov dword [edx + RZDriverIOQuery.SRC + 0],eax
-mov dword [edx + RZDriverIOQuery.SRC + 4],0
-lea eax,[edi + KERNEL_BUFFER_OFFSET]
-mov dword [edx + RZDriverIOQuery.DST + 0],eax
-mov dword [edx + RZDriverIOQuery.DST + 4],0
-mov dword [edx + RZDriverIOQuery.BYTES + 0],ecx
-mov dword [edx + RZDriverIOQuery.BYTES + 4],0
-mov [edx + RZDriverIOQuery.IODATA],0              ; 0 means unmap
-mov ecx,Bytes
-invoke WriteFile, [SCP_DATA.driver], edx, sizeof.RZDriverIOQuery, ecx, 0
-;---------- Unload kernel mode driver kmd64.sys -------------------------------;
+rep stosd
+pop edi
+;---------- Call target operation handler -------------------------------------;
+; Operation, results dump, internal error messages at this subroutine.
+push ebx edi
+movzx eax,[OptionAction]
+call dword [ActionsHandlers + eax * 4]
+pop edi ebx
+;---------- Unload driver -----------------------------------------------------;
 mov ecx,ebx
 call UnloadKernelModeDriver
-;---------- Memory buffer dump ------------------------------------------------;
-lea esi,[edi + KERNEL_BUFFER_OFFSET]
-; mov ebx,KERNEL_BUFFER_LENGTH
-mov ebx,dword [OptionStopAddress]
-sub ebx,dword [OptionStartAddress]
-inc ebx 
-call DumpMemory
 ;---------- Exit points -------------------------------------------------------;
 .kmdReturn:
 pop ebp edi esi ebx
@@ -353,3 +338,14 @@ xchg esi,eax
 pop edx ecx eax
 @@:
 ret
+
+;---------- Handlers ----------------------------------------------------------;
+include 'readers\ReadMemory.inc'
+include 'readers\ReadIo.inc'
+include 'readers\ReadPci.inc'
+include 'readers\ReadPciMcfg.inc'
+include 'readers\ReadCrMsr.inc'
+include 'readers\ReadCmos.inc'
+include 'readers\ReadApic.inc'
+include 'readers\ReadSpdAtSmbus.inc'
+include 'readers\ReadClkAtSmbus.inc'

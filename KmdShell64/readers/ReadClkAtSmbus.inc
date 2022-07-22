@@ -1,0 +1,2 @@
+ReadClkAtSmbus:
+ret

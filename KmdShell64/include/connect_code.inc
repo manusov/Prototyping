@@ -12,9 +12,6 @@
 ;------------------------------------------------------------------------------;
 ApplicationKmdShell:
 push rbx rsi rdi rbp r12 r13 r14 r15 
-mov rbp,rsp                   ; RBP = Storage for RSP 
-and rsp,0FFFFFFFFFFFFFFF0h    ; Align stack
-sub rsp,32                    ; Parameters shadow
 mov r15,rcx                   ; R15 = Pointer to error status block
 mov rsi,rcx
 mov rdi,rdx
@@ -22,45 +19,32 @@ xor eax,eax
 mov ERROR_STRING_1,rax
 mov ERROR_STRING_2,rax
 mov ERROR_CODE,rax
-;---------- Try load kernel mode driver kmd64.sys -----------------------------;
+;---------- Skip if inconsistent action selector option -----------------------;
+cmp [OptionAction],OPTION_ACTION_LIMIT
+ja .kmdReturn
+;---------- Load driver -------------------------------------------------------;
 call LoadKernelModeDriver
 test eax,eax
 jz .kmdLoadError
-;----------- Blank buffer -----------------------------------------------------;
+;---------- Blank buffer, also required for prevent page faults at ring 0 -----; 
 push rdi
 add rdi,KERNEL_BUFFER_OFFSET
-mov rcx,[OptionStopAddress]
-sub rcx,[OptionStartAddress]
-inc ecx 
-mov al,11h
+mov ecx,KERNEL_BLOCK_LIMIT / 8 
+mov rax,1111111111111111h
 cld
-push rcx
-rep stosb
-pop rcx rdi
-;---------- Operation with KMD ------------------------------------------------;
-lea rdx,[Query]
-mov [rdx + RZDriverIOQuery.IOCODE],RZ_DRIVER_QUERY_MAP_IO_SPACE
-mov rax,[OptionStartAddress]
-mov [rdx + RZDriverIOQuery.SRC],rax
-lea rax,[rdi + KERNEL_BUFFER_OFFSET]
-mov [rdx + RZDriverIOQuery.DST],rax
-mov [rdx + RZDriverIOQuery.BYTES],rcx
-mov [rdx + RZDriverIOQuery.IODATA],0   ; 0 means unmap
-lea r9,[Bytes]
-invoke WriteFile, [SCP_DATA.driver], rdx, sizeof.RZDriverIOQuery, r9, 0
-;---------- Unload kernel mode driver kmd64.sys -------------------------------;
+rep stosq
+pop rdi
+;---------- Call target operation handler -------------------------------------;
+; Operation, results dump, internal error messages at this subroutine.
+push rsi rdi r15
+movzx eax,[OptionAction]
+call qword [ActionsHandlers + rax * 8]
+pop r15 rdi rsi
+;---------- Unload driver -----------------------------------------------------;
 mov rcx,rsi
 call UnloadKernelModeDriver
-;---------- Memory buffer dump ------------------------------------------------;
-lea rsi,[rdi + KERNEL_BUFFER_OFFSET]
-; mov ebx,KERNEL_BUFFER_LENGTH
-mov rbx,[OptionStopAddress]
-sub rbx,[OptionStartAddress]
-inc rbx 
-call DumpMemory
 ;---------- Exit points -------------------------------------------------------;
 .kmdReturn:
-mov rsp,rbp
 pop r15 r14 r13 r12 rbp rdi rsi rbx
 ret
 .kmdLoadError:
@@ -334,3 +318,14 @@ mov rsp,rbp                 ; Restore stack
 pop rbp r11 r10 r9 r8 rdx rcx rax
 @@:
 ret
+
+;---------- Handlers ----------------------------------------------------------;
+include 'readers\ReadMemory.inc'
+include 'readers\ReadIo.inc'
+include 'readers\ReadPci.inc'
+include 'readers\ReadPciMcfg.inc'
+include 'readers\ReadCrMsr.inc'
+include 'readers\ReadCmos.inc'
+include 'readers\ReadApic.inc'
+include 'readers\ReadSpdAtSmbus.inc'
+include 'readers\ReadClkAtSmbus.inc'

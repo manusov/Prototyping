@@ -1,0 +1,20 @@
+;---------- Target operation, old sequence with KMD load inside subroutine ----;
+; Note about x64 driver calls under 32-bit mode.
+; call RzDriverQueryProcNoargs
+; call RzDriverQueryProcRegister
+; call RzDriverQueryProcRegister2p
+; call RzDriverQueryPortInByte
+; call RzDriverQueryPortOutByte
+; call RzDriverQueryMapIoSpace
+; call DebugReadSpdAtSmbus
+; jc .kmdLoadError
+
+---
+
+include 'simple\RzDriverQueryProcNoargs.inc'
+include 'simple\RzDriverQueryProcRegister.inc'
+include 'simple\RzDriverQueryProcRegister2p.inc'
+include 'simple\RzDriverQueryPortInByte.inc'
+include 'simple\RzDriverQueryPortOutByte.inc'
+include 'simple\RzDriverQueryMapIoSpace.inc'
+

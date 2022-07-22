@@ -1,0 +1,2 @@
+ReadCrMsr:
+ret

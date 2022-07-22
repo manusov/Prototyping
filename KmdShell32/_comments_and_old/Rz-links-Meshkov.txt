@@ -1,0 +1,9 @@
+C:\1-asm\90-Kernel-Mode-Driver-by-Meshkov
+C:\1-asm\07-KernelModeDriver
+
+Signed drivers rz64.sys, rz32.sys, see files properties.
+
+Special thanks to @L.CHEMIST ( Andrey A. Meshkov )
+for Kernel Mode Driver ( KMD ) and Service Control Program ( SCP ) examples
+http://maalchemist.narod.ru
+

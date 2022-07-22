@@ -1,12 +1,13 @@
 Display console messages     = on
 Generate report file         = on
 Wait key press from user     = on
+Action                       = memory
 Start physical address       = 00000000FFFFFF00h
 Stop physical address        = 00000000FFFFFFFFh
 
 ERROR: Error loading kernel mode driver :
        Open service control program failed.
-       OS error 5 = Access is denied.
+       OS error 5 = Отказано в доступе.
 
 
 Done, press ENTER...
