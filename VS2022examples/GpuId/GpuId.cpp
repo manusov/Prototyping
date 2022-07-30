@@ -655,7 +655,7 @@ BOOL printCurrentDisplayMode()
     parmValue("Format", s1);
 
     helperPrintDecimal("Integer refresh rate", gpuData.currentDisplayMode.DisplayMode.IntegerRefreshRate);
-    
+
     int numerator = gpuData.currentDisplayMode.DisplayMode.RefreshRate.Numerator;
     int denominator = gpuData.currentDisplayMode.DisplayMode.RefreshRate.Denominator;
     double hz = (double)numerator / (double)denominator;
