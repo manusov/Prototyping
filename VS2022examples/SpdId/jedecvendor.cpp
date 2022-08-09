@@ -38,7 +38,7 @@
 
 #define VENDORS_BANKS 8
 #define VENDORS_ITEMS 128
-#define JEDEC_MFG_STR(b,i) ( (b >= 0 && b < VENDORS_BANKS && i < VENDORS_ITEMS) ? vendors[(b)][(i)] : NULL )
+#define JEDEC_MFG_STR(b,i) ( ((b >= 0) && (b < VENDORS_BANKS) && (i < VENDORS_ITEMS)) ? vendors[(b)][(i)] : NULL )
 static const char* vendors[VENDORS_BANKS][VENDORS_ITEMS] =
 {
 {"AMD", "AMI", "Fairchild", "Fujitsu",
@@ -319,20 +319,56 @@ const char* decodeModuleManufacturer(unsigned char* bytes)
     unsigned char first;
     int ai = 0;
     int len = 8;
+/*
     if (!spd_written(bytes, 8)) 
     {
         return "undefined";
     }
+*/
     do { ai++; } while ((--len && (*bytes++ == 0x7f)));
     first = *--bytes;
     if (ai == 0) 
     {
-        return "invalid";
+        // return "invalid";
+        return "<NO JEDEC ID>";
     }
     if (parity(first) != 1) 
     {
-        return "invalid";
+        // return "invalid";
+        return "<NO JEDEC ID>";
     }
     return (char*)JEDEC_MFG_STR(ai - 1, (first & 0x7f) - 1);
 }
 
+const char* decodeModuleManufacturerDdr3(unsigned char* bytes)
+{
+    int index0 = ( * bytes ) & 0xFF;
+    int index1 = ( * (bytes + 1)) & 0xFF;
+    if ((index0 == 0) || (index1 == 0))
+    {
+        return "<NO JEDEC ID>";
+    }
+    else if ((index0 & 0x7F) >= VENDORS_BANKS)
+    {
+        return "<UNKNOWN JEDEC ID>";
+    }
+    else if ((parity(index0) != 1) || (parity(index1) != 1))
+    {
+        return "<INVALID JEDEC ID>";
+    }
+    else
+    {
+        // return (char*)JEDEC_MFG_STR((index0 & 0x7F), (index1 & 0x7F) - 1);
+
+        int bank = index0 & 0x7F;
+        int item = (index1 & 0x7F) - 1;
+        if ((bank < VENDORS_BANKS)&&(item >=0))
+        {
+            return (char*)JEDEC_MFG_STR(bank, item);
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+}
