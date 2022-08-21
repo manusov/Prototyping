@@ -1,0 +1,2 @@
+Experimental support Intel Hybrid CPUs.
+Threads control for Performance and Effective scenarios.

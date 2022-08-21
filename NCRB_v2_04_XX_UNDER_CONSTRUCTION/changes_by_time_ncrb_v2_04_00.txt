@@ -1,0 +1,238 @@
+Changes list for NCRB v2.04.00 generation. Ordereb by change TIME.
+-------------------------------------------------------------------
+Step 2 of 2. Changes in this step has priority over step 1.
+All changes for x64 and ia32 versions, NCRB64, NCRB32.
+
+
+See list by TYPE.
+(1.1) - (1.5).  5.
+(2.1) - (2.10). 10.
+(3.1) - (3.9).  9.
+--------------------
+Total           24.
+
+
+(1) (3.2 by type). OK.
+Version number v2.04.00 for NCRB64.EXE, NCRB32.EXE, DATA.DLL.
+Resource version and about version updated. 
+Source files updated: NCRB64.ASM, NCRB32.ASM, DATA.ASM.
+
+(2) (1.1 by type). OK.
+Hybrid option support equations, between NUMA and LP(Large Pages):
+HYBRID_LIMIT         = 4
+HYBRID_NOT_SUPPORTED = 0   ; Gray checkboxes
+HYBRID_NOT_CONTROL   = 1   ; Simple run all threads without affinization
+HYBRID_P_PLUS_E      = 2   ; Affinization for select all (P+E) cores
+HYBRID_P_ONLY        = 3   ; Affinization for select P-Cores
+HYBRID_E_ONLY        = 4   ; Affinization for select E-Cores
+Order argumentation: first 2 variants with all cores, next 2 variants
+with part of cores.
+Source files updated: NCRB64.ASM, NCRB32.ASM.
+
+(3) (1.2 by type). OK.
+Update MEMUPB structure, add variable, between NUMA and LP(Large Pages):
+optionHybrid (gray not sup, unaware, p-only, e-only, p+e.
+Source files updated: NCRB64.ASM, NCRB32.ASM.
+
+(4) (1.3 by type). OK.
+Update MEMIPB structure, add variable, between NUMA and LP(Large Pages):
+updatedHybrid (not sup, unaware, p-only, e-only, p+e.
+Source files updated: NCRB64.ASM, NCRB32.ASM.
+
+(5) (1.4 by type). OK.
+Update SYSPARMS structure, add structures for P and E cores:
+summaryCache      SUMMARYCACHE      ; legacy
+summaryTopology   SUMMARYTOPOLOGY
+perfCoreCache     SUMMARYCACHE      ; start added
+perfCoreTopology  SUMMARYTOPOLOGY
+effCoreCache      SUMMARYCACHE
+effCoreTopology   SUMMARYTOPOLOGY
+Location must be sequental, because calculations:
+Offset = sizeof.SUMMARYCACHE + sizeof.SUMMARYTOPOLOGY
+used for same types fields for Summary/PCores/ECores.
+Source files updated: NCRB64.ASM, NCRB32.ASM.
+
+(6) (1.5 by type). OK.
+Update SYSPARMS structure, add affinity masks for P and E cores,
+for support P and E cores selection depend on hybrid control option:
+perfCoreAffinity
+effCoreAffinity.
+Source files updated: NCRB64.ASM, NCRB32.ASM.
+
+(7) (3.3 by type). OK.
+Update GUI for "sysinfo" screen. Add P-Cores, E-Cores. Cache types A+B.
+Update resources for P-Cores and E-Cores visual.
+Update system information procedures for cache types visual as A+B.
+Note. Because Threads/Cores/Sockets is one hierarchy, better visual as
+single line, new lines P-Cores and E-Cores added BELOW, not after cores.
+Key additions notes for resources:
+ IDC_SYSINFO_PCORES, IDC_SYSINFO_PCOR_V, 
+ IDC_SYSINFO_ECORES, IDC_SYSINFO_ECOR_V.
+ STR_P_CORES, STR_E_CORES.
+ SET_STRING STR_P_CORES, IDC_SYSINFO_PCORES 
+ SET_STRING STR_E_CORES, IDC_SYSINFO_ECORES.
+ BINDTOPOLOGY.pCores, BINDTOPOLOGY.eCores, BINDTOPOLOGY.hybridBitmap.
+ SET_INFO BINDLIST.bindTopology.pCores, IDC_SYSINFO_PCOR_V
+ SET_INFO BINDLIST.bindTopology.eCores, IDC_SYSINFO_ECOR_V.
+Key additions notes for code:
+ Show P and E cores by system info subroutines.
+ SystemInfo, HelperSysinfoHybridTopology.
+Source files updated: 
+resource edit: DATA.ASM, DATA.INC, code edit: SYSINFO.INC.
+
+(8) (3.8 by type). OK.
+Update "memory run" window report, add hybrid option.
+Key additions notes for resources:
+ IDC_MR_HYBRID, IDC_MR_HYBRID_V.
+ SET_STRING STR_MR_HYBRID, IDC_MR_HYBRID.
+ mrHybrid db 40 + 1 dup ?
+Key additions notes for code:
+ ScenarioMemoryRun, GuiToUserParms (part).
+Source files updated:
+resource edit: DATA.ASM, DATA.INC, code edit: SCENARIO_MEMORY_RUN.INC.
+
+(9) (3.9 by type). OK.
+Update "memory draw" text below draw, add hybrid option,
+Threads=N / N(P) / N(E) / N(P+E).
+Key additions notes for resources:
+ STR_MD_NO_HYBRID
+ STR_MD_HYBRID_P_E
+ STR_MD_HYBRID_P
+ STR_MD_HYBRID_E
+Source files updated:
+resource edit: DATA.ASM, DATA.INC, code edit: SCENARIO_MEMORY_DRAW.INC.
+
+(10) (3.7 by type). OK.
+Correct "affinized cpuid" screen, remove limit 16 logical processors.
+Key additions notes for code:
+ LOGICAL_PROCESSORS_LIMIT = 64 (x64)
+ LOGICAL_PROCESSORS_LIMIT = 32 (ia32)
+ FILE_WORK_MAXIMUM = 262144
+ dec r14d / jnz .affinizedDump (x64)
+ loop .affinizedDump (ia32)
+Source files updated: INFO_AFFINIZED_CPUID.INC, NCRB64.ASM, NCRB32.ASM.
+
+(11) (3.5 by type). OK.
+Update cache summary info at "topology" screen, for hybrid cores.
+cache size use format: A*X KB + B*Y KB.
+Source files updated: NCRB64.ASM, NCRB32.ASM, INFO_TOPOLOGY.INC.
+
+(12) (3.6 by type). OK.
+Update cache summary info at "extended topology" screen, for hybrid cores
+cache size use format: A*X KB + B*Y KB.
+This detection method actual for "sysinfo" screen also.
+Check cache info and P/E cores at "sysinfo" screen also.
+Source files updated: 
+resource edit: DATA.ASM, DATA.INC,
+code edit:  NCRB64.ASM, NCRB32.ASM, INFO_EXTENDED_TOPOLOGY.INC.
+
+(13) (3.4 by type). OK.
+Update GUI for "memory" screen. Some items remove (MTRR), add items:
+Hybrid unaware, All cores, P-Cores only, E-Cores only.
+Memory-mapped files and kernel mode operations can support
+at other screens.
+Source files updated: resource edit: DATA.ASM, DATA.INC.
+
+(14) (3.1 by type). OK.
+Add binders for hybrid option (DATA.ASM).
+GET_SWITCH  IDB_HYBRID_UNAWARE  , BINDLIST.getMemHybrid + 0 , 0 
+GET_SWITCH  IDB_HYBRID_P_PLUS_E , BINDLIST.getMemHybrid + 0 , 1
+GET_SWITCH  IDB_HYBRID_PERF     , BINDLIST.getMemHybrid + 0 , 2
+GET_SWITCH  IDB_HYBRID_EFF      , BINDLIST.getMemHybrid + 0 , 3
+SET_SWITCH  BINDLIST.setMemHybrid + 0 , 0 , IDB_HYBRID_UNAWARE
+SET_SWITCH  BINDLIST.setMemHybrid + 0 , 2 , IDB_HYBRID_P_PLUS_E
+SET_SWITCH  BINDLIST.setMemHybrid + 0 , 4 , IDB_HYBRID_PERF
+SET_SWITCH  BINDLIST.setMemHybrid + 0 , 6 , IDB_HYBRID_EFF
+Replace MTRR option by Hybrid option.
+getMemMtrr replace to getMemHybrid,
+setMemMtrr replace to setMemHybrid.
+
+(15) (2.1 by type). OK.
+Prepare data for visual hybrid info at "sysinfo" screen
+"P-Cores", "E-Cores", sysinfo.inc after comment:
+"Support screen 0 show P- and E-cores for hybrid CPU topology"
+Cache as sum "X1 KB * Y1 + X2 KB * Y2"
+subroutine HelperSysinfoTopologyCache at sysinfo.inc.
+labels: ".noHybrid:", ".hybrid:".
+Source files updated:
+code edit:
+SYSINFO.INC, INFO_TOPOLOGY.INC, INFO_EXTENDED_TOPOLOGY.INC.
+
+(16) (2.2 by type). OK.
+Prepare data for visual hybrid info at "memory" screen
+and extract GUI options settings for code.
+Source files updated:
+code edit:
+SYSINFO.INC, INFO_TOPOLOGY.INC, INFO_EXTENDED_TOPOLOGY.INC,
+SCENARIO_MEMORY_RUN.INC, SCENARIO_MEMORY_DRAW.INC.
+SESSIONSTART.INC.
+Subroutines:
+GuiToUserParms, ScenarioMemoryRun.
+DrawSessionStart.
+SessionStart.
+
+(17) (2.4 by type), see item (3.5 by type). OK.
+Source file: ...\system_info\info_topology.inc.
+Standard topology screen.
+Source files updated: code edit: INFO_TOPOLOGY.INC.
+ 
+(18) (2.5 by type), see item (3.6 by type). OK.
+plus build: perfCoreAffinity, effCoreAffinity.
+Source file: ...\system_info\info_extended_topology.inc.
+Extended topology screen.
+Source files updated: code edit: INFO_EXTENDED_TOPOLOGY.INC.
+
+(19) (2.6 by type), see item (3.7 by type). OK.
+Source file: ...\system_info\info_affinized_cpuid.inc.
+Affinized CPUID screen.
+Source files updated: code edit: INFO_AFFINIZED_CPUID.INC.
+Logical processors count limit now 64 (x64), 32 (ia32).
+
+(20) (2.7 by type), see item (3.8 by type). OK.
+Source file: ...\gui_dialogs\scenario_memory_run.inc.
+Run memory benchmark screen.
+Source files updated: code edit: SCENARIO_MEMORY_RUN.INC.
+
+(21) (2.8 by type), see item (3.9 by type). OK.
+Source file: ...\gui_dialogs\scenario_memory_draw.inc.
+Draw memory benchmark screen.
+Source files updated: code edit: SCENARIO_MEMORY_DRAW.INC.
+
+(22) (2.3 by type). OK.
+Update system information manager.
+Detect hybrid SMP topology.
+Detect hybrid cache topology.
+Update benchmark options: SMP/SMT,
+add benchmark options: Hybrid.
+Source files updated: code edit:
+NCRB64.ASM, NCRB32.ASM.
+SYSINFO.INC, INFO_TOPOLOGY.INC, INFO_EXTENDED_TOPOLOGY.INC.
+Change hyper-threading detection method at SYSINFO.INC.
+Flags added:
+htAll       db  ?
+htPcores    db  ?
+htEcores    db  ?
+htReserved  db  ?
+
+(23) (2.9 by type). OK.
+Thread count control when run benchmark.
+Cache size control when run benchmark.
+Source file: ...\threads_manager\sessionstart.inc.
+Source files updated: code edit: SESSIONSTART.INC.
+Thread count = F(Summary Cores, Summary Hyper-Threading,
+P-Cores, E-Cores, Hyper-Threading-P, Hyper-Threading-E,
+Hybrid option state).
+
+(24) (2.10 by type). OK.
+Affinity mask control when run benchmark.
+Source file: ...\threads_manager\buildthreadslist.inc.
+Source files updated: code edit: BUILDTHREADSLIST.INC.
+Affinity mask = F(Summary Cores mask, Summary Hyper-Threading,
+P-Cores mask, E-Cores mask, Hyper-Threading-P, Hyper-Threading-E,
+Hybrid option state).
+
+
+
+
+
+

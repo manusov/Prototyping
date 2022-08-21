@@ -1,0 +1,126 @@
+Changes list for NCRB v2.04.00 generation. Ordereb by change TYPE.
+-------------------------------------------------------------------
+Step 1 of 2.
+
+1) Data structures changes.
+----------------------------
+
+1.1)+ Hybrid option support equations (NCRB64.ASM, NCRB32.ASM).
+     HYBRID_LIMIT         = 4
+     HYBRID_NOT_SUPPORTED = 0
+     HYBRID_NOT_CONTROL   = 1
+     HYBRID_P_ONLY        = 2
+     HYBRID_E_ONLY        = 3
+     HYBRID_P_PLUS_E      = 4
+
+1.2)+ Update MEMUPB structure (NCRB64.ASM, NCRB32.ASM).
+     optionHybrid (gray not sup, unaware, p-only, e-only, p+e.
+
+1.3)+ Update MEMIPB structure (NCRB64.ASM, NCRB32.ASM).
+     updatedHybrid (not sup, unaware, p-only, e-only, p+e.
+
+1.4)+ Update SYSPARMS structure (NCRB64.ASM, NCRB32.ASM).
+     summaryCache      SUMMARYCACHE
+     summaryTopology   SUMMARYTOPOLOGY
+     perfCoreCache     SUMMARYCACHE
+     perfCoreTopology  SUMMARYTOPOLOGY
+     effCoreCache      SUMMARYCACHE
+     effCoreTopology   SUMMARYTOPOLOGY
+
+1.5)+ Update SYSPARMS structure (NCRB64.ASM, NCRB32.ASM),
+     for support item 2.9.
+     perfCoreAffinity
+     effCoreAffinity.
+
+
+2) Code procedures changes.
+----------------------------
+
+2.1)+ Prepare data for visual hybrid info at "sysinfo" screen
+     (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\system_info\sysinfo.inc.
+
+2.2)+ Prepare data for visual hybrid info at "memory" screen
+     and extract GUI options settings for code.
+     (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\gui_dialogs\scenario_memory_draw.inc.
+
+2.3)+ Update system information manager (NCRB64.ASM, NCRB32.ASM).
+     Detect hybrid SMP topology.
+     Detect hybrid cache topology.
+     Update benchmark options: SMP/SMT,
+     add benchmark options: Hybrid.
+     Source file: ...\system_info\sysinfo.inc.
+
+2.4)+ See item 3.5 (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\system_info\info_topology.inc.
+ 
+2.5)+ See item 3.6 (NCRB64.ASM, NCRB32.ASM),
+     plus build:     
+     perfCoreAffinity
+     effCoreAffinity.
+     Source file: ...\system_info\info_extended_topology.inc.
+
+2.6)+ See item 3.7 (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\system_info\info_affinized_cpuid.inc.
+
+2.7)+ See item 3.8 (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\gui_dialogs\scenario_memory_run.inc.
+
+2.8)+ See item 3.9 (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\gui_dialogs\scenario_memory_draw.inc.
+
+2.9)+ Thread count control when run benchmark (NCRB64.ASM, NCRB32.ASM).
+     Cache size control when run benchmark. (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\threads_manager\sessionstart.inc.
+
+2.10)+ Affinity mask control when run benchmark (NCRB64.ASM, NCRB32.ASM).
+     Source file: ...\threads_manager\buildthreadslist.inc.
+
+
+3. GUI and resources changes.
+------------------------------
+
+3.1)+ Add binders for hybrid option (DATA.ASM).
+     SET_SWITCH  BINDLIST.setMemHybrid   + 0 , 0 , IDB_MEMORY_HYBRID_U
+     SET_SWITCH  BINDLIST.setMemHybrid   + 0 , 2 , IDB_MEMORY_HYBRID_P
+     SET_SWITCH  BINDLIST.setMemHybrid   + 0 , 4 , IDB_MEMORY_HYBRID_E
+     SET_SWITCH  BINDLIST.setMemHybrid   + 0 , 6 , IDB_MEMORY_HYBRID_ALL
+     Replace MTRR option by Hybrid option.
+     getMemMtrr replace to getMemHybrid,
+     setMemMtrr replace to setMemHybrid.
+
+3.2)+ Version number v2.04.00 for NCRB64.EXE, NCRB32.EXE, DATA.DLL.
+     Resource version and about version updated.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.3)+ Update GUI for "sysinfo" screen. Add P-Cores, E-Cores. Cache types A+B.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.4)+ Update GUI for "memory" screen. Some items remove (MTRR), add items:
+     Hybrid unaware, All cores, P-Cores only, E-Cores only.
+     Optimize items location:
+      remove MTRR, 
+      move access and large pages instead MTRR,
+      add hybrid instead access (other variant accepted).
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.5)+ Update cache summary info at "topology" screen, for hybrid cores
+     cache size use format: A*X KB + B*Y KB.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.6)+ Update cache summary info at "extended topology" screen, for hybrid cores
+     cache size use format: A*X KB + B*Y KB.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.7)+ Correct "affinized cpuid" screen, remove limit 16 logical processors.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.8)+ Update "memory run" report, add hybrid option.
+     (NCRB64.ASM, NCRB32.ASM).
+
+3.9)+ Update "memory draw" text below draw, add hybrid option,
+     Threads = N / N(P) / N(E) / N(P+E).
+     (NCRB64.ASM, NCRB32.ASM).
+
+
