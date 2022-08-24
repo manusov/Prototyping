@@ -448,6 +448,32 @@ jmp .nodata
 ;--- Scan topology list for cache object, variant for hybrid CPU --------------;
 .hybridMode:
 push ecx esi
+.scanPEcores:             ; This cycle for count number of cache units
+cmp dword [esi + 00],2
+jne .donePEcores          ; Go skip if descriptor type mismatch
+cmp byte [esi + 08],dl
+jne .donePEcores          ; Go skip if cache level mismatch
+cmp dword [esi + 16],ebx
+jne .donePEcores          ; Go skip if cache type mismatch
+mov eax,[esi + 40]
+test eax,[SYS_PARMS.perfCoreAffinity]
+jz .donePEcores           ; Go skip if no P-Core affinity, here required both 
+test eax,[SYS_PARMS.effCoreAffinity]
+jz .donePEcores           ; Go skip if no E-Core affinity, here required both  
+mov eax,[esi + 12]        ; EAX = cache size
+mov [ebp + 04],eax
+inc dword [ebp + 08]      ; Cache units count + 1
+.donePEcores:
+mov eax,[esi + 04]
+add esi,eax
+cmp esi,ecx
+jb .scanPEcores           ; This cycle for count number cache units
+mov dh,0                  ; Hybrid status = 0, None
+call HelperCacheSummarySaveEx
+pop esi ecx
+mov dword [ebp + 04],0
+mov dword [ebp + 08],0
+push ecx esi
 .scanPcores:              ; This cycle for count number of cache units
 cmp dword [esi + 00],2
 jne .donePcores           ; Go skip if descriptor type mismatch
@@ -458,6 +484,8 @@ jne .donePcores           ; Go skip if cache type mismatch
 mov eax,[esi + 40]
 test eax,[SYS_PARMS.perfCoreAffinity]
 jz .donePcores            ; Go skip if not a P-Core cache unit 
+test eax,[SYS_PARMS.effCoreAffinity]
+jnz .donePcores           ; Go skip if non-hybrid (for P+E both) cache unit 
 mov eax,[esi + 12]        ; EAX = cache size
 mov [ebp + 04],eax
 inc dword [ebp + 08]      ; Cache units count + 1
@@ -481,6 +509,8 @@ jne .doneEcores           ; Go skip if cache type mismatch
 mov eax,[esi + 40]
 test eax,[SYS_PARMS.effCoreAffinity]
 jz .doneEcores            ; Go skip if not a P-Core cache unit 
+test eax,[SYS_PARMS.perfCoreAffinity]
+jnz .doneEcores           ; Go skip if non-hybrid (for P+E both) cache unit 
 mov eax,[esi + 12]        ; EAX = cache size
 mov [ebp + 04],eax
 inc dword [ebp + 08]      ; Cache units count + 1

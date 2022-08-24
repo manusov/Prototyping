@@ -397,6 +397,31 @@ jmp .nodata
 ;--- Scan topology list for cache object, variant for hybrid CPU --------------;
 .hybridMode:
 push rcx rsi
+.scanPEcores:             ; This cycle for count number of cache units
+cmp dword [rsi + 00],2
+jne .donePEcores          ; Go skip if descriptor type mismatch
+cmp byte [rsi + 08],dl
+jne .donePEcores          ; Go skip if cache level mismatch
+cmp dword [rsi + 16],ebx
+jne .donePEcores          ; Go skip if cache type mismatch
+mov rax,[rsi + 40]
+test rax,[SYS_PARMS.perfCoreAffinity]
+jz .donePEcores           ; Go skip if no P-Core affinity, here required both  
+test rax,[SYS_PARMS.effCoreAffinity]
+jz .donePEcores           ; Go skip if no E-Core affinity, here required both   
+mov r8d,[rsi + 12]        ; R8D = cache size
+inc r9d                   ; R9D, cache units count + 1
+.donePEcores:
+mov eax,[rsi + 04]
+add rsi,rax
+cmp rsi,rcx
+jb .scanPEcores           ; This cycle for count number cache units
+mov dh,0                  ; Hybrid status = 0, None
+call HelperCacheSummarySaveEx
+pop rsi rcx
+xor r8d,r8d
+xor r9d,r9d
+push rcx rsi
 .scanPcores:              ; This cycle for count number of cache units
 cmp dword [rsi + 00],2
 jne .donePcores           ; Go skip if descriptor type mismatch
@@ -407,6 +432,8 @@ jne .donePcores           ; Go skip if cache type mismatch
 mov rax,[rsi + 40]
 test rax,[SYS_PARMS.perfCoreAffinity]
 jz .donePcores            ; Go skip if not a P-Core cache unit 
+test rax,[SYS_PARMS.effCoreAffinity]
+jnz .donePcores           ; Go skip if non-hybrid (for P+E both) cache unit 
 mov r8d,[rsi + 12]        ; R8D = cache size
 inc r9d                   ; R9D, cache units count + 1
 .donePcores:
@@ -429,6 +456,8 @@ jne .doneEcores           ; Go skip if cache type mismatch
 mov rax,[rsi + 40]
 test rax,[SYS_PARMS.effCoreAffinity]
 jz .doneEcores            ; Go skip if not a E-Core cache unit 
+test rax,[SYS_PARMS.perfCoreAffinity]
+jnz .doneEcores           ; Go skip if non-hybrid (for P+E both) cache unit 
 mov r8d,[rsi + 12]        ; R8D = cache size
 inc r9d                   ; R9D, cache units count + 1
 .doneEcores:

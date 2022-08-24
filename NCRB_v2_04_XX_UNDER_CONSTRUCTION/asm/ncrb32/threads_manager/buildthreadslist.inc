@@ -76,6 +76,7 @@ jz .exit                               ; Go if error creating thread
 mov [esi + THCTRL.threadHandle],eax    ; Store thread handle in the per-thread list
 ;---------- Setup affinity mask for hybrid cores ------------------------------;
 ; Assume hybrid platform without processor groups, <64 logical processors.
+; Hybrid platforms with >64 logical processors yet not supported.
 mov edx,[esp + 00]                        ; EDX = Pointer to IPB
 mov eax,[edx + MEMIPB.updatedHybrid]
 cmp eax,HYBRID_P_PLUS_E
@@ -85,42 +86,39 @@ je .hybridMaskP
 cmp eax,HYBRID_E_ONLY
 jne .maskNonHybrid
 ;--- Hybrid, E-Cores only ---
-mov eax,[SYS_PARMS.effCoreAffinity]
-cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
-je .hybridMaskSetup
+mov ecx,[SYS_PARMS.effCoreAffinity]
+cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect case HT supported but not used
+jne .hybridMaskSetup                      ; Go skip masking if other cases
 cmp [SYS_PARMS.htEcores],1
-jne .hybridMaskSetup
-mov ecx,055555555h
-and ecx,eax
+jne .hybridMaskSetup                      ; Go skip masking if no HT for E-cores
+and ecx,055555555h                        ; Masking for Hyper-Threading OFF
 jmp .hybridMaskSetup 
 ;--- Hybrid, P-Cores only ---
 .hybridMaskP:
-mov eax,[SYS_PARMS.perfCoreAffinity]
-cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
-je .hybridMaskSetup
+mov ecx,[SYS_PARMS.perfCoreAffinity]
+cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect case HT supported but not used
+jne .hybridMaskSetup                      ; Go skip masking if other cases
 cmp [SYS_PARMS.htPcores],1
-jne .hybridMaskSetup
-mov ecx,055555555h
-and ecx,eax
+jne .hybridMaskSetup                      ; Go skip masking if no HT for P-cores
+and ecx,055555555h
 jmp .hybridMaskSetup 
 ;--- Hybrid, P+E Cores ---
 .hybridMaskPplusE:
-mov eax,[SYS_PARMS.perfCoreAffinity]
-cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
-je @f
+mov ecx,[SYS_PARMS.perfCoreAffinity]
+cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect case HT supported but not used
+jne @f                                    ; Go skip masking if other cases
 cmp [SYS_PARMS.htPcores],1
 jne @f
-mov ecx,055555555h
-and ecx,eax
+and ecx,055555555h
 @@:
 mov eax,[SYS_PARMS.effCoreAffinity]
-cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect means HT supported but not used
-je @f
+cmp [edx + MEMIPB.updatedHT],HT_NOT_USED  ; Detect case HT supported but not used
+jne .hybridMaskOr                         ; Go skip masking if other cases 
 cmp [SYS_PARMS.htEcores],1
-jne @f
-mov edx,055555555h
-and edx,eax
-or ecx,edx
+jne .hybridMaskOr
+and eax,055555555h
+.hybridMaskOr:
+or ecx,eax
 .hybridMaskSetup:
 test ecx,ecx
 jnz .afterMasking 

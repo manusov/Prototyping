@@ -1,2 +1,10 @@
 Experimental support Intel Hybrid CPUs.
 Threads control for Performance and Effective scenarios.
+
+---
+
+Note about processor groups + hybrid simultaneously not supported.
+Fix "Set defaults" for hybrid option.
+
+---
+
