@@ -1,17 +1,16 @@
 #pragma once
-
 #include <windows.h>
 
 #if _WIN64
-#define BUILD_STRING "SPDID v0.00.02 for Windows x64."
+#define BUILD_STRING "SPDID v0.00.03 (x64)."
 #define NATIVE_WIDTH 64
 #elif _WIN32
-#define BUILD_STRING "SPDID v0.00.02 for Windows ia32."
+#define BUILD_STRING "SPDID v0.00.03 (ia32)."
 #define NATIVE_WIDTH 32
 #else
 #define BUILD_STRING "UNSUPPORTED PLATFORM."
 #endif
-#define USAGE_STRING "Usage: spdid filename.bin, required binary data file."
+#define USAGE_STRING "Usage: spdinfo filename.bin, required binary data file."
 
 #define PARM_COLOR     FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
 #define VALUE_COLOR    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY
@@ -37,4 +36,5 @@ void parmError(const char s[]);
 void parmSummary(const char s[]);
 void parmDump(byte* ptr, int size);
 void printSize(char* buf, ULONGLONG bytes);
+
 

@@ -1,3 +1,6 @@
+
+// NEED REPLACE THIS BY OWN DATABASE.
+
 /*
  * spd-decode.c, spd-vendors.c
  * Copyright (c) 2010 L. A. F. Pereira
@@ -305,7 +308,7 @@ int spd_written(unsigned char* bytes, int len)
     return 1;
 }
 
-int parity(int value) 
+int parity(int value)
 {
     value ^= value >> 16;
     value ^= value >> 8;
@@ -319,20 +322,20 @@ const char* decodeModuleManufacturer(unsigned char* bytes)
     unsigned char first;
     int ai = 0;
     int len = 8;
-/*
-    if (!spd_written(bytes, 8)) 
-    {
-        return "undefined";
-    }
-*/
+    /*
+        if (!spd_written(bytes, 8))
+        {
+            return "undefined";
+        }
+    */
     do { ai++; } while ((--len && (*bytes++ == 0x7f)));
     first = *--bytes;
-    if (ai == 0) 
+    if (ai == 0)
     {
         // return "invalid";
         return "<NO JEDEC ID>";
     }
-    if (parity(first) != 1) 
+    if (parity(first) != 1)
     {
         // return "invalid";
         return "<NO JEDEC ID>";
@@ -342,8 +345,8 @@ const char* decodeModuleManufacturer(unsigned char* bytes)
 
 const char* decodeModuleManufacturerDdr3(unsigned char* bytes)
 {
-    int index0 = ( * bytes ) & 0xFF;
-    int index1 = ( * (bytes + 1)) & 0xFF;
+    int index0 = (*bytes) & 0xFF;
+    int index1 = (*(bytes + 1)) & 0xFF;
     if ((index0 == 0) || (index1 == 0))
     {
         return "<NO JEDEC ID>";
@@ -362,7 +365,7 @@ const char* decodeModuleManufacturerDdr3(unsigned char* bytes)
 
         int bank = index0 & 0x7F;
         int item = (index1 & 0x7F) - 1;
-        if ((bank < VENDORS_BANKS)&&(item >=0))
+        if ((bank < VENDORS_BANKS) && (item >= 0))
         {
             return (char*)JEDEC_MFG_STR(bank, item);
         }

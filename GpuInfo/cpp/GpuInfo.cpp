@@ -63,10 +63,10 @@ https://github.com/wuye9036/SalviaRenderer/blob/master/salvia_d3d_sw_driver/src/
 using namespace std;
 
 #if _WIN64
-#define BUILD_STRING "GPUID v0.00.01 for Windows x64."
+#define BUILD_STRING "GPU Info v0.00.02 (x64)."
 #define NATIVE_WIDTH 64
 #elif _WIN32
-#define BUILD_STRING "GPUID v0.00.01 for Windows ia32."
+#define BUILD_STRING "GPU Info v0.00.02 (ia32)."
 #define NATIVE_WIDTH 32
 #else
 #define BUILD_STRING "UNSUPPORTED PLATFORM."

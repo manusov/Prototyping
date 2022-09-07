@@ -1,7 +1,7 @@
 #include <windows.h>
 #include<iostream>
 #include<fstream>
-#include "spdid.h"
+#include "spdinfo.h"
 using namespace std;
 
 int loadSpd(int argc, char** argv, byte* ptr, int maxBuffer)

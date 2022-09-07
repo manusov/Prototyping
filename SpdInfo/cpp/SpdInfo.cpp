@@ -1,14 +1,18 @@
-﻿
+﻿/*
+SPD binary data decoder.
+Engineering sample.
+*/
+
 #include <iostream>
 #include <iomanip>
 #include <windows.h>
 #include "loadspd.h"
 #include "parsespd.h"
-#include "spdid.h"
+#include "spdinfo.h"
 using namespace std;
 
 int   dataSize = 0;
-byte* dataPtr  = NULL;
+byte* dataPtr = NULL;
 
 int main(int argc, char** argv)
 {
@@ -195,5 +199,3 @@ void printSize(char* buf, ULONGLONG bytes)
     else
         snprintf(buf, SMALL_STRING, "%.2f %s", count, suffixes[s]);
 }
-
-

@@ -18,7 +18,7 @@ TODO.
 #include <iostream>
 #include <iomanip>
 #include <windows.h>
-#include "spdid.h"
+#include "spdinfo.h"
 #include "jedecvendor.h"
 using namespace std;
 
@@ -49,204 +49,204 @@ typedef enum {
 	ID_DDR5 = 18,
 } RamNativeType;
 
-const char* spdRevision      = "SPD revision";
-const char* spdNumOfBytes    = "Total number of bytes in the SPD";
-const char* spdDeviceType    = "Device type";
-const char* spdModuleType    = "Module type";
+const char* spdRevision = "SPD revision";
+const char* spdNumOfBytes = "Total number of bytes in the SPD";
+const char* spdDeviceType = "Device type";
+const char* spdModuleType = "Module type";
 const char* spdRowColumnBits = "Row/Column address bits";
-const char* spdBankAndType   = "Bank address bits and type";
-const char* spdRefreshBank   = "Refresh bank bits";
-const char* spdTref          = "tREF";
-const char* spdProtocol      = "Protocol version";
-const char* spdMiscDevice    = "Misc. device configuration";
-const char* spdTrpRmin       = "tRP-R, min";
-const char* spdTrasRmin      = "tRAS-R, min";
-const char* spdTrcdRmin      = "tRCD-R, min";
-const char* spdTrrRmin       = "tRR-R, min";
-const char* spdTppRmin       = "tPP-R, min";
-const char* spdMinCycleA     = "Min tCYCLE for range A";
-const char* spdMaxCycleA     = "Max tCYCLE for range A";
-const char* spdTcdlyA        = "tCDLY range for range A";
-const char* spdTclsTcasA     = "tCLS and tCAS range for range A";
-const char* spdMinCycleB     = "Min tCYCLE for range B";
-const char* spdMaxCycleB     = "Max tCYCLE for range B";
-const char* spdTcdlyB        = "tCDLY range for range B";
-const char* spdTclsTcasB     = "tCLS and tCAS range for range B";
-const char* spdMinCycleC     = "Min tCYCLE for range C";
-const char* spdMaxCycleC     = "Max tCYCLE for range C";
-const char* spdTcdlyC        = "tCDLY range for range C";
-const char* spdTclsTcasC     = "tCLS and tCAS range for range C";
-const char* spdMinCycleD     = "Min tCYCLE for range D";
-const char* spdMaxCycleD     = "Max tCYCLE for range D";
-const char* spdTcdlyD        = "tCDLY range for range D";
-const char* spdTclsTcasD     = "tCLS and tCAS range for range D";
-const char* spdTpdnxAmax     = "tPDNXA, max";
-const char* spdTpdnxBmax     = "tPDNXB, max";
-const char* spdTnapxAmax     = "tNAPXA, max";
-const char* spdTnapxBmax     = "tNAPXB, max";
-const char* spdFiminFimax    = "fIMIN[11:8], fIMAX[11:8]";
-const char* spdFimin70       = "fIMIN[7:0]";
-const char* spdFimax70       = "fIMAX[7:0]";
-const char* spdOdfMapping    = "ODF mapping";
-const char* spdTcctrlMax     = "tCCTRL, max";
-const char* spdTtempMax      = "tTEMP, max";
-const char* spdTtceMin       = "tTCE, min";
-const char* spdTrasrMax      = "tRAS-R, max";
-const char* spdTnlimitMax    = "tNLIMIT, max";
-const char* spdActPch30      = "ACTREPT[3:0], PCHREPT[3:0]";
-const char* spdCpcRdr30      = "CPCHREPT_DC[3:0], WRREPT_DC[3:0]";
-const char* spdRetWpr30      = "RETREPT_DC[3:0], WRREPT_DC[3:0]";
-const char* spdReserved      = "Reserved";
-const char* spdFras118       = "fRAS[11:8]";
-const char* spdFras70        = "fRAS[7:0]";
-const char* spdPmaxTj        = "PMAX, hi, PMAX, lo, Tj";
-const char* spdHeatSpreader  = "HeatSpreader, thermal sensor, Tplate";
-const char* spdPstbyHi       = "PSTBY, hi";
-const char* spdPactiHi       = "PACTI, hi";
-const char* spdPactrwHi      = "PACTRW, hi";
-const char* spdPstbyLo       = "PSTBY, lo";
-const char* spdPactiLo       = "PACTI, lo";
-const char* spdPactrwLo      = "PACTRW, lo";
-const char* spdPnap          = "PNAP";
-const char* spdPresa         = "PRESA";
-const char* spdPresb         = "PRESB";
-const char* spdChecksum062   = "Checksum for bytes 0-3Eh (0-62)";
-const char* spdModuleManuf   = "Module manufacturer ID code";
-const char* spdModuleLoc     = "Module manufacturer location";
-const char* spdModulePart    = "Module part number";
-const char* spdModuleRev     = "Module manufacturer revision code";
-const char* spdModuleYear    = "Module manufacturing year";
-const char* spdModuleWeek    = "Module manufacturing week";
-const char* spdModuleSerial  = "Module serial number";
-const char* spdNumOfDev      = "Number of devices on module";
-const char* spdModuleData    = "Module data width";
+const char* spdBankAndType = "Bank address bits and type";
+const char* spdRefreshBank = "Refresh bank bits";
+const char* spdTref = "tREF";
+const char* spdProtocol = "Protocol version";
+const char* spdMiscDevice = "Misc. device configuration";
+const char* spdTrpRmin = "tRP-R, min";
+const char* spdTrasRmin = "tRAS-R, min";
+const char* spdTrcdRmin = "tRCD-R, min";
+const char* spdTrrRmin = "tRR-R, min";
+const char* spdTppRmin = "tPP-R, min";
+const char* spdMinCycleA = "Min tCYCLE for range A";
+const char* spdMaxCycleA = "Max tCYCLE for range A";
+const char* spdTcdlyA = "tCDLY range for range A";
+const char* spdTclsTcasA = "tCLS and tCAS range for range A";
+const char* spdMinCycleB = "Min tCYCLE for range B";
+const char* spdMaxCycleB = "Max tCYCLE for range B";
+const char* spdTcdlyB = "tCDLY range for range B";
+const char* spdTclsTcasB = "tCLS and tCAS range for range B";
+const char* spdMinCycleC = "Min tCYCLE for range C";
+const char* spdMaxCycleC = "Max tCYCLE for range C";
+const char* spdTcdlyC = "tCDLY range for range C";
+const char* spdTclsTcasC = "tCLS and tCAS range for range C";
+const char* spdMinCycleD = "Min tCYCLE for range D";
+const char* spdMaxCycleD = "Max tCYCLE for range D";
+const char* spdTcdlyD = "tCDLY range for range D";
+const char* spdTclsTcasD = "tCLS and tCAS range for range D";
+const char* spdTpdnxAmax = "tPDNXA, max";
+const char* spdTpdnxBmax = "tPDNXB, max";
+const char* spdTnapxAmax = "tNAPXA, max";
+const char* spdTnapxBmax = "tNAPXB, max";
+const char* spdFiminFimax = "fIMIN[11:8], fIMAX[11:8]";
+const char* spdFimin70 = "fIMIN[7:0]";
+const char* spdFimax70 = "fIMAX[7:0]";
+const char* spdOdfMapping = "ODF mapping";
+const char* spdTcctrlMax = "tCCTRL, max";
+const char* spdTtempMax = "tTEMP, max";
+const char* spdTtceMin = "tTCE, min";
+const char* spdTrasrMax = "tRAS-R, max";
+const char* spdTnlimitMax = "tNLIMIT, max";
+const char* spdActPch30 = "ACTREPT[3:0], PCHREPT[3:0]";
+const char* spdCpcRdr30 = "CPCHREPT_DC[3:0], WRREPT_DC[3:0]";
+const char* spdRetWpr30 = "RETREPT_DC[3:0], WRREPT_DC[3:0]";
+const char* spdReserved = "Reserved";
+const char* spdFras118 = "fRAS[11:8]";
+const char* spdFras70 = "fRAS[7:0]";
+const char* spdPmaxTj = "PMAX, hi, PMAX, lo, Tj";
+const char* spdHeatSpreader = "HeatSpreader, thermal sensor, Tplate";
+const char* spdPstbyHi = "PSTBY, hi";
+const char* spdPactiHi = "PACTI, hi";
+const char* spdPactrwHi = "PACTRW, hi";
+const char* spdPstbyLo = "PSTBY, lo";
+const char* spdPactiLo = "PACTI, lo";
+const char* spdPactrwLo = "PACTRW, lo";
+const char* spdPnap = "PNAP";
+const char* spdPresa = "PRESA";
+const char* spdPresb = "PRESB";
+const char* spdChecksum062 = "Checksum for bytes 0-3Eh (0-62)";
+const char* spdModuleManuf = "Module manufacturer ID code";
+const char* spdModuleLoc = "Module manufacturer location";
+const char* spdModulePart = "Module part number";
+const char* spdModuleRev = "Module manufacturer revision code";
+const char* spdModuleYear = "Module manufacturing year";
+const char* spdModuleWeek = "Module manufacturing week";
+const char* spdModuleSerial = "Module serial number";
+const char* spdNumOfDev = "Number of devices on module";
+const char* spdModuleData = "Module data width";
 const char* spdDeviceEnables = "Device enables";
-const char* spdModuleVdd     = "Module Vdd[3:0], Vinterface[3:0]";
-const char* spdModuleVddT    = "Module Vdd tolerance";
-const char* spdCdly01cdly3   = "CDLY0/1 for tCDLY=3";
-const char* spdCdly01cdly4   = "CDLY0/1 for tCDLY=4";
-const char* spdCdly01cdly5   = "CDLY0/1 for tCDLY=5";
-const char* spdCdly01cdly6   = "CDLY0/1 for tCDLY=6";
-const char* spdCdly01cdly7   = "CDLY0/1 for tCDLY=7";
-const char* spdCdly01cdly8   = "CDLY0/1 for tCDLY=8";
-const char* spdCdly01cdly9   = "CDLY0/1 for tCDLY=9";
-const char* spdCdly01cdly10  = "CDLY0/1 for tCDLY=10";
-const char* spdCdly01cdly11  = "CDLY0/1 for tCDLY=11";
-const char* spdCdly01cdly12  = "CDLY0/1 for tCDLY=12";
-const char* spdCdly01cdly13  = "CDLY0/1 for tCDLY=13";
-const char* spdCdly01cdly14  = "CDLY0/1 for tCDLY=14";
-const char* spdCdly01cdly15  = "CDLY0/1 for tCDLY=15";
+const char* spdModuleVdd = "Module Vdd[3:0], Vinterface[3:0]";
+const char* spdModuleVddT = "Module Vdd tolerance";
+const char* spdCdly01cdly3 = "CDLY0/1 for tCDLY=3";
+const char* spdCdly01cdly4 = "CDLY0/1 for tCDLY=4";
+const char* spdCdly01cdly5 = "CDLY0/1 for tCDLY=5";
+const char* spdCdly01cdly6 = "CDLY0/1 for tCDLY=6";
+const char* spdCdly01cdly7 = "CDLY0/1 for tCDLY=7";
+const char* spdCdly01cdly8 = "CDLY0/1 for tCDLY=8";
+const char* spdCdly01cdly9 = "CDLY0/1 for tCDLY=9";
+const char* spdCdly01cdly10 = "CDLY0/1 for tCDLY=10";
+const char* spdCdly01cdly11 = "CDLY0/1 for tCDLY=11";
+const char* spdCdly01cdly12 = "CDLY0/1 for tCDLY=12";
+const char* spdCdly01cdly13 = "CDLY0/1 for tCDLY=13";
+const char* spdCdly01cdly14 = "CDLY0/1 for tCDLY=14";
+const char* spdCdly01cdly15 = "CDLY0/1 for tCDLY=15";
 const char* spdChecksum99126 = "Checksum for bytes 63h-7Eh (99-126)";
 
-const char* spdUsedBytes     = "SPD bytes used for data";
-const char* spdRomBytes      = "SPD EPROM physical size";
-const char* spdRowBits       = "Row address bits";
-const char* spdColumnBits    = "Column address bits";
-const char* spdRanks         = "Physical ranks";
-const char* spdModuleWidth   = "DIMM module data width";
-const char* spdVoltage       = "Voltage interface";
-const char* spdCycleAtMaxCl  = "Cycle time at maximum CAS latency";
+const char* spdUsedBytes = "SPD bytes used for data";
+const char* spdRomBytes = "SPD EPROM physical size";
+const char* spdRowBits = "Row address bits";
+const char* spdColumnBits = "Column address bits";
+const char* spdRanks = "Physical ranks";
+const char* spdModuleWidth = "DIMM module data width";
+const char* spdVoltage = "Voltage interface";
+const char* spdCycleAtMaxCl = "Cycle time at maximum CAS latency";
 const char* spdAccessFromClk = "Access from clock";
-const char* spdDimmConfig    = "DIMM ECC and parity configuration";
-const char* spdRefresh       = "Refresh rate and type";
-const char* spdChipsWidth    = "DRAM chips data width";
-const char* spdErrorCheck    = "Error checking DRAM data width";
-const char* spdMinClkB2B     = "Min back-to-back random column, nCCD";
-const char* spdBurstLengts   = "Burst lengths supported";
-const char* spdBanks         = "Logical banks";
-const char* spdCasLatencies  = "CAS latencies supported";
-const char* spdCsLatencies   = "CS latencies supported";
-const char* spdWrLatencies   = "Write latencies";
-const char* spdModuleAttr    = "Module attributes";
-const char* spdDeviceAttr    = "Device attributes";
-const char* spdMinClkClM1    = "Min clock cycle time at CL-1";
-const char* spdMaxDataClM1   = "Max access time from clk at CL-1";
-const char* spdMinClkClM2    = "Min clock cycle time at CL-2";
-const char* spdMaxDataClM2   = "Max access time from clk at CL-2";
-const char* spdMinRowPrchg   = "Min row precharge time, tRP";
-const char* spdMinRowAct     = "Min row active to row active, tRRD";
-const char* spdMinRasToCas   = "Min RAS to CAS delay, tRCD";
-const char* spdMinRasPulse   = "Min RAS pulse width, tRAS";
+const char* spdDimmConfig = "DIMM ECC and parity configuration";
+const char* spdRefresh = "Refresh rate and type";
+const char* spdChipsWidth = "DRAM chips data width";
+const char* spdErrorCheck = "Error checking DRAM data width";
+const char* spdMinClkB2B = "Min back-to-back random column, nCCD";
+const char* spdBurstLengts = "Burst lengths supported";
+const char* spdBanks = "Logical banks";
+const char* spdCasLatencies = "CAS latencies supported";
+const char* spdCsLatencies = "CS latencies supported";
+const char* spdWrLatencies = "Write latencies";
+const char* spdModuleAttr = "Module attributes";
+const char* spdDeviceAttr = "Device attributes";
+const char* spdMinClkClM1 = "Min clock cycle time at CL-1";
+const char* spdMaxDataClM1 = "Max access time from clk at CL-1";
+const char* spdMinClkClM2 = "Min clock cycle time at CL-2";
+const char* spdMaxDataClM2 = "Max access time from clk at CL-2";
+const char* spdMinRowPrchg = "Min row precharge time, tRP";
+const char* spdMinRowAct = "Min row active to row active, tRRD";
+const char* spdMinRasToCas = "Min RAS to CAS delay, tRCD";
+const char* spdMinRasPulse = "Min RAS pulse width, tRAS";
 const char* spdModuleBankDen = "Module bank density";
-const char* spdAddrCmdSet    = "Addr and cmd setup time before clk";
-const char* spdAddrCmdHold   = "Addr and cmd hold time after clk";
-const char* spdDataInputSet  = "Data input setup time before clock";
+const char* spdAddrCmdSet = "Addr and cmd setup time before clk";
+const char* spdAddrCmdHold = "Addr and cmd hold time after clk";
+const char* spdDataInputSet = "Data input setup time before clock";
 const char* spdDataInputHold = "Data input hold time after clock";
-const char* spdSuperset      = "Superset memory-specific features";
-const char* spdManufSpec     = "Manufacturer specific data";
-const char* spdVendorSpec    = "Vendor specific data";
+const char* spdSuperset = "Superset memory-specific features";
+const char* spdManufSpec = "Manufacturer specific data";
+const char* spdVendorSpec = "Vendor specific data";
 
-const char* spdMinClkClM05   = "Min clock cycle time at CL-0.5";
-const char* spdMaxDataClM05  = "Max access time from clk at CL-0.5";
-const char* spdMinAutoRef    = "Min act-to-act/auto refresh, tRC";
-const char* spdMinAutoRefTo  = "Min auto refresh to active, tRFC";
-const char* spdMaxCycleTime  = "Max cycle time";
-const char* spdMaxDqsSkew    = "Max DQS-DQ skew, tDQSQ max";
-const char* spdReadSkew      = "Read data hold skew, tQHS";
-const char* spdDimmHeight    = "DIMM height";
+const char* spdMinClkClM05 = "Min clock cycle time at CL-0.5";
+const char* spdMaxDataClM05 = "Max access time from clk at CL-0.5";
+const char* spdMinAutoRef = "Min act-to-act/auto refresh, tRC";
+const char* spdMinAutoRefTo = "Min auto refresh to active, tRFC";
+const char* spdMaxCycleTime = "Max cycle time";
+const char* spdMaxDqsSkew = "Max DQS-DQ skew, tDQSQ max";
+const char* spdReadSkew = "Read data hold skew, tQHS";
+const char* spdDimmHeight = "DIMM height";
 
-const char* spdRanksPckgH    = "Ranks, package and height";
-const char* spdDimmMech      = "DIMM mechanical characteristics";
-const char* spdDimmType      = "DIMM type";
-const char* spdWriteRec      = "Write recovery time";
-const char* spdWriteToRead   = "Write to read command delay";
-const char* spdReadToPrec    = "Read to precharge delay";
-const char* spdProbeChar     = "Memory probe characteristics";
-const char* spdExtTrcTrfc    = "Extension for tRC and tRFC";
-const char* spdPllRelock     = "PLL relock time";
-const char* spdTcaseMax      = "Tcase max";
-const char* spdThermRes      = "Thermal resistance of DRAM";
-const char* spdDramTriseAp   = "DRAM T rise, activate/precharge";
-const char* spdDramTriseP    = "DRAM T rise, precharge";
-const char* spdDramTrisePp   = "DRAM T rise, precharge/powerdown";
-const char* spdDramTriseAs   = "DRAM T rise, active standby";
-const char* spdDramTriseApf  = "DRAM T rise, active powerdown, fast";
-const char* spdDramTriseAps  = "DRAM T rise, active powerdown, slow";
-const char* spdDramTriseBr   = "DRAM T rise, burst read";
-const char* spdDramTriseBrf  = "DRAM T rise, burst refresh";
-const char* spdDramTriseBir  = "DRAM T rise, bank interleave read";
-const char* spdThermResPll   = "Thermal resistance of PLL";
-const char* spdThermResReg   = "Thermal resistance of register";
-const char* spdPllTriseA     = "PLL T rise, active";
-const char* spdRegTriseA     = "Register T rise, active";
+const char* spdRanksPckgH = "Ranks, package and height";
+const char* spdDimmMech = "DIMM mechanical characteristics";
+const char* spdDimmType = "DIMM type";
+const char* spdWriteRec = "Write recovery time";
+const char* spdWriteToRead = "Write to read command delay";
+const char* spdReadToPrec = "Read to precharge delay";
+const char* spdProbeChar = "Memory probe characteristics";
+const char* spdExtTrcTrfc = "Extension for tRC and tRFC";
+const char* spdPllRelock = "PLL relock time";
+const char* spdTcaseMax = "Tcase max";
+const char* spdThermRes = "Thermal resistance of DRAM";
+const char* spdDramTriseAp = "DRAM T rise, activate/precharge";
+const char* spdDramTriseP = "DRAM T rise, precharge";
+const char* spdDramTrisePp = "DRAM T rise, precharge/powerdown";
+const char* spdDramTriseAs = "DRAM T rise, active standby";
+const char* spdDramTriseApf = "DRAM T rise, active powerdown, fast";
+const char* spdDramTriseAps = "DRAM T rise, active powerdown, slow";
+const char* spdDramTriseBr = "DRAM T rise, burst read";
+const char* spdDramTriseBrf = "DRAM T rise, burst refresh";
+const char* spdDramTriseBir = "DRAM T rise, bank interleave read";
+const char* spdThermResPll = "Thermal resistance of PLL";
+const char* spdThermResReg = "Thermal resistance of register";
+const char* spdPllTriseA = "PLL T rise, active";
+const char* spdRegTriseA = "Register T rise, active";
 
-const char* spdDensBank      = "SDRAM chips density and logical banks";
-const char* spdAddressing    = "SDRAM addressing";
-const char* spdNomVoltage    = "Module nominal voltage";
-const char* spdModuleOrg     = "Module organization";
-const char* spdBusWidth      = "Module bus width";
-const char* spdFineTime      = "Fine timebase (FTB) dividend/divisor";
-const char* spdMediumTdvdn   = "Medium timebase (MTB) dividend";
-const char* spdMediumTdivs   = "Medium timebase (MTB) divisor";
-const char* spdMinCycleTime  = "Min cycle time (MTB), tCKmin";
-const char* spdMinCasLat     = "Min CAS latency (MTB), tAAmin";
-const char* spdMinWriteRecM  = "Min write recovery (MTB), tWRmin";
-const char* spdMinRasToCasM  = "Min RAS-to-CAS delay (MTB), tRCDmin";
-const char* spdMinRowActTaM  = "Min row act to row act (MTB), tRRDmin";
-const char* spdMinRowPrechM  = "Min row precharge (MTB), tRPmin";
-const char* spdUpTrasTrcM    = "Upper nibbles for tRAS and tRC";
-const char* spdMinActToPrM   = "Min act to precharge (MTB), tRASmin";
-const char* spdMinActToAcM   = "Min act to act/ref (MTB), tRCmin";
-const char* spdMinRefRecLoM  = "Min ref recov (MTB), low, tRFCmin";
-const char* spdMinRefRecHiM  = "Min ref recov (MTB), high, tRFCmin";
-const char* spdMinWrToRdM    = "Min write to read  (MTB), tWTR";
-const char* spdMinRdToPcM    = "Min read to precharge (MTB), tRTP";
-const char* spdUpTfawM       = "Upper nibble for tFAW";
-const char* spdMinFawM       = "Min four act window (MTB), tFAWmin";
-const char* spdOptional      = "SDRAM optional features";
-const char* spdThermRef      = "SDRAM thermal and refresh options";
-const char* spdThermSens     = "Module thermal sensor";
-const char* spdDeviceChips   = "SDRAM chips and die type";
-const char* spdFineTck       = "Fine offset for tCKmin";
-const char* spdFineTaa       = "Fine offset for tAAmin";
-const char* spdFineTrcd      = "Fine offset for tRCDmin";
-const char* spdFineTrp       = "Fine offset for tRPmin";
-const char* spdFineTrc       = "Fine offset for tRCmin";
-const char* spdMaxActCount   = "SDRAM maximum active count (MAC)";
-const char* spdFamilySpec    = "Family-specific";
-const char* spdCrcLow        = "CRC, low byte";
-const char* spdCrcHigh       = "CRC, high byte";
-const char* spdChipManuf     = "DRAM chips manufacturer ID code";
+const char* spdDensBank = "SDRAM chips density and logical banks";
+const char* spdAddressing = "SDRAM addressing";
+const char* spdNomVoltage = "Module nominal voltage";
+const char* spdModuleOrg = "Module organization";
+const char* spdBusWidth = "Module bus width";
+const char* spdFineTime = "Fine timebase (FTB) dividend/divisor";
+const char* spdMediumTdvdn = "Medium timebase (MTB) dividend";
+const char* spdMediumTdivs = "Medium timebase (MTB) divisor";
+const char* spdMinCycleTime = "Min cycle time (MTB), tCKmin";
+const char* spdMinCasLat = "Min CAS latency (MTB), tAAmin";
+const char* spdMinWriteRecM = "Min write recovery (MTB), tWRmin";
+const char* spdMinRasToCasM = "Min RAS-to-CAS delay (MTB), tRCDmin";
+const char* spdMinRowActTaM = "Min row act to row act (MTB), tRRDmin";
+const char* spdMinRowPrechM = "Min row precharge (MTB), tRPmin";
+const char* spdUpTrasTrcM = "Upper nibbles for tRAS and tRC";
+const char* spdMinActToPrM = "Min act to precharge (MTB), tRASmin";
+const char* spdMinActToAcM = "Min act to act/ref (MTB), tRCmin";
+const char* spdMinRefRecLoM = "Min ref recov (MTB), low, tRFCmin";
+const char* spdMinRefRecHiM = "Min ref recov (MTB), high, tRFCmin";
+const char* spdMinWrToRdM = "Min write to read  (MTB), tWTR";
+const char* spdMinRdToPcM = "Min read to precharge (MTB), tRTP";
+const char* spdUpTfawM = "Upper nibble for tFAW";
+const char* spdMinFawM = "Min four act window (MTB), tFAWmin";
+const char* spdOptional = "SDRAM optional features";
+const char* spdThermRef = "SDRAM thermal and refresh options";
+const char* spdThermSens = "Module thermal sensor";
+const char* spdDeviceChips = "SDRAM chips and die type";
+const char* spdFineTck = "Fine offset for tCKmin";
+const char* spdFineTaa = "Fine offset for tAAmin";
+const char* spdFineTrcd = "Fine offset for tRCDmin";
+const char* spdFineTrp = "Fine offset for tRPmin";
+const char* spdFineTrc = "Fine offset for tRCmin";
+const char* spdMaxActCount = "SDRAM maximum active count (MAC)";
+const char* spdFamilySpec = "Family-specific";
+const char* spdCrcLow = "CRC, low byte";
+const char* spdCrcHigh = "CRC, high byte";
+const char* spdChipManuf = "DRAM chips manufacturer ID code";
 
 struct SPD_BYTE_DESCRIPTOR
 {
@@ -392,9 +392,9 @@ void printRdramRowColumnBits(char* s, int n, byte myData, byte* allData)
 }
 void printRdramBankAndType(char* s, int n, byte myData, byte* allData)
 {
-	int db = ( myData >> 7 ) & 0x01;
-	int sb = ( myData >> 6 ) & 0x01;
-	int banks = 1 << ( myData & 0x07);
+	int db = (myData >> 7) & 0x01;
+	int sb = (myData >> 6) & 0x01;
+	int banks = 1 << (myData & 0x07);
 	snprintf(s, n, "doubled: %d, split: %d, banks: %d", db, sb, banks);
 }
 void printRdramRefreshBank(char* s, int n, byte myData, byte* allData)
@@ -456,7 +456,7 @@ void printRdramMiscDevice(char* s, int n, byte myData, byte* allData)
 	int s28ieco = (myData >> 2) & 0x01;
 	int s3pdnd = (myData >> 7) & 0x01;
 	snprintf(s, n, "tDQS, min: %.1f SCK, LPSR: %d, S28IECO: %d, S3PDN dis: %d.",
-		     tdqs, lpsr, s28ieco, s3pdnd);
+		tdqs, lpsr, s28ieco, s3pdnd);
 }
 void printRdramTrpRmin(char* s, int n, byte myData, byte* allData)
 {
@@ -709,7 +709,7 @@ void printRdramHeatSpreader(char* s, int n, byte myData, byte* allData)
 	int spreader = (myData >> 7) & 0x01;
 	int sensor = (myData >> 6) & 0x01;
 	int tplate = (myData & 0x3F) + 64;
-	snprintf(s, n, "spreader: %d, sensor: %d, Tplate: %d C.", 
+	snprintf(s, n, "spreader: %d, sensor: %d, Tplate: %d C.",
 		spreader, sensor, tplate);
 }
 void printRdramPstbyHi(char* s, int n, byte myData, byte* allData)
@@ -793,7 +793,7 @@ void printRdramModuleLoc(char* s, int n, byte myData, byte* allData)
 }
 void printRdramModulePart(char* s, int n, byte myData, byte* allData)
 {
-	char partName[19+1];
+	char partName[19 + 1];
 	char* dst = partName;
 	char* src = (char*)allData + 73;
 	int m = 19;
@@ -805,7 +805,7 @@ void printRdramModuleRev(char* s, int n, byte myData, byte* allData)
 	int byte1 = myData & 0xFF;
 	int byte2 = *(allData + 92) & 0xFF;
 	int rev = byte1 + (byte2 << 8);
-	char revStr[3+1];
+	char revStr[3 + 1];
 	int revTemp = rev;
 	char* dst = revStr;
 	int m = 3;
@@ -1112,27 +1112,27 @@ void printSdramDeviceType(char* s, int n, byte myData, byte* allData)
 	const char* type;
 	switch (myData)
 	{
-		case ID_SDR:
-			type = "SDR SDRAM";
-			break;
-		case ID_DDR:
-			type = "DDR SDRAM";
-			break;
-		case ID_DDR2:
-			type = "DDR2 SDRAM";
-			break;
-		case ID_DDR3:
-			type = "DDR3 SDRAM";
-			break;
-		case ID_DDR4:
-			type = "DDR4 SDRAM";
-			break;
-		case ID_DDR5:
-			type = "DDR5 SDRAM";
-			break;
-		default:
-			type = "unknown";
-			break;
+	case ID_SDR:
+		type = "SDR SDRAM";
+		break;
+	case ID_DDR:
+		type = "DDR SDRAM";
+		break;
+	case ID_DDR2:
+		type = "DDR2 SDRAM";
+		break;
+	case ID_DDR3:
+		type = "DDR3 SDRAM";
+		break;
+	case ID_DDR4:
+		type = "DDR4 SDRAM";
+		break;
+	case ID_DDR5:
+		type = "DDR5 SDRAM";
+		break;
+	default:
+		type = "unknown";
+		break;
 	}
 	snprintf(s, n, "%s.", type);
 }
@@ -1167,7 +1167,7 @@ void printSdramRanks(char* s, int n, byte myData, byte* allData)
 void printSdramModuleWidth(char* s, int n, byte myData, byte* allData)
 {
 	int low = myData & 0xFF;
-	int high = ( * (allData + 7) & 0xFF) << 8;
+	int high = (*(allData + 7) & 0xFF) << 8;
 	int width = low + high;
 	if (width == 0)
 	{
@@ -1472,7 +1472,7 @@ void printSdramTimeSigned(char* s, int n, byte myData, byte* allData)
 	{
 		sign = "-";
 	}
-	snprintf(s, n, "%s%d.%d ns.", sign, high, low );
+	snprintf(s, n, "%s%d.%d ns.", sign, high, low);
 }
 void printSdramRevision(char* s, int n, byte myData, byte* allData)
 {
@@ -1603,7 +1603,7 @@ void printSdramIntelPc(char* s, int n, byte myData, byte* allData)
 	{
 		snprintf(s, n, "reserved for Intel PC66/PC100.");
 	}
-	else if ((myData != 66)&&(myData != 100))
+	else if ((myData != 66) && (myData != 100))
 	{
 		snprintf(s, n, "invalid value for Intel PC66/PC100.");
 	}
@@ -1803,7 +1803,7 @@ void printDdrDeviceAttr(char* s, int n, byte myData, byte* allData)
 	{
 		s4 = "0.2V";
 	}
-snprintf(s, n, "FastAP: %d, CoAP: %d, UVCC: %s, LVCC: %s, WeakDrv: %d.",
+	snprintf(s, n, "FastAP: %d, CoAP: %d, UVCC: %s, LVCC: %s, WeakDrv: %d.",
 		b7, b6, s5, s4, b0);
 }
 void printDdr025ns(char* s, int n, byte myData, byte* allData)
@@ -2004,9 +2004,9 @@ void printDdr2cycleTime(char* s, int n, byte myData, byte* allData)
 		int mhz;
 		int high = (myData >> 4) & 0x0F;
 		int low = myData & 0x0F;
-		double timings[] = 
-		{ 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 
-	  	  0.25, 0.33, 0.66, 0.75, 0.0, 0.0 };
+		double timings[] =
+		{ 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+		  0.25, 0.33, 0.66, 0.75, 0.0, 0.0 };
 		double ns = high + timings[low];
 		switch (myData)
 		{
@@ -2117,7 +2117,7 @@ void printDdr2dimmMech(char* s, int n, byte myData, byte* allData)
 		else
 		{
 			const char* mechTypes[4][8] =
-			{ { "x<4.10", "x<4.10", "x<3.80", "x<3.80", 
+			{ { "x<4.10", "x<4.10", "x<3.80", "x<3.80",
 				"x<3.85", "x<3.85", "x<3.80", "x<3.80" },
 			  { "4.10<x<6.75", "4.10<x<6.75", "3.80<x<TBD", "3.80<x<TBD",
 				"3.85<x<6.45", "3.85<x<6.45", "3.80<x<7.10", "3.80<x<7.10" },
@@ -2134,8 +2134,8 @@ void printDdr2dimmMech(char* s, int n, byte myData, byte* allData)
 void printDdr2dimmType(char* s, int n, byte myData, byte* allData)
 {
 	const char* types[] =
-	{ "undefined", "RDIMM", "UDIMM", "SO-DIMM", 
-	  "72b-SO-CDIMM", "72b-SO-RDIMM", "Micro-DIMM", "Mini-RDIMM", "Mini-UDIMM"};
+	{ "undefined", "RDIMM", "UDIMM", "SO-DIMM",
+	  "72b-SO-CDIMM", "72b-SO-RDIMM", "Micro-DIMM", "Mini-RDIMM", "Mini-UDIMM" };
 	const double widths[] =
 	{ 0.0, 133.35, 133.35, 67.60, 67.60, 67.60, 54.00, 82.00, 82.00 };
 	int index = helperDimmTypeDdr2(myData);
@@ -2204,7 +2204,7 @@ void printDdr2extTrcTrfc(char* s, int n, byte myData, byte* allData)
 void printDdr2autoRef(char* s, int n, byte myData, byte* allData)
 {
 	int ns = myData & 0xFF;
-	int index = (( * (allData + 40) & 0x70) >> 4);
+	int index = ((*(allData + 40) & 0x70) >> 4);
 	double nsa[] = { 0.0, 0.25, 0.33, 0.5, 0.66, 0.75, 0.0, 0.0 };
 	double trc = ns + nsa[index];
 	snprintf(s, n, "%.2f", trc);
@@ -2690,7 +2690,7 @@ void printDdr3nomVoltage(char* s, int n, byte myData, byte* allData)
 	k = snprintf(p, m, "supported voltages: ");
 	p += k;
 	m -= k;
-	if ((myData & 0x06)||(!(myData & 0x01)))
+	if ((myData & 0x06) || (!(myData & 0x01)))
 	{
 		if (myData & 0x04)
 		{
@@ -2821,7 +2821,7 @@ void printDdr3moduleWidth(char* s, int n, byte myData, byte* allData)
 void printDdr3fineTime(char* s, int n, byte myData, byte* allData)
 {
 	double t = helperFtbDdr3(myData);
-	if (t<0.0)
+	if (t < 0.0)
 	{
 		snprintf(s, n, "undefined.");
 	}
@@ -3019,7 +3019,7 @@ void printDdr3thermRefOpt(char* s, int n, byte myData, byte* allData)
 	int asr = (myData & 0x04) >> 2;
 	int etrr = (myData & 0x02) >> 1;
 	int etr = myData & 0x01;
-	snprintf(s, n, "PASR: %d, ODTS: %d, ASR: %d, ETRR: %d, ETR: %d.", 
+	snprintf(s, n, "PASR: %d, ODTS: %d, ASR: %d, ETRR: %d, ETR: %d.",
 		pasr, odts, asr, etrr, etr);
 }
 void printDdr3thermSensor(char* s, int n, byte myData, byte* allData)
@@ -3252,7 +3252,7 @@ void printDdr3spd(char* s, int n, byte myData, byte* allData)
 			else
 				crc = crc << 1;
 	}
-	
+
 	int saved = (((*(allData + 127)) & 0xFF) << 8) + (myData & 0xFF);
 	int calculated = crc & 0xFFFF;
 	if (calculated == saved)
@@ -4051,7 +4051,7 @@ RAM_TYPES_DIRECTORY ramTypesDirectory[] =
 	{ "DDR5 SDRAM"       , ddr5sdramDecoder    , DDR5_SDRAM_COUNT    }
 };
 
-int parseSpd(byte* ptr, int size )
+int parseSpd(byte* ptr, int size)
 {
 	int nativeType = *(ptr + 2);
 	int indexType = UNKNOWN;
@@ -4416,7 +4416,7 @@ int parseSpd(byte* ptr, int size )
 		char sizeName[48];
 		int sdramCapacity = helperChipSizeDdr3(*(ptr + 4));
 		int primaryBusWidth;
-		int dataBusIndex = ( * (ptr + 8)) & 0x07;
+		int dataBusIndex = (*(ptr + 8)) & 0x07;
 		if (dataBusIndex > 3)
 		{
 			primaryBusWidth = -1;
@@ -4426,7 +4426,7 @@ int parseSpd(byte* ptr, int size )
 			primaryBusWidth = 8 << dataBusIndex;
 		}
 		int sdramWidth;
-		int widthIndex = ( * (ptr + 7)) & 0x07;
+		int widthIndex = (*(ptr + 7)) & 0x07;
 		if (widthIndex > 3)
 		{
 			sdramWidth = -1;
@@ -4436,7 +4436,7 @@ int parseSpd(byte* ptr, int size )
 			sdramWidth = 4 << widthIndex;
 		}
 		int ranks;
-		int rankIndex = ((*(ptr + 7)) & 0x38 ) >> 3;
+		int rankIndex = ((*(ptr + 7)) & 0x38) >> 3;
 		if (rankIndex > 4)
 		{
 			ranks = -1;
@@ -4458,7 +4458,7 @@ int parseSpd(byte* ptr, int size )
 		snprintf(moduleString, MAX_TEXT_STRING, "%s %s %s %s.",
 			vendorName, partName, speedName, sizeName);
 		parmSummary(moduleString);
-}
+	}
 
 	// fundamental memory type
 	RAM_TYPES_DIRECTORY rtd = ramTypesDirectory[indexType];
