@@ -1,6 +1,6 @@
 #include <windows.h>
-#include<iostream>
-#include<fstream>
+#include <iostream>
+#include <fstream>
 #include "spdinfo.h"
 using namespace std;
 

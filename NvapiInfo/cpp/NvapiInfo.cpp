@@ -1,8 +1,9 @@
 ﻿/*
 NVAPI information. Engineering sample.
+https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/nvapi_8h.html
 TODO.
 1) Tachometer read error.
-2) Other information view, include power (watts) read add.
+2) Other information view, include power (watts) read add. Find PCIe bandwidth.
 3) Support all variants of frequency read. Learn variants, include sensors array.
 4) Support all variants of temperature read. Learn variants, include sensors array.
 5) Code optimization and comments.
@@ -22,11 +23,11 @@ TODO.
 #define SMALL_STRING 160
 #define NVAPIQUERY_UTILIZATION_TYPE_GPU 0
 #ifdef  _WIN64
-#define BUILD_STRING "NVAPI info v0.00.02 (x64)."
+#define BUILD_STRING "NVAPI info v0.00.03 (x64)."
 #define NATIVE_WIDTH 64
 #pragma comment(lib, "lib\\amd64\\nvapi64.lib")
 #else
-#define BUILD_STRING "NVAPI info v0.00.02 (ia32)."
+#define BUILD_STRING "NVAPI info v0.00.03 (ia32)."
 #define NATIVE_WIDTH 32
 #pragma comment(lib, "lib\\x86\\nvapi.lib")
 #endif
@@ -146,6 +147,8 @@ struct CLK_ENTRY
 // layout is handler-specific, memory size minimized by union.
 union NVAPI_DATA
 {
+    NvAPI_ShortString versionString;
+    NvAPI_ShortString versionExString;
     NvAPI_ShortString gpuName;
     NV_DISPLAY_DRIVER_MEMORY_INFO gpuMemoryStatus;
     NV_GPU_DYNAMIC_PSTATES_INFO_EX gpuPerformance;
@@ -636,7 +639,7 @@ NVAPI_INFO_ENTRY sequence[] =
     { "Video clock"                              , infoGpuVideoClk               },
     { "Memory clock"                             , infoGpuMemoryClk              },
     { "GPU internal temperature"                 , infoGpuInternalTemperature    },
-    { "GPU fan tachometer"                       , infoGpuFanTachometer          }
+    { "Fan tachometer"                           , infoGpuFanTachometer          }
 };
 const int SEQUENCE_COUNT = sizeof(sequence) / sizeof(NVAPI_INFO_ENTRY);
 
@@ -661,10 +664,26 @@ int main(int argc, char* argv[])
             nvRetValue = NvAPI_EnumPhysicalGPUs(nvGPUHandle, &uiNumGPUs);
             if (nvRetValue == NVAPI_OK)
             {
+                // Show information block about driver
+                cout << endl;
+                parmGroup("Driver info");
+                memset(&nvapiData, 0, sizeof(nvapiData));
+                nvRetValue = NvAPI_GetInterfaceVersionString(nvapiData.versionString);
+                if (nvRetValue == NVAPI_OK)
+                {
+                    snprintf(buffer, SMALL_STRING, "%s.", nvapiData.gpuName);
+                    parmValue("Driver version", buffer);
+                }
+                else
+                {
+                    snprintf(buffer, SMALL_STRING, "Get version name failed (%d).", nvRetValue);
+                    parmError(buffer);
+                }
+                // Show information blocks per each GPU
                 if (uiNumGPUs != 0)
                 {
-                    snprintf(buffer, SMALL_STRING, "NVIDIA GPU detected: %d.", uiNumGPUs);
-                    parmName(buffer);
+                    snprintf(buffer, SMALL_STRING, "%d.", uiNumGPUs);
+                    parmValue("NVIDIA GPU detected", buffer);
                     // Iterate through all of the detected compatible GPUs.
                     for (unsigned int iDevIDX = 0; iDevIDX < uiNumGPUs; iDevIDX++)
                     {

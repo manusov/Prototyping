@@ -780,7 +780,7 @@ void printRdramChecksum062(char* s, int n, byte myData, byte* allData)
 }
 void printRdramModuleManuf(char* s, int n, byte myData, byte* allData)
 {
-	const char* vendor = decodeModuleManufacturer(allData + 64);
+	const char* vendor = jedecDecoderSequental(allData + 64);
 	snprintf(s, n, "%s.", vendor);
 }
 void printRdramSeeAbove(char* s, int n, byte myData, byte* allData)
@@ -3226,7 +3226,7 @@ void printDdr3maxActCount(char* s, int n, byte myData, byte* allData)
 }
 void printDdr3moduleManuf(char* s, int n, byte myData, byte* allData)
 {
-	const char* vendor = decodeModuleManufacturerDdr3(allData + 117);
+	const char* vendor = jedecDecoderIndexed(*(allData+117), *(allData + 118));
 	snprintf(s, n, "%s.", vendor);
 }
 void printDdr3spd(char* s, int n, byte myData, byte* allData)
@@ -3277,7 +3277,7 @@ void printDdr3ModulePart(char* s, int n, byte myData, byte* allData)
 }
 void printDdr3chipsManuf(char* s, int n, byte myData, byte* allData)
 {
-	const char* vendor = decodeModuleManufacturerDdr3(allData + 148);
+	const char* vendor = jedecDecoderIndexed(*(allData + 148), *(allData + 149));
 	snprintf(s, n, "%s.", vendor);
 }
 void printDdr3moduleSerial(char* s, int n, byte myData, byte* allData)
@@ -4088,7 +4088,7 @@ int parseSpd(byte* ptr, int size)
 	if (indexType == DIRECT_RAMBUS)
 	{
 		parmGroup("Module");
-		const char* vendorName = decodeModuleManufacturer(ptr + 64);
+		const char* vendorName = jedecDecoderSequental(ptr + 64);
 		char partName[19 + 1];
 		char* dst = partName;
 		char* src = (char*)ptr + 73;
@@ -4132,7 +4132,7 @@ int parseSpd(byte* ptr, int size)
 	if (indexType == SDR_SDRAM)
 	{
 		parmGroup("Module");
-		const char* vendorName = decodeModuleManufacturer(ptr + 64);
+		const char* vendorName = jedecDecoderSequental(ptr + 64);
 		char partName[19 + 1];
 		char* dst = partName;
 		char* src = (char*)ptr + 73;
@@ -4226,7 +4226,7 @@ int parseSpd(byte* ptr, int size)
 	if (indexType == DDR_SDRAM)
 	{
 		parmGroup("Module");
-		const char* vendorName = decodeModuleManufacturer(ptr + 64);
+		const char* vendorName = jedecDecoderSequental(ptr + 64);
 		char partName[19 + 1];
 		char* dst = partName;
 		char* src = (char*)ptr + 73;
@@ -4298,7 +4298,7 @@ int parseSpd(byte* ptr, int size)
 	if (indexType == DDR2_SDRAM)
 	{
 		parmGroup("Module");
-		const char* vendorName = decodeModuleManufacturer(ptr + 64);
+		const char* vendorName = jedecDecoderSequental(ptr + 64);
 		char partName[19 + 1];
 		char* dst = partName;
 		char* src = (char*)ptr + 73;
@@ -4370,7 +4370,7 @@ int parseSpd(byte* ptr, int size)
 	if (indexType == DDR3_SDRAM)
 	{
 		parmGroup("Module");
-		const char* vendorName = decodeModuleManufacturerDdr3(ptr + 117);
+		const char* vendorName = jedecDecoderIndexed(*(ptr + 117), *(ptr + 118));
 		char partName[19 + 1];
 		char* dst = partName;
 		char* src = (char*)ptr + 128;

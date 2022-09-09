@@ -1,7 +1,8 @@
 #pragma once
+#ifndef JEDECVENDOR_H
+#define JEDECVENDOR_H
 
-// NEED REPLACE THIS BY OWN DATABASE.
+const char* jedecDecoderSequental(unsigned char* bytes);
+const char* jedecDecoderIndexed(int group, int index);
 
-const char* decodeModuleManufacturer(unsigned char* bytes);
-const char* decodeModuleManufacturerDdr3(unsigned char* bytes);
-
+#endif  // JEDECVENDOR_H

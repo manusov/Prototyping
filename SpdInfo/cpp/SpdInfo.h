@@ -1,11 +1,14 @@
 #pragma once
+#ifndef SPDINFO_H
+#define SPDINFO_H
+
 #include <windows.h>
 
 #if _WIN64
-#define BUILD_STRING "SPDID v0.00.03 (x64)."
+#define BUILD_STRING "SPDID v0.00.04 (x64)."
 #define NATIVE_WIDTH 64
 #elif _WIN32
-#define BUILD_STRING "SPDID v0.00.03 (ia32)."
+#define BUILD_STRING "SPDID v0.00.04 (ia32)."
 #define NATIVE_WIDTH 32
 #else
 #define BUILD_STRING "UNSUPPORTED PLATFORM."
@@ -37,4 +40,4 @@ void parmSummary(const char s[]);
 void parmDump(byte* ptr, int size);
 void printSize(char* buf, ULONGLONG bytes);
 
-
+#endif  // SPDINFO_H
