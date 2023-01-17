@@ -1,0 +1,143 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Русский (Россия) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_APPLICATION_TITLE   ICON                    "icons_service\\application_title.ico"
+
+IDI_ITEM_CLOSED         ICON                    "icons_service\\item_closed.ico"
+
+IDI_ITEM_CLOSED_LIGHT   ICON                    "icons_service\\item_closed_light.ico"
+
+IDI_ITEM_OPENED         ICON                    "icons_service\\item_opened.ico"
+
+IDI_ITEM_OPENED_LIGHT   ICON                    "icons_service\\item_opened_light.ico"
+
+IDI_ACPI                ICON                    "icons_system\\acpi.ico"
+
+IDI_ACPI_HAL            ICON                    "icons_system\\acpi_hal.ico"
+
+IDI_BLUETOOTH           ICON                    "icons_system\\bluetooth.ico"
+
+IDI_HIGH_DEFINITION_AUDIO ICON                    "icons_system\\high_definition_audio.ico"
+
+IDI_HID                 ICON                    "icons_system\\human_interface_devices.ico"
+
+IDI_IDE                 ICON                    "icons_system\\ide.ico"
+
+IDI_MASS_STORAGE        ICON                    "icons_system\\mass_storage.ico"
+
+IDI_OTHER_DEVICES       ICON                    "icons_system\\other_devices.ico"
+
+IDI_PCI                 ICON                    "icons_system\\pci.ico"
+
+IDI_PCI_IDE             ICON                    "icons_system\\pci_ide.ico"
+
+IDI_ROOT_ENUMERATOR     ICON                    "icons_system\\root_enumerator.ico"
+
+IDI_SCSI                ICON                    "icons_system\\scsi.ico"
+
+IDI_SOFTWARE_DEFINED    ICON                    "icons_system\\software_defined_devices.ico"
+
+IDI_SYSTEM_TREE         ICON                    "icons_system\\system_tree.ico"
+
+IDI_THIS_COMPUTER       ICON                    "icons_system\\this_computer.ico"
+
+IDI_UEFI                ICON                    "icons_system\\uefi.ico"
+
+IDI_USB                 ICON                    "icons_system\\usb.ico"
+
+IDI_USB_MASS_STORAGE    ICON                    "icons_system\\usb_mass_storage.ico"
+
+IDI_USER_MODE_BUS       ICON                    "icons_system\\user_mode_bus.ico"
+
+IDI_VIDEO_DISPLAYS      ICON                    "icons_system\\video_displays.ico"
+
+IDI_AUDIO_IN_OUT        ICON                    "icons_add\\audio_in_out.ico"
+
+IDI_IMAGE_PROC          ICON                    "icons_add\\image_processing_devices.ico"
+
+IDI_KEYBOARDS           ICON                    "icons_add\\keyboards.ico"
+
+IDI_LPT_AND_COM         ICON                    "icons_add\\lpt_and_com_ports.ico"
+
+IDI_MOBILE_DEVICES      ICON                    "icons_add\\mobile_devices.ico"
+
+IDI_MOUSES              ICON                    "icons_add\\mouses.ico"
+
+IDI_NETWORK_ADAPTERS    ICON                    "icons_add\\network_adapters.ico"
+
+IDI_PRINT_QUEUES        ICON                    "icons_add\\print_queues.ico"
+
+IDI_PROCESSORS          ICON                    "icons_add\\processors.ico"
+
+IDI_SECURITY_DEVICES    ICON                    "icons_add\\security_devices.ico"
+
+IDI_SOFTWARE_COMPONENTS ICON                    "icons_add\\software_components.ico"
+
+IDI_VIDEO_ADAPTERS      ICON                    "icons_add\\video_adapters.ico"
+
+#endif    // Русский (Россия) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
