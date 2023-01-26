@@ -1,10 +1,7 @@
-/*
+/* ----------------------------------------------------------------------------------------
+Class for GUI window.
+---------------------------------------------------------------------------------------- */
 
-Реализация класса окна.
-
-*/
-
-#include "resource.h"  // This for load icons.
 #include "KWnd.h"
 
 KWnd::KWnd(LPCTSTR windowName, HINSTANCE hInst, int cmdShow,
@@ -20,16 +17,16 @@ KWnd::KWnd(LPCTSTR windowName, HINSTANCE hInst, int cmdShow,
 	wc.cbClsExtra	 = 0;
 	wc.cbWndExtra    = 0;
 	wc.hInstance     = hInst;
-	wc.hIcon		 = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPLICATION_TITLE));
+	wc.hIcon		 = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APP));
 	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 	wc.lpszMenuName  = menuName;
 	wc.lpszClassName = szClassName;
-	wc.hIconSm       = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPLICATION_TITLE));
+	wc.hIconSm       = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APP));
 
 	hWnd = NULL;
 
-	// Регистрируем класс окна
+	// Register window class, show message box if error.
 	if (!RegisterClassEx(&wc)) {
 		char msg[100] = "Cannot register class: ";
 		strcat_s(msg, szClassName);
@@ -37,10 +34,9 @@ KWnd::KWnd(LPCTSTR windowName, HINSTANCE hInst, int cmdShow,
 		return;
 	}
 	
-	// Создаем окно
+	// Create window, show message box if error.
 	hWnd = CreateWindow(szClassName, windowName, windowStyle,
 		x, y, width, height, hParent, (HMENU)NULL, hInst, NULL);       
-	
 	if (!hWnd) {
 		char text[100] = "Cannot create window: ";
 		strcat_s(text, windowName);
@@ -48,6 +44,6 @@ KWnd::KWnd(LPCTSTR windowName, HINSTANCE hInst, int cmdShow,
 		return;
 	}
 
-	// Показываем  окно
+	// Show window.
 	ShowWindow(hWnd, cmdShow); 
 }

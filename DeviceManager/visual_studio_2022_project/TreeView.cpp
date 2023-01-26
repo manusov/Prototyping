@@ -8,24 +8,18 @@ TreeView::TreeView()
 {
 	// Reserved functionality.
 }
-
 TreeView::~TreeView()
 {
 	// Reserved functionality.
 }
-
 void TreeView::SetAndInitModel(TreeModel* p)
 {
 	pModel = p;
 }
-
 LRESULT CALLBACK TreeView::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	HDC hdc;
-	PAINTSTRUCT ps;
-	SCROLLINFO si;
-	// These variables are required by BitBlt. 
-	static HDC hdcWin;           // window DC 
+	// These variables are required by BeginPaint, EndPaint, BitBlt. 
+	PAINTSTRUCT ps;              // Temporary storage for paint info
 	static HDC hdcScreen;        // DC for entire screen 
 	static HDC hdcScreenCompat;  // memory DC for screen 
 	static HBITMAP hbmpCompat;   // bitmap handle to old DC 
@@ -33,6 +27,8 @@ LRESULT CALLBACK TreeView::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 	static BOOL fBlt;            // TRUE if BitBlt occurred 
 	static BOOL fScroll;         // TRUE if scrolling occurred 
 	static BOOL fSize;           // TRUE if fBlt & WM_SIZE 
+	// This variable used for horizontal and vertical scrolling both.
+	SCROLLINFO si;               // Temporary storage for scroll info
 	// These variables are required for horizontal scrolling. 
 	static int xMinScroll;       // minimum horizontal scroll value 
 	static int xCurrentScroll;   // current horizontal scroll value 
@@ -61,7 +57,6 @@ LRESULT CALLBACK TreeView::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 		bgndBrush = CreateSolidBrush(BACKGROUND_BRUSH);
 		SetClassLongPtr(hWnd, GCLP_HBRBACKGROUND, (LONG_PTR)bgndBrush);
 		// Create font
-		// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfonta
 		hFont = CreateFont(13, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 			CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, VARIABLE_PITCH, TEXT("Verdana"));
 		// Create a normal DC and a memory DC for the entire 
@@ -112,7 +107,7 @@ LRESULT CALLBACK TreeView::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 	case WM_PAINT:
 	{
 		// Open paint context.
-		hdc = BeginPaint(hWnd, &ps);
+		BeginPaint(hWnd, &ps);
 		// Paint bufferred copy.
 		BitBlt(ps.hdc, 0, 0, bmp.bmWidth, bmp.bmHeight, hdcScreenCompat, xCurrentScroll, yCurrentScroll, SRCCOPY);
 		// Close paint context.
@@ -405,19 +400,15 @@ LRESULT CALLBACK TreeView::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 }
 
 // ========== Helpers ==========
-
 // Helpers for mouse click and position detection
-
 bool TreeView::DetectMouseClick(int xPos, int yPos, PTREENODE p)
 {
 	return (xPos > p->clickArea.left) && (xPos < p->clickArea.right) && (yPos > p->clickArea.top) && (yPos < p->clickArea.bottom);
 }
-
 bool TreeView::DetectMousePosition(int xPos, int yPos, PTREENODE p)
 {
 	return (xPos > (p->clickArea.left + 1)) && (xPos < (p->clickArea.right - 1)) && (yPos > (p->clickArea.top + 1)) && (yPos < (p->clickArea.bottom - 1));
 }
-
 // Helper for mark nodes in the tree, direction flag means:
 // 0 = increment, mark next node or no changes if last node currently marked,
 // 1 = decrement, mark previous node or no changes if first (root) node currently marked.
@@ -488,7 +479,6 @@ PTREENODE TreeView::HelperMarkNode(BOOL direction)
 	}
 	return retPointer;
 }
-
 // Helper for update open-close icon light depend on mouse cursor position near icon.
 void TreeView::HelperOpenCloseMouseLight(HWND hWnd, PTREENODE p, HDC hdcScreenCompat, int mouseX, int mouseY,
 	int xCurrentScroll, int yCurrentScroll, BOOL& fSize, BOOL forceUpdate)
@@ -510,7 +500,7 @@ void TreeView::HelperOpenCloseMouseLight(HWND hWnd, PTREENODE p, HDC hdcScreenCo
 		}
 		HICON hIcon = pModel->GetIconHandleByIndex(index);
 		DrawIconEx(hdcScreenCompat, p->clickArea.left, p->clickArea.top, hIcon,
-			X_SIZE, Y_SIZE, 0, NULL, DI_NORMAL | DI_COMPAT);
+			X_ICON_SIZE, Y_ICON_SIZE, 0, NULL, DI_NORMAL | DI_COMPAT);
 		fSize = TRUE;
 		scrolledArea.left = p->clickArea.left - xCurrentScroll;
 		scrolledArea.top = p->clickArea.top - yCurrentScroll;
@@ -543,7 +533,7 @@ void TreeView::HelperOpenCloseMouseLight(HWND hWnd, PTREENODE p, HDC hdcScreenCo
 					}
 					HICON hIcon = pModel->GetIconHandleByIndex(index);
 					DrawIconEx(hdcScreenCompat, p->clickArea.left, p->clickArea.top, hIcon,
-						X_SIZE, Y_SIZE, 0, NULL, DI_NORMAL | DI_COMPAT);
+						X_ICON_SIZE, Y_ICON_SIZE, 0, NULL, DI_NORMAL | DI_COMPAT);
 					fSize = TRUE;
 					scrolledArea.left = p->clickArea.left - xCurrentScroll;
 					scrolledArea.top = p->clickArea.top - yCurrentScroll;
@@ -557,9 +547,7 @@ void TreeView::HelperOpenCloseMouseLight(HWND hWnd, PTREENODE p, HDC hdcScreenCo
 		}
 	}
 }
-
 // Helper for unmark items stay invisible after parent item close.
-// void HelperMarkedClosedChilds(PTREENODE rootP, PTREENODE parentP, PTREENODE& openNode, BOOL& fTab, BOOL changedState)
 void TreeView::HelperMarkedClosedChilds(PTREENODE pParent, PTREENODE& openNode, BOOL fTab)
 {
 	if (fTab && (pParent->openable) && (!pParent->opened))
@@ -606,7 +594,6 @@ void TreeView::HelperMarkedClosedChilds(PTREENODE pParent, PTREENODE& openNode, 
 		}
 	}
 }
-
 // Helper for draw tree by nodes linked list and base coordinate point.
 // Returns tree array (xleft, ytop, xright, ybottom),
 // This parameters better calculate during draw, because depend on font size,
@@ -619,15 +606,15 @@ RECT TreeView::HelperDrawTreeSized(PTREENODE pNodeList, POINT basePoint, BOOL fT
 	{
 		// Draw root node.
 		treeDimension = HelperDrawNodeLayerSized(pNodeList, 1, basePoint.x, basePoint.y,
-			X_STEP, Y_STEP, X_SIZE, Y_SIZE, fTab, hDC, hFont);
+			X_ICON_STEP, Y_ICON_STEP, X_ICON_SIZE, Y_ICON_SIZE, fTab, hDC, hFont);
 		PTREENODE childLink = pNodeList->childLink;
 		int childCount = pNodeList->childCount;
 		int skipY = 0;
 		if ((childLink) && (childCount) && (pNodeList->opened))
 		{
 			// Draw devices categories nodes.
-			rtemp = HelperDrawNodeLayerSized(childLink, childCount, basePoint.x + X_STEP, basePoint.y + Y_STEP,
-				X_STEP, Y_STEP, X_SIZE, Y_SIZE, fTab, hDC, hFont);
+			rtemp = HelperDrawNodeLayerSized(childLink, childCount, basePoint.x + X_ICON_STEP, basePoint.y + Y_ICON_STEP,
+				X_ICON_STEP, Y_ICON_STEP, X_ICON_SIZE, Y_ICON_SIZE, fTab, hDC, hFont);
 			// Update maximum X size.
 			if (rtemp.right > treeDimension.right) { treeDimension.right = rtemp.right; }
 			// Cycle for draw child nodes.
@@ -639,8 +626,8 @@ RECT TreeView::HelperDrawTreeSized(PTREENODE pNodeList, POINT basePoint, BOOL fT
 				{
 					// Draw devices nodes as childs of opened categories nodes.
 					rtemp = HelperDrawNodeLayerSized(childChildLink, childChildCount,
-						basePoint.x + X_STEP * 3, basePoint.y + Y_STEP * 2 + Y_STEP * skipY,
-						X_STEP, Y_STEP, X_SIZE, Y_SIZE, fTab, hDC, hFont);
+						basePoint.x + X_ICON_STEP * 3, basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY,
+						X_ICON_STEP, Y_ICON_STEP, X_ICON_SIZE, Y_ICON_SIZE, fTab, hDC, hFont);
 					// Update maximum X size.
 					if (rtemp.right > treeDimension.right) { treeDimension.right = rtemp.right; }
 					// calculate Y size
@@ -653,14 +640,12 @@ RECT TreeView::HelperDrawTreeSized(PTREENODE pNodeList, POINT basePoint, BOOL fT
 		POINT base = pModel->GetBase();
 		treeDimension.left = basePoint.x;
 		treeDimension.top = basePoint.y;
-		treeDimension.bottom = basePoint.y + Y_STEP * 2 + Y_STEP * skipY + base.y;
+		treeDimension.bottom = basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY + base.y;
 	}
 	return treeDimension;
 }
-
 // This for early start X scroll bar show.
 #define X_ADDEND 16
-
 // Helper for node sequence of one layer.
 // Returns layer array (xleft, ytop, xright, ybottom),
 // This parameters better calculate during draw, because depend on font size,
@@ -734,7 +719,6 @@ RECT TreeView::HelperDrawNodeLayerSized(PTREENODE pNodeList, int nodeCount, int 
 	layerDimension.bottom = nodeBaseY + iconStepY * nodeCount + iconStepY * skipY;
 	return layerDimension;
 }
-
 // Helper for adjust horizontal scrolling parameters.
 // The horizontal scrolling range is defined by 
 // (bitmap_width) - (client_width). The current horizontal 
@@ -753,7 +737,6 @@ void TreeView::HelperAdjustScrollX(HWND hWnd, SCROLLINFO& scrollInfo, RECT& tree
 	scrollInfo.nPos = xCurrentScroll;
 	SetScrollInfo(hWnd, SB_HORZ, &scrollInfo, TRUE);
 }
-
 // Helper for adjust vertical scrolling parameters.
 // The vertical scrolling range is defined by 
 // (bitmap_height) - (client_height). The current vertical 
@@ -772,7 +755,6 @@ void TreeView::HelperAdjustScrollY(HWND hWnd, SCROLLINFO& scrollInfo, RECT& tree
 	scrollInfo.nPos = yCurrentScroll;
 	SetScrollInfo(hWnd, SB_VERT, &scrollInfo, TRUE);
 }
-
 // Helper for make horizontal scrolling by given signed offset.
 void TreeView::HelperMakeScrollX(HWND hWnd, SCROLLINFO& scrollInfo,
 	int xMaxScroll, int& xCurrentScroll, BOOL& fScroll, int addX)
@@ -797,7 +779,6 @@ void TreeView::HelperMakeScrollX(HWND hWnd, SCROLLINFO& scrollInfo,
 		InvalidateRect(hWnd, NULL, false);
 	}
 }
-
 // Helper for make vertical scrolling by given signed offset.
 void TreeView::HelperMakeScrollY(HWND hWnd, SCROLLINFO& scrollInfo,
 	int yMaxScroll, int& yCurrentScroll, BOOL& fScroll, int addY)
@@ -823,4 +804,5 @@ void TreeView::HelperMakeScrollY(HWND hWnd, SCROLLINFO& scrollInfo,
 	}
 }
 
+// Storage for model class.
 TreeModel* TreeView::pModel = NULL;

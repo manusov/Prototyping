@@ -1,10 +1,6 @@
-/*
-
-Заголовочный файл для енумератора устройств.
-Special thanks to:
-https://github.com/microsoft/Windows-driver-samples/tree/main/setup/devcon
-
-*/
+/* ----------------------------------------------------------------------------------------
+Devices enumerator.
+---------------------------------------------------------------------------------------- */
 
 #pragma once
 #ifndef ENUMERATOR_H
@@ -18,6 +14,7 @@ https://github.com/microsoft/Windows-driver-samples/tree/main/setup/devcon
 #include <SetupAPI.h>
 #include <cfgmgr32.h>
 #include <strsafe.h>
+#include "TreeController.h"
 
 UINT EnumerateSystem(LPTSTR pBase, UINT64 pMax, PGROUPSORT sortControl, UINT SORT_CONTROL_LENGTH);
 LPTSTR GetDeviceStringProperty(_In_ HDEVINFO Devs, _In_ PSP_DEVINFO_DATA DevInfo, _In_ DWORD Prop);

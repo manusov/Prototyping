@@ -38,10 +38,8 @@ public:
 	// Don't use constructor and destructor for build and release tree, because
 	// dynamical rebuild with model change and partial changes can be required.
 	void SetAndInitModel(TreeModel* p);
-
 	virtual PTREENODE BuildTree();
 	virtual void ReleaseTree();
-
 protected:
 	static PTREENODE pTreeBase;
 	static TreeModel* pModel;

@@ -12,11 +12,10 @@ Class for create GUI window with tree visualization.
 
 #define X_BASE_TREE 10
 #define Y_BASE_TREE 10
-#define X_SIZE 16
-#define Y_SIZE 16
-#define X_STEP 18
-#define Y_STEP 18
-
+#define X_ICON_SIZE 16
+#define Y_ICON_SIZE 16
+#define X_ICON_STEP 18
+#define Y_ICON_STEP 18
 #define BACKGROUND_BRUSH  RGB(213, 240, 213)
 #define SELECTED_BRUSH    RGB(245, 245, 120)
 
@@ -41,7 +40,6 @@ protected:
 	void HelperOpenCloseMouseLight(HWND hWnd, PTREENODE p, HDC hdcScreenCompat, int mouseX, int mouseY,
 		int xCurrentScroll, int yCurrentScroll, BOOL& fSize, BOOL forceUpdate);
 	// Helper for unmark items stay invisible after parent item close.
-	// void HelperMarkedClosedChilds(PTREENODE rootP, PTREENODE parentP, PTREENODE& openNode, BOOL& fTab, BOOL changedState);
 	void HelperMarkedClosedChilds(PTREENODE pParent, PTREENODE& openNode, BOOL fTab);
 	// Helper for draw tree by nodes linked list and base coordinate point.
 	// Returns tree array (xleft, ytop, xright, ybottom),

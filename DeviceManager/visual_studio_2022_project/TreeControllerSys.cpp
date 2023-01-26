@@ -12,12 +12,10 @@ TreeControllerSys::TreeControllerSys()
 {
 	// Reserved functionality.
 }
-
 TreeControllerSys::~TreeControllerSys()
 {
 	// Reserved functionality.
 }
-
 PTREENODE TreeControllerSys::BuildTree()
 {
 	// Build sequence of strings.
@@ -132,7 +130,6 @@ PTREENODE TreeControllerSys::BuildTree()
 	}
 	return pTreeBase;
 }
-
 void TreeControllerSys::ReleaseTree()
 {
 	if (pTreeBase) free(pTreeBase);
@@ -148,7 +145,6 @@ void TreeControllerSys::ReleaseTree()
 		}
 	}
 }
-
 LPCSTR TreeControllerSys::MAIN_SYSTEM_NAME = "This computer";
 int TreeControllerSys::MAIN_SYSTEM_ICON_INDEX = ID_THIS_COMPUTER;
 GROUPSORT TreeControllerSys::sortControl[] = {
@@ -173,5 +169,4 @@ GROUPSORT TreeControllerSys::sortControl[] = {
 	{ "OTHER"    , "Other devices types"       , ID_OTHER            , new std::vector<LPCSTR> }
 };
 const UINT TreeControllerSys::SORT_CONTROL_LENGTH = sizeof(sortControl) / sizeof(GROUPSORT);
-
 LPSTR TreeControllerSys::pEnumBase = NULL;

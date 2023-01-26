@@ -1,14 +1,13 @@
-/*
- 
-Заголовочный файл для класса окна.
-
-*/
+/* ----------------------------------------------------------------------------------------
+Class for GUI window.
+---------------------------------------------------------------------------------------- */
 
 #pragma once
 #ifndef KWND_H
 #define KWND_H
 
 #include <windows.h>
+#include "resource.h"  // This for load icons.
 
 class KWnd {
 public:	

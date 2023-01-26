@@ -1,14 +1,7 @@
-/*
+/* ----------------------------------------------------------------------------------------
+Devices enumerator.
+---------------------------------------------------------------------------------------- */
 
-Процедуры енумератора устройств.
-Special thanks to:
-https://github.com/microsoft/Windows-driver-samples/tree/main/setup/devcon
-
-*/
-
-#include "AppModel.h"
-#include "AppView.h"
-#include "AppController.h"
 #include "Enumerator.h"
 
  UINT EnumerateSystem(LPTSTR pBase, UINT64 pMax, PGROUPSORT sortControl, UINT SORT_CONTROL_LENGTH)
@@ -169,7 +162,6 @@ Return Value:
     }
     return desc;
 }
-
 
 LPTSTR GetDeviceStringProperty(_In_ HDEVINFO Devs, _In_ PSP_DEVINFO_DATA DevInfo, _In_ DWORD Prop)
 /*++
