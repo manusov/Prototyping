@@ -29,12 +29,13 @@ ROADMAP 1: SUPPORT BIG SCROLLABLE TREES WITHOUT MEMORY OVERFLOW:
 1.8) WM_MOUSEWHEEL handler: vertical scroll, alternative method.
 1.9) WM_KEYDOWN handler: mark, unmark, move pointer, open and close by keys.
 
-ROADMAP 2: RECURSIVE TREE LEVELS, REMOVE TREE LEVEL COUNT LIMITS:
-------------------------------------------------------------------
-2.1) Recursive or stacked draw tree with pixel granular scroll offset, vertical and horizontal.
+ROADMAP 2: RECURSIVE OR STACKED TREE LEVELS, REMOVE TREE LEVEL COUNT LIMITS:
+-----------------------------------------------------------------------------
+2.1) Method for verify results of next steps, data source = child class TreeControllerExt.
 2.2) Recursive or stacked mouse move selection.
-2.3) Recursive or stacked open-close nodes.
-2.4) Verify results of previous step, data source = child class TreeControllerExt.
+2.3) Recursive or stacked open-close nodes, means recursive or stacked draw layers.
+2.4) Correct TAB selection for extra layers.
+2.5) Verify all handlers in the Window Procedure.
 
 Lines, selected by:
 //
@@ -136,8 +137,9 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		yMaxScroll = 0;
 		// Draw device manager tree for first show window, mark show required.
 		BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);
-		treeDimension = HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont, 
-			xCurrentScroll, yCurrentScroll);
+		int dy = 0;
+		treeDimension = HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(),
+			fTab, hdcScreenCompat, hFont, xCurrentScroll, yCurrentScroll, dy);
 		fSize = TRUE;
 		// Initialize pointer for open items by SPACE, Gray+, Gray- keys.
 		openNode = pModel->GetTree();
@@ -172,6 +174,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		// (tree_height) - (client_height). The current vertical 
 		// scroll value remains within the vertical scrolling range. 
 		HelperAdjustScrollY(hWnd, si, treeDimension, yNewSize, yMaxScroll, yMinScroll, yCurrentScroll);
+		//
+		BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
+		int dy = 0;
+		HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+			xCurrentScroll, yCurrentScroll, dy);
+		//
 	}
 	break;
 
@@ -179,41 +187,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 	{
 		int mouseX = GET_X_LPARAM(lParam);
 		int mouseY = GET_Y_LPARAM(lParam);
-		int n = 0;
 		PTREENODE p = pModel->GetTree();
-		if (DetectMouseClick(mouseX, mouseY, p) && (p->openable))
-		{
-			p->opened = ~(p->opened);
-			HelperMarkedClosedChilds(p, openNode, fTab);
-			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			treeDimension = HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
-			fSize = TRUE;
-			InvalidateRect(hWnd, NULL, false);
-		}
-		else
-		{
-			n = p->childCount;
-			p = p->childLink;
-			if (p)
-			{
-				for (int i = 0; i < n; i++)
-				{
-					if (DetectMouseClick(mouseX, mouseY, p) && (p->openable))
-					{
-						p->opened = ~(p->opened);
-						HelperMarkedClosedChilds(p, openNode, fTab);
-						BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-						treeDimension = HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-							xCurrentScroll, yCurrentScroll);
-						fSize = TRUE;
-						InvalidateRect(hWnd, NULL, false);
-						break;
-					}
-					p++;
-				}
-			}
-		}
+		POINT b = pModel->GetBase();
+
+		treeDimension = HelperRecursiveMouseClick(p, b, hWnd, hdcScreenCompat, fSize,
+			openNode, fTab, bmp, hFont,
+			mouseX, mouseY, xCurrentScroll, yCurrentScroll);
 
 		RECT r = { 0,0,0,0 };
 		if (GetClientRect(hWnd, &r))
@@ -232,18 +211,17 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 			// scroll value remains within the vertical scrolling range. 
 			HelperAdjustScrollY(hWnd, si, treeDimension, yNewSize, yMaxScroll, yMinScroll, yCurrentScroll);
 		}
+
 		// Restore Open/Close icon lighting by mouse cursor after node clicked.
-		HelperOpenCloseMouseLightScrolled(hWnd, p, hdcScreenCompat, mouseX, mouseY,
-			xCurrentScroll, yCurrentScroll, fSize, TRUE);
+		HelperRecursiveMouseMove(p, hWnd, hdcScreenCompat, fSize, TRUE,
+			mouseX, mouseY, xCurrentScroll, yCurrentScroll);
 	}
 	break;
 
 	case WM_MOUSEMOVE:
 	{
-		int mouseX = GET_X_LPARAM(lParam);
-		int mouseY = GET_Y_LPARAM(lParam);
-		HelperOpenCloseMouseLightScrolled(hWnd, pModel->GetTree(), hdcScreenCompat, mouseX, mouseY,
-			xCurrentScroll, yCurrentScroll, fSize, FALSE);
+		HelperRecursiveMouseMove(pModel->GetTree(), hWnd, hdcScreenCompat, fSize, FALSE,
+			GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), xCurrentScroll, yCurrentScroll);
 	}
 	break;
 
@@ -278,8 +256,9 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		{
 			HelperMakeScrollX(hWnd, si, xMaxScroll, xCurrentScroll, fScroll, addX);
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			int dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
 		}
 	}
 	break;
@@ -316,8 +295,9 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		{
 			HelperMakeScrollY(hWnd, si, yMaxScroll, yCurrentScroll, fScroll, addY);
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			int dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
 		}
 	}
 	break;
@@ -329,8 +309,9 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		{
 			HelperMakeScrollY(hWnd, si, yMaxScroll, yCurrentScroll, fScroll, addY);
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			int dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
 		}
 	}
 	break;
@@ -339,6 +320,7 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 	{
 		int addX = 0;
 		int addY = 0;
+		int dy = 0;
 
 		switch (wParam)
 		{
@@ -353,8 +335,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 			{
 				openNode = HelperMarkNode(FALSE);
 				BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-				HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-					xCurrentScroll, yCurrentScroll);
+				//HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				//	xCurrentScroll, yCurrentScroll);
+				dy = 0;
+				HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+					xCurrentScroll, yCurrentScroll, dy);
+				//
 				fSize = TRUE;
 				InvalidateRect(hWnd, NULL, false);
 			}
@@ -368,8 +354,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 			{
 				openNode = HelperMarkNode(TRUE);
 				BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-				HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-					xCurrentScroll, yCurrentScroll);
+				//HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				//	xCurrentScroll, yCurrentScroll);
+				dy = 0;
+				HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+					xCurrentScroll, yCurrentScroll, dy);
+				//
 				fSize = TRUE;
 				InvalidateRect(hWnd, NULL, false);
 			}
@@ -393,8 +383,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		case VK_TAB:
 			fTab = ~fTab;
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			//HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+			//	xCurrentScroll, yCurrentScroll);
+			dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
+			//
 			fSize = TRUE;
 			InvalidateRect(hWnd, NULL, false);
 			break;
@@ -407,8 +401,12 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 				openNode->opened = ~(openNode->opened);
 				HelperMarkedClosedChilds(openNode, openNode, fTab);
 				BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-				treeDimension = HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-					xCurrentScroll, yCurrentScroll);
+				//treeDimension = HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				//	xCurrentScroll, yCurrentScroll);
+				dy = 0;
+				treeDimension = HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+					xCurrentScroll, yCurrentScroll, dy);
+				//
 				fSize = TRUE;
 				InvalidateRect(hWnd, NULL, false);
 
@@ -431,15 +429,23 @@ LRESULT CALLBACK TreeViewUpgrade::AppViewer(HWND hWnd, UINT uMsg, WPARAM wParam,
 		{
 			HelperMakeScrollX(hWnd, si, xMaxScroll, xCurrentScroll, fScroll, addX);
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			//HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+			//	xCurrentScroll, yCurrentScroll);
+			dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
+			//
 		}
 		else if (addY != 0)
 		{
 			HelperMakeScrollY(hWnd, si, yMaxScroll, yCurrentScroll, fScroll, addY);
 			BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
-			HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
-				xCurrentScroll, yCurrentScroll);
+			//HelperDrawTreeSizedScrolled(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+			//	xCurrentScroll, yCurrentScroll);
+			dy = 0;
+			HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(), fTab, hdcScreenCompat, hFont,
+				xCurrentScroll, yCurrentScroll, dy);
+			//
 		}
 	}
 	break;
@@ -544,3 +550,142 @@ void TreeViewUpgrade::HelperOpenCloseMouseLightScrolled(HWND hWnd, PTREENODE p, 
 	}
 }
 
+// ---------- This part for support recursive tree levels and eliminate level count limits ----------
+
+void TreeViewUpgrade::HelperRecursiveMouseMove(PTREENODE p, HWND hWnd, HDC hdcScreenCompat, BOOL& fSize, BOOL forceUpdate,
+	int mouseX, int mouseY, int xCurrentScroll, int yCurrentScroll)
+{
+	RECT a;
+	bool currentMouse = (DetectMousePosition(mouseX, mouseY, p) && (p->openable));
+	if (((currentMouse != p->prevMouse) || forceUpdate) && p->openable)
+	{   // Operation for node, addressed by caller.
+		int index;
+		if (p->opened)
+		{
+			currentMouse ? index = ID_OPENED_LIGHT : index = ID_OPENED;
+		}
+		else
+		{
+			currentMouse ? index = ID_CLOSED_LIGHT : index = ID_CLOSED;
+		}
+		HICON hIcon = pModel->GetIconHandleByIndex(index);
+		DrawIconEx(hdcScreenCompat, p->clickArea.left, p->clickArea.top, hIcon,
+			X_ICON_SIZE, Y_ICON_SIZE, 0, NULL, DI_NORMAL | DI_COMPAT);
+		fSize = TRUE;
+		a.left = p->clickArea.left;
+		a.top = p->clickArea.top;
+		a.right = p->clickArea.right;
+		a.bottom = p->clickArea.bottom;
+		InvalidateRect(hWnd, &a, false);
+		p->prevMouse = currentMouse;
+	}
+	if (p->opened)
+	{
+		int n = p->childCount;
+		p = p->childLink;
+		if (p && (n > 0))
+		{   // Recursive operation for childs nodes of node, addressed by caller.
+			for (int i = 0; i < n; i++)
+			{
+				HelperRecursiveMouseMove(p, hWnd, hdcScreenCompat, fSize, forceUpdate,
+					mouseX, mouseY, xCurrentScroll, yCurrentScroll);
+				p++;
+			}
+		}
+	}
+}
+
+RECT TreeViewUpgrade::HelperRecursiveMouseClick(PTREENODE p, POINT b, HWND hWnd, HDC hdcScreenCompat, BOOL& fSize,
+	PTREENODE& openNode, BOOL fTab, BITMAP bmp, HFONT hFont,
+	int mouseX, int mouseY, int xCurrentScroll, int yCurrentScroll)
+{
+	RECT rDimension = { 0,0,0,0 };
+	RECT rTemp;
+	if (DetectMouseClick(mouseX, mouseY, p) && (p->openable))
+	{
+		p->opened = ~(p->opened);
+		HelperMarkedClosedChilds(p, openNode, fTab);
+		BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, PATCOPY);  // This for blank background
+		int dy = 0;
+		   rDimension = HelperRecursiveDrawTree(pModel->GetTree(), pModel->GetBase(),
+			fTab, hdcScreenCompat, hFont, xCurrentScroll, yCurrentScroll, dy);
+		fSize = TRUE;
+		InvalidateRect(hWnd, NULL, false);
+	}
+	else if (p->openable)
+	{
+		int n = p->childCount;
+		p = p->childLink;
+		if (p)
+		{
+			b.x += X_ICON_STEP;
+			for (int i = 0; i < n; i++)
+			{
+				if (p->openable)
+				{
+					b.y += Y_ICON_STEP;
+					rTemp = HelperRecursiveMouseClick(p, b, hWnd, hdcScreenCompat, fSize,
+						openNode, fTab, bmp, hFont,
+						mouseX, mouseY, xCurrentScroll, yCurrentScroll);
+					// Update maximal dimensions.
+					if (rTemp.left   < rDimension.left)   { rDimension.left = rTemp.left; }
+					if (rTemp.right  > rDimension.right)  { rDimension.right = rTemp.right; }
+					if (rTemp.top    < rDimension.top)    { rDimension.top    = rTemp.top; }
+					if (rTemp.bottom > rDimension.bottom) { rDimension.bottom = rTemp.bottom; }
+				}
+				p++;
+			}
+		}
+	}
+	return rDimension;
+}
+
+RECT TreeViewUpgrade::HelperRecursiveDrawTree(PTREENODE p, POINT b, BOOL fTab, HDC hDC, HFONT hFont,
+	int xCurrentScroll, int yCurrentScroll, int& dy)
+{
+	b.x -= xCurrentScroll;
+	b.y -= yCurrentScroll;
+	return HelperRecursive(p, b, fTab, hDC, hFont, xCurrentScroll, yCurrentScroll, dy);
+}
+
+RECT TreeViewUpgrade::HelperRecursive(PTREENODE p, POINT b, BOOL fTab, HDC hDC, HFONT hFont,
+	int xCurrentScroll, int yCurrentScroll, int& dy)
+{
+	RECT rDimension = { 0,0,0,0 };
+	RECT rTemp;
+	int skipY = 0;
+	if (p)
+	{   // Draw node, addressed by caller.
+		rDimension = HelperDrawNodeLayerSized(p, 1, b.x, b.y,
+			X_ICON_STEP, Y_ICON_STEP, X_ICON_SIZE, Y_ICON_SIZE, fTab, hDC, hFont);
+
+		PTREENODE childLink = p->childLink;
+		int childCount = p->childCount;
+		if ((childLink) && (childCount) && (p->openable) && (p->opened))
+		{
+			for (int i = 0; i < childCount; i++)
+			{   // Recursive operation for childs nodes of node, addressed by caller.
+				PTREENODE childChildLink = childLink->childLink;
+				int childChildCount = childLink->childCount;
+				POINT b1 = { b.x + X_ICON_STEP * 2, b.y + Y_ICON_STEP + Y_ICON_STEP * skipY };
+				if (childLink->openable) { b1.x = b.x + X_ICON_STEP; }
+				int dy = 0;
+				rTemp = HelperRecursive(childLink, b1, fTab, hDC, hFont, xCurrentScroll, yCurrentScroll, dy);
+				// Update maximal dimensions.
+				if (rTemp.left < rDimension.left) { rDimension.left = rTemp.left; }
+				if (rTemp.right > rDimension.right) { rDimension.right = rTemp.right; }
+				if (rTemp.top < rDimension.top) { rDimension.top = rTemp.top; }
+				if (rTemp.bottom > rDimension.bottom) { rDimension.bottom = rTemp.bottom; }
+				// Update Y size and pointer.
+				skipY = skipY + 1 + dy;
+				childLink++;
+			}
+		}
+		POINT base = pModel->GetBase();
+		rDimension.left = b.x;
+		rDimension.top = b.y;
+		rDimension.bottom = b.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY + base.y;
+	}
+	dy = skipY;
+	return rDimension;
+}

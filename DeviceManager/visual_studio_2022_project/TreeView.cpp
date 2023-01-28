@@ -625,8 +625,16 @@ RECT TreeView::HelperDrawTreeSized(PTREENODE pNodeList, POINT basePoint, BOOL fT
 				if (childChildLink && childChildCount && childLink->openable && childLink->opened)
 				{
 					// Draw devices nodes as childs of opened categories nodes.
+
+					LONG t;
+					(childChildLink->openable) ? t = basePoint.x + X_ICON_STEP * 2 : t = basePoint.x + X_ICON_STEP * 3;
+
 					rtemp = HelperDrawNodeLayerSized(childChildLink, childChildCount,
-						basePoint.x + X_ICON_STEP * 3, basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY,
+
+						 // basePoint.x + X_ICON_STEP * 3, basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY,
+						 // basePoint.x + X_ICON_STEP * 2, basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY,
+						    t, basePoint.y + Y_ICON_STEP * 2 + Y_ICON_STEP * skipY,
+
 						X_ICON_STEP, Y_ICON_STEP, X_ICON_SIZE, Y_ICON_SIZE, fTab, hDC, hFont);
 					// Update maximum X size.
 					if (rtemp.right > treeDimension.right) { treeDimension.right = rtemp.right; }

@@ -47,6 +47,7 @@ http://www.sibcode.com/junior-icon-editor/
 #include "TreeView.h"
 #include "TreeViewUpgrade.h"
 #include "TreeController.h"
+#include "TreeControllerExt.h"
 #include "TreeControllerSys.h"
 
 // Select emulated or system scan mode: uncomment this for debug.
@@ -54,14 +55,18 @@ http://www.sibcode.com/junior-icon-editor/
 // WITHOUT get system information.
 // #define _EMULATED_MODE
 
+// Select extended emulated mode, with improved nodes nesting level.
+// Enable both _EMULATED_MODE, _EXT_EMULATED_MODE for extended mode.
+// #define _EXT_EMULATION
+
 // Select debug mode for upgraded viewer. UNDER CONSTRUCTION: debug
 // use state variables and recursive tree levels visualization.
    #define _UPGRADE_VIEWER
 
 #if _WIN64
-const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.05. x64.";
+const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.07. x64.";
 #elif _WIN32
-const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.05. ia32.";
+const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.07. ia32.";
 #else
 const char* BUILD_NAME = "UNKNOWN BUILD MODE.";
 #endif
@@ -88,7 +93,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 #endif
 
 #ifdef _EMULATED_MODE
+#ifdef _EXT_EMULATION
+	pController = new TreeControllerExt();
+#else
 	pController = new TreeController();
+#endif
 #else
 	pController = new TreeControllerSys();
 #endif

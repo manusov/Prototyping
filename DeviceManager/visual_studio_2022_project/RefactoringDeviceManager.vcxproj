@@ -150,6 +150,7 @@
     <ClCompile Include="KWnd.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="TreeController.cpp" />
+    <ClCompile Include="TreeControllerExt.cpp" />
     <ClCompile Include="TreeControllerSys.cpp" />
     <ClCompile Include="TreeModel.cpp" />
     <ClCompile Include="TreeView.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="KWnd.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TreeController.h" />
+    <ClInclude Include="TreeControllerExt.h" />
     <ClInclude Include="TreeControllerSys.h" />
     <ClInclude Include="TreeModel.h" />
     <ClInclude Include="TreeView.h" />
