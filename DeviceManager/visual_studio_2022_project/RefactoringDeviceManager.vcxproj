@@ -154,7 +154,6 @@
     <ClCompile Include="TreeControllerSys.cpp" />
     <ClCompile Include="TreeModel.cpp" />
     <ClCompile Include="TreeView.cpp" />
-    <ClCompile Include="TreeViewUpgrade.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Enumerator.h" />
@@ -165,7 +164,6 @@
     <ClInclude Include="TreeControllerSys.h" />
     <ClInclude Include="TreeModel.h" />
     <ClInclude Include="TreeView.h" />
-    <ClInclude Include="TreeViewUpgrade.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RefactoringDeviceManager.rc" />

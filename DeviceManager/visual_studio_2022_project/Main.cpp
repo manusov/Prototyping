@@ -45,7 +45,6 @@ http://www.sibcode.com/junior-icon-editor/
 #include "KWnd.h"
 #include "TreeModel.h"
 #include "TreeView.h"
-#include "TreeViewUpgrade.h"
 #include "TreeController.h"
 #include "TreeControllerExt.h"
 #include "TreeControllerSys.h"
@@ -59,14 +58,18 @@ http://www.sibcode.com/junior-icon-editor/
 // Enable both _EMULATED_MODE, _EXT_EMULATED_MODE for extended mode.
 // #define _EXT_EMULATION
 
-// Select debug mode for upgraded viewer. UNDER CONSTRUCTION: debug
-// use state variables and recursive tree levels visualization.
-   #define _UPGRADE_VIEWER
-
 #if _WIN64
-const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.07. x64.";
+#ifdef _EMULATED_MODE
+const char* BUILD_NAME = "Modeling Device Manager (emulated data). Engineering sample v0.06.01. x64.";
+#else
+const char* BUILD_NAME = "System view. v0.06.01. x64.";
+#endif
 #elif _WIN32
-const char* BUILD_NAME = "Modeling Device Manager. Engineering sample v0.05.07. ia32.";
+#ifdef _EMULATED_MODE
+const char* BUILD_NAME = "Modeling Device Manager (emulated data). Engineering sample v0.06.01. ia32.";
+#else
+const char* BUILD_NAME = "System view. v0.06.01. ia32.";
+#endif
 #else
 const char* BUILD_NAME = "UNKNOWN BUILD MODE.";
 #endif
@@ -85,12 +88,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	// Initialize system context.
 	int status = 0;
 	pModel = new TreeModel();
-
-#ifdef _UPGRADE_VIEWER
-	pView = new TreeViewUpgrade();
-#else
 	pView = new TreeView();
-#endif
 
 #ifdef _EMULATED_MODE
 #ifdef _EXT_EMULATION

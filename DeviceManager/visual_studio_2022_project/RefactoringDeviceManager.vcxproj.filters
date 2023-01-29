@@ -36,9 +36,6 @@
     <ClCompile Include="Enumerator.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="TreeViewUpgrade.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
     <ClCompile Include="TreeControllerExt.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
@@ -63,9 +60,6 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="Enumerator.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="TreeViewUpgrade.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="TreeControllerExt.h">
