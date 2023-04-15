@@ -2,54 +2,61 @@
 ; OpenGL programming examples. x64 version.                                    ;
 ;                                                                              ;
 ;                             UNDER CONSTRUCTION.                              ;
-;                     Benchmark "Politburo" design step 13.                    ;
+;                     Benchmark "Politburo" design step 13.4.                  ;
 ;          Heavy load with CPU-GPU lite traffic. FPS and GBPS measure.         ;
 ;                                                                              ;
 ; See also:                                                                    ;
 ; https://github.com/manusov                                                   ;
+; https://github.com/manusov/Prototyping/tree/master/OpenGL                    ;
 ;                                                                              ;
 ; Special thanks:                                                              ;
 ; https://flatassembler.net/                                                   ;
 ; https://board.flatassembler.net/topic.php?t=15453                            ;
 ; https://ravesli.com/uroki-po-opengl/                                         ;
 ; https://www.manhunter.ru/assembler/923_vivod_izobrazheniya_na_assemblere_s_pomoschyu_gdi.html
-;  https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmap ;
+; https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmap  ;
 ;------------------------------------------------------------------------------;
 
 include 'win64a.inc'
 include 'OpenGL.inc'
 
-X_BASE = 380    ; GUI window positions at application start.
-Y_BASE = 140
-X_SIZE = 1024    ; GUI window sizes at application start.
-Y_SIZE = 768
+APPLICATION_NAME   EQU 'OpenGL with shaders. Engineering sample #13.4.x64.'
 
-ID_EXE_ICON        = 101     ; Application exe file icon resource IDs.
-ID_EXE_ICONS       = 102
-IDR_JPEG           = 103     ; JPG file resource ID, used as texture. 
+X_BASE             EQU 380    ; GUI window positions at application start.
+Y_BASE             EQU 140
+X_SIZE             EQU 1024    ; GUI window sizes at application start.
+Y_SIZE             EQU 768
 
-TEMP_BUFFER_SIZE   = 4096    ; Transit buffer(s) default size.
+ID_EXE_ICON        EQU 101     ; Application exe file icon resource IDs.
+ID_EXE_ICONS       EQU 102
+IDR_JPEG           EQU 103     ; JPG file resource ID, used as texture. 
 
-GL_VERTEX_SHADER   = 00008B31h
-GL_FRAGMENT_SHADER = 00008B30h
-GL_COMPILE_STATUS  = 00008B81h
-GL_LINK_STATUS     = 00008B82h
-GL_ARRAY_BUFFER    = 00008892h
-GL_STATIC_DRAW     = 000088E4h
-GL_DYNAMIC_DRAW    = 000088E8h
-GL_TEXTURE0        = 000084C0h
+TEMP_BUFFER_SIZE   EQU 4096    ; Transit buffer(s) default size.
 
-GL_SHADING_LANGUAGE_VERSION = 00008B8Ch
+GL_VERTEX_SHADER   EQU 00008B31h
+GL_FRAGMENT_SHADER EQU 00008B30h
+GL_COMPILE_STATUS  EQU 00008B81h
+GL_LINK_STATUS     EQU 00008B82h
+GL_ARRAY_BUFFER    EQU 00008892h
+GL_STATIC_DRAW     EQU 000088E4h
+GL_DYNAMIC_DRAW    EQU 000088E8h
+GL_TEXTURE0        EQU 000084C0h
 
-TEXTURE_WIDTH      = 2952
-TEXTURE_HEIGHT     = 1967
-TEXT_FRONT_COLOR   = 0FF267190h 
-TEXT_BACK_COLOR    = 0FFF8F8F8h
+GL_SHADING_LANGUAGE_VERSION EQU 00008B8Ch
+
+TEXTURE_WIDTH      EQU 2952
+TEXTURE_HEIGHT     EQU 1967
+TEXT_FRONT_COLOR   EQU 0FF267190h 
+TEXT_BACK_COLOR    EQU 0FFF8F8F8h
+BACKGROUND_R       EQU 0.80
+BACKGROUND_G       EQU 0.95
+BACKGROUND_B       EQU 0.95
 
 ; 128 x 4 = 512 chars positions matrix for text output.
 ; 9 x 3   = 27 portraits.
-; + 300000 instances for GPU heavy load, can manipulate with this value.
-INSTANCING_COUNT   = 128 * 4 + 27 + 300000  
+; + 500000 instances for GPU heavy load. 
+; Change this last addend value for change GPU load.
+INSTANCING_COUNT   EQU 128 * 4 + 27 + 500000  
 
 struct GdiplusStartupInput
 GdiplusVersion            dd ?
@@ -286,11 +293,12 @@ call [ExitProcess]
 ;---------- Window callback procedure -----------------------------------------;
 
 WindowProc:
-push rbx rsi rdi rbp  ; note about other non-volatile registers, include XMM6-15
+push rbx rsi rdi rbp r15  ; note about other non-volatile regs, include XMM6-15
 mov rbp,rsp
 and rsp,0FFFFFFFFFFFFFFF0h
 sub rsp,32
-mov rbx,rcx
+mov rbx,rcx        ; RBX = HWND
+lea r15,[OGL_API]  ; R15 = Pointer for compact call OpenGL API
 
 ;--- Select message handler ---------------------------------------------------;
 
@@ -314,8 +322,11 @@ jmp	.finish
 ;--- Window message handler : create window procedure -------------------------;
 
 .wmcreate:
+;--- Initialize display context -----------------------------------------------;
 call [GetDC]           ; rcx = input
-mov [hdc],rax
+lea rdx,[hdc]
+mov [rdx],rax
+;--- Start initialize OpenGL context ------------------------------------------;
 lea rdi,[pfd]
 mov rsi,rdi            ; rsi = pointer to pfd
 mov	ecx,sizeof.PIXELFORMATDESCRIPTOR shr 3
@@ -330,7 +341,7 @@ mov [rsi + PIXELFORMATDESCRIPTOR.cColorBits],16
 mov [rsi + PIXELFORMATDESCRIPTOR.cDepthBits],16
 mov [rsi + PIXELFORMATDESCRIPTOR.cAccumBits],0
 mov [rsi + PIXELFORMATDESCRIPTOR.cStencilBits],0
-mov rdi,[hdc]            ; rdi = hdc
+mov rdi,[rdx]            ; rdi = hdc
 mov rcx,rdi
 mov rdx,rsi
 call [ChoosePixelFormat] 
@@ -406,19 +417,25 @@ lea rdi,[tempBuffer2 + 128 * 1 + 90]
 call StringWrite
 ;--- Dynamically load required OpenGL API procedures --------------------------;
 cld
-lea rdi,[loadList]
+lea rsi,[oglNamesList]
+mov rdi,r15
 .loadCycle:
-mov rcx,[rdi]
-jrcxz .loadOk
+cmp byte [rsi],0
+je .loadOk
+mov rcx,rsi
 call [wglGetProcAddress]
 test rax,rax
 jz .loadFailed
 stosq
+.skipName:
+lodsb
+cmp al,0
+jne .skipName
 jmp .loadCycle
 .loadOk:
 ;--- Compile vertex shader ----------------------------------------------------;
 mov ecx,GL_VERTEX_SHADER
-call [ptr_glCreateShader]
+call [r15 + OGLAPI.ptr_glCreateShader]
 test eax,eax
 jz .shaderFailed
 mov [vertexShader],eax
@@ -427,20 +444,20 @@ mov ecx,ebx
 mov edx,1
 lea r8,[ptr_vertexShaderSource]
 xor r9,r9
-call [ptr_glShaderSource]
+call [r15 + OGLAPI.ptr_glShaderSource]
 mov ecx,ebx
-call [ptr_glCompileShader]
+call [r15 + OGLAPI.ptr_glCompileShader]
 mov ecx,ebx
 mov edx,GL_COMPILE_STATUS
 lea rsi,[params]
 mov r8,rsi
 mov dword [rsi],0
-call [ptr_glGetShaderiv]
+call [r15 + OGLAPI.ptr_glGetShaderiv]
 cmp dword [rsi],0
 je .compileFailed 
 ;--- Compile fragment shader --------------------------------------------------;
 mov ecx,GL_FRAGMENT_SHADER
-call [ptr_glCreateShader]
+call [r15 + OGLAPI.ptr_glCreateShader]
 test eax,eax
 jz .shaderFailed
 mov [fragmentShader],eax
@@ -449,64 +466,64 @@ mov ecx,ebx
 mov edx,1
 lea r8,[ptr_fragmentShaderSource]
 xor r9,r9
-call [ptr_glShaderSource]
+call [r15 + OGLAPI.ptr_glShaderSource]
 mov ecx,ebx
-call [ptr_glCompileShader]
+call [r15 + OGLAPI.ptr_glCompileShader]
 mov ecx,ebx
 mov edx,GL_COMPILE_STATUS
 mov r8,rsi
 mov dword [rsi],0
-call [ptr_glGetShaderiv]
+call [r15 + OGLAPI.ptr_glGetShaderiv]
 cmp dword [rsi],0
 je .compileFailed 
 ;--- Link shaders into shader program = GPU-executable program ----------------;
-call [ptr_glCreateProgram]
+call [r15 + OGLAPI.ptr_glCreateProgram]
 test eax,eax
 jz .shaderFailed
 mov [shaderProgram],eax
 xchg ebx,eax
 mov ecx,ebx
 mov edx,[vertexShader]
-call [ptr_glAttachShader]
+call [r15 + OGLAPI.ptr_glAttachShader]
 mov ecx,ebx
 mov edx,[fragmentShader]
-call [ptr_glAttachShader]
+call [r15 + OGLAPI.ptr_glAttachShader]
 mov ecx,ebx
-call [ptr_glLinkProgram]
+call [r15 + OGLAPI.ptr_glLinkProgram]
 mov ecx,ebx
 mov edx,GL_LINK_STATUS
 mov r8,rsi
 mov dword [rsi],0
-call [ptr_glGetProgramiv]
+call [r15 + OGLAPI.ptr_glGetProgramiv]
 cmp dword [rsi],0
 je .linkFailed 
 ;--- Delete shaders after used by shader program linker -----------------------;
 mov ecx,[vertexShader]
-call [ptr_glDeleteShader]
+call [r15 + OGLAPI.ptr_glDeleteShader]
 mov ecx,[fragmentShader]
-call [ptr_glDeleteShader]
+call [r15 + OGLAPI.ptr_glDeleteShader]
 ;--- Build and bind arrays ----------------------------------------------------;
 lea rbx,[VAO]
 mov ecx,1
 mov rdx,rbx
 mov dword [rbx],0
-call [ptr_glGenVertexArrays]
+call [r15 + OGLAPI.ptr_glGenVertexArrays]
 cmp dword [rbx],0
 je .shaderFailed
 mov ecx,1
 lea rdx,[rbx + 4]
 mov dword [rbx + 4],0
-call [ptr_glGenBuffers]
+call [r15 + OGLAPI.ptr_glGenBuffers]
 cmp dword [rbx + 4],0
 je .shaderFailed
 mov ecx,[rbx]
-call [ptr_glBindVertexArray]
+call [r15 + OGLAPI.ptr_glBindVertexArray]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 mov ecx,GL_ARRAY_BUFFER
 mov edx,[rbx + 4]
-call [ptr_glBindBuffer]
+call [r15 + OGLAPI.ptr_glBindBuffer]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -514,7 +531,7 @@ mov ecx,GL_ARRAY_BUFFER
 mov edx,6 * 6 * 5 * 4
 lea r8,[verticesCube]
 mov r9d,GL_STATIC_DRAW
-call [ptr_glBufferData]
+call [r15 + OGLAPI.ptr_glBufferData]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -525,13 +542,13 @@ xor r9,r9
 push 0
 push 5 * 4
 sub rsp,32
-call [ptr_glVertexAttribPointer]
+call [r15 + OGLAPI.ptr_glVertexAttribPointer]
 add rsp,32 + 16
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 xor ecx,ecx
-call [ptr_glEnableVertexAttribArray]
+call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -542,13 +559,13 @@ xor r9,r9
 push 3 * 4
 push 5 * 4
 sub rsp,32
-call [ptr_glVertexAttribPointer]
+call [r15 + OGLAPI.ptr_glVertexAttribPointer]
 add rsp,32 + 16
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 mov ecx,1
-call [ptr_glEnableVertexAttribArray]
+call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -611,23 +628,23 @@ call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 mov ecx,GL_TEXTURE_2D
-call [ptr_glGenerateMipmap]
+call [r15 + OGLAPI.ptr_glGenerateMipmap]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Connect shader program ---------------------------------------------------;
 mov ecx,[shaderProgram]
-call [ptr_glUseProgram]
+call [r15 + OGLAPI.ptr_glUseProgram]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Set texture name for shader program --------------------------------------;
 mov ecx,[shaderProgram]
 lea rdx,[textureName]
-call [ptr_glGetUniformLocation]
+call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
 xor edx,edx
-call [ptr_glUniform1i]
+call [r15 + OGLAPI.ptr_glUniform1i]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -646,25 +663,25 @@ pop rdi
 ;--- Generate and bind buffer for instancing array ----------------------------;
 mov ecx,1
 lea rdx,[IVBO]
-call [ptr_glGenBuffers]
+call [r15 + OGLAPI.ptr_glGenBuffers]
 mov ecx,GL_ARRAY_BUFFER
 mov edx,[IVBO]
-call [ptr_glBindBuffer]
+call [r15 + OGLAPI.ptr_glBindBuffer]
 ;--- Copy data from CPU to GPU ------------------------------------------------;
 mov ecx,GL_ARRAY_BUFFER
 mov edx,4 * INSTANCING_COUNT
 lea r8,[scales]
 mov r9d,GL_DYNAMIC_DRAW 
-call [ptr_glBufferData]
+call [r15 + OGLAPI.ptr_glBufferData]
 ;--- Setup CPU-GPU communication ----------------------------------------------;  
 mov ecx,GL_ARRAY_BUFFER
 xor edx,edx
-call [ptr_glBindBuffer]
+call [r15 + OGLAPI.ptr_glBindBuffer]
 mov ecx,2
-call [ptr_glEnableVertexAttribArray]
+call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
 mov ecx,GL_ARRAY_BUFFER
 mov edx,[IVBO]
-call [ptr_glBindBuffer]
+call [r15 + OGLAPI.ptr_glBindBuffer]
 mov ecx,2
 mov edx,1
 mov r8d,GL_FLOAT
@@ -672,11 +689,11 @@ xor r9,r9
 push 0
 push 4
 sub rsp,32
-call [ptr_glVertexAttribPointer]
+call [r15 + OGLAPI.ptr_glVertexAttribPointer]
 add rsp,32 + 16
 mov ecx,2
 mov edx,1
-call [ptr_glVertexAttribDivisor]
+call [r15 + OGLAPI.ptr_glVertexAttribDivisor]
 jmp .shadersOk
 ;--- Initialization errors handling -------------------------------------------;
 .linkFailed:
@@ -685,7 +702,7 @@ mov edx,TEMP_BUFFER_SIZE
 xor r8d,r8d
 lea rsi,[tempBuffer1]
 mov r9,rsi
-call [ptr_glGetProgramInfoLog]
+call [r15 + OGLAPI.ptr_glGetProgramInfoLog]
 mov rdx,rsi
 jmp .msgEntry
 .compileFailed:
@@ -694,7 +711,7 @@ mov edx,TEMP_BUFFER_SIZE
 xor r8d,r8d
 lea rsi,[tempBuffer1]
 mov r9,rsi
-call [ptr_glGetShaderInfoLog]
+call [r15 + OGLAPI.ptr_glGetShaderInfoLog]
 mov rdx,rsi
 jmp .msgEntry
 ;--- Show message about initialization error ----------------------------------;
@@ -752,12 +769,12 @@ call [glClear]
 mov ecx,GL_DEPTH_TEST
 call [glEnable]
 mov ecx,GL_TEXTURE0
-call [ptr_glActiveTexture]
+call [r15 + OGLAPI.ptr_glActiveTexture]
 mov ecx,GL_TEXTURE_2D 
 mov edx,[TXT1]
 call [glBindTexture]
 mov ecx,[shaderProgram]
-call [ptr_glUseProgram]
+call [r15 + OGLAPI.ptr_glUseProgram]
 ;--- Build transformation matrices, rotation = f( time ) ----------------------;
 call HelperGetSeconds
 fsincos
@@ -790,12 +807,12 @@ call HelperMultiplyMatrices
 ;--- Send transformations matrix to shader program ----------------------------;
 mov ecx,[shaderProgram]
 lea rdx,[modelName_R]
-call [ptr_glGetUniformLocation]
+call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
 mov edx,1
 xor r8,r8
 lea r9,[model_R]
-call [ptr_glUniformMatrix4fv]
+call [r15 + OGLAPI.ptr_glUniformMatrix4fv]
 ;--- Data buffer copy, this operation time measured for MBPS statistics -------;
 rdtsc
 mov esi,eax
@@ -807,7 +824,7 @@ mov edx,4 * INSTANCING_COUNT
 lea r8,[scales]
 mov r9d,GL_DYNAMIC_DRAW 
 add [bytesCount],rdx
-call [ptr_glBufferData]
+call [r15 + OGLAPI.ptr_glBufferData]
 xor eax,eax  ; this CPUID for serialization only, results ignored
 cpuid
 rdtsc
@@ -818,12 +835,12 @@ add [rcx + 00],eax
 adc [rcx + 04],edx
 ;--- Draw and swap buffers ----------------------------------------------------;
 mov ecx,[VAO]
-call [ptr_glBindVertexArray]
+call [r15 + OGLAPI.ptr_glBindVertexArray]
 mov ecx,GL_TRIANGLES
 xor edx,edx
 mov r8d,6 * 6
 mov r9d,INSTANCING_COUNT
-call [ptr_glDrawArraysInstanced]
+call [r15 + OGLAPI.ptr_glDrawArraysInstanced]
 mov rcx,[hdc]
 call [SwapBuffers]
 ;--- Build text strings for FPS statistics strings group ----------------------;
@@ -889,10 +906,10 @@ mov ax,0000h + ']'
 stosw
 mov ecx,[shaderProgram]
 lea rdx,[tempBuffer2 + 128*4]
-call [ptr_glGetUniformLocation]
+call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
 mov edx,dword [tempBuffer2 + rbx*4]
-call [ptr_glUniform1i]
+call [r15 + OGLAPI.ptr_glUniform1i]
 inc ebx
 cmp ebx,128
 jb .uniformArray
@@ -912,13 +929,15 @@ jne .defwndproc
 .wmdestroy:
 cmp [contextSkip],0
 jne .skipContext
+;--- Close conditionally initialized context ----------------------------------;
 call HelperStopSeconds
 mov ecx,1
 lea rdx,[VAO]
-call [ptr_glDeleteVertexArrays]
+call [r15 + OGLAPI.ptr_glDeleteVertexArrays]
 mov ecx,1
 lea rdx,[VBO]
-call [ptr_glDeleteBuffers]
+call [r15 + OGLAPI.ptr_glDeleteBuffers]
+;--- Close unconditionally initialized context --------------------------------;
 .skipContext:
 xor ecx,ecx
 xor edx,edx
@@ -926,6 +945,7 @@ call [wglMakeCurrent]
 mov rcx,[hrc]
 call [wglDeleteContext]
 mov rcx,rbx
+;--- Release display context --------------------------------------------------; 
 mov rdx,[hdc]
 call [ReleaseDC]	
 ;--- Close window -------------------------------------------------------------;
@@ -942,7 +962,7 @@ xor	eax,eax
 
 .finish:
 mov rsp,rbp
-pop rbp rdi rsi rbx
+pop r15 rbp rdi rsi rbx
 ret
 
 ;---------- Helper procedures -------------------------------------------------;
@@ -1062,25 +1082,6 @@ je .exit
 stosb
 jmp .cycle
 .exit:
-ret
-;---------- Find string in the pool by index ----------------------------------;
-;                                                                              ;
-; INPUT:   RSI = Pointer to string pool                                        ;
-;          AX  = String index in the strings pool                              ;
-;                                                                              ;
-; OUTPUT:  RSI = Updated pointer to string, selected by index                  ;  
-;                                                                              ;
-;------------------------------------------------------------------------------;
-IndexString:
-cld
-movzx ecx,ax
-jrcxz .stop
-.cycle:
-lodsb
-cmp al,0
-jne .cycle
-loop .cycle
-.stop:
 ret
 ;---------- Print 32-bit Decimal Number ---------------------------------------;
 ;                                                                              ;
@@ -1313,14 +1314,14 @@ ret
 
 section '.data' data readable writeable
 
-appName     DB  'OpenGL with shaders. Engineering sample #v13.2.x64.',0
-appClass    DB  'FASMOPENGL32',0
+appName     DB  APPLICATION_NAME , 0
+appClass    DB  'FASMOPENGL32'   , 0
 wc          WNDCLASS  0, WindowProc, 0, 0, NULL, NULL, NULL, NULL, NULL,\
                       appClass
 contextSkip DB 1
 ;--- OpenGL background color --------------------------------------------------;
 align 8
-clearColor  GLclampf  0.95, 0.95, 0.95, 1.0
+clearColor    GLclampf  BACKGROUND_R, BACKGROUND_G, BACKGROUND_B, 1.0
 ;--- Vertex model -------------------------------------------------------------;
 verticesCube  GLfloat   -0.5 , -0.5 , -0.5 ,  0.0 , 0.0
               GLfloat    0.5 , -0.5 , -0.5 ,  1.0 , 0.0
@@ -1365,67 +1366,37 @@ verticesCube  GLfloat   -0.5 , -0.5 , -0.5 ,  0.0 , 0.0
               GLfloat   -0.5 ,  0.5 , -0.5 ,  0.0 , 0.0 
 
 ;--- Dynamical import list for OpenGL API -------------------------------------; 
-loadList:
-ptr_glCreateShader              DQ  name_glCreateShader
-ptr_glShaderSource              DQ  name_glShaderSource
-ptr_glCompileShader             DQ  name_glCompileShader
-ptr_glGetShaderiv               DQ  name_glGetShaderiv
-ptr_glGetShaderInfoLog          DQ  name_glGetShaderInfoLog
-ptr_glCreateProgram             DQ  name_glCreateProgram
-ptr_glAttachShader              DQ  name_glAttachShader
-ptr_glLinkProgram               DQ  name_glLinkProgram
-ptr_glGetProgramiv              DQ  name_glGetProgramiv
-ptr_glGetProgramInfoLog         DQ  name_glGetProgramInfoLog
-ptr_glDeleteShader              DQ  name_glDeleteShader
-ptr_glGenVertexArrays           DQ  name_glGenVertexArrays
-ptr_glGenBuffers                DQ  name_glGenBuffers
-ptr_glBindVertexArray           DQ  name_glBindVertexArray
-ptr_glBindBuffer                DQ  name_glBindBuffer
-ptr_glBufferData                DQ  name_glBufferData
-ptr_glVertexAttribPointer       DQ  name_glVertexAttribPointer
-ptr_glEnableVertexAttribArray   DQ  name_glEnableVertexAttribArray
-ptr_glUseProgram                DQ  name_glUseProgram
-ptr_glDeleteVertexArrays        DQ  name_glDeleteVertexArrays
-ptr_glDeleteBuffers             DQ  name_glDeleteBuffers
-ptr_glGetUniformLocation        DQ  name_glGetUniformLocation
-ptr_glUniformMatrix4fv          DQ  name_glUniformMatrix4fv
-ptr_glGenerateMipmap            DQ  name_glGenerateMipmap
-ptr_glUniform1i                 DQ  name_glUniform1i
-ptr_glActiveTexture             DQ  name_glActiveTexture
-ptr_glDrawArraysInstanced       DQ  name_glDrawArraysInstanced
-ptr_glVertexAttribDivisor       DQ  name_glVertexAttribDivisor
-                                DQ  0
-name_glCreateShader             DB  'glCreateShader'            , 0
-name_glShaderSource             DB  'glShaderSource'            , 0
-name_glCompileShader            DB  'glCompileShader'           , 0
-name_glGetShaderiv              DB  'glGetShaderiv'             , 0
-name_glGetShaderInfoLog         DB  'glGetShaderInfoLog'        , 0
-name_glCreateProgram            DB  'glCreateProgram'           , 0
-name_glAttachShader             DB  'glAttachShader'            , 0
-name_glLinkProgram              DB  'glLinkProgram'             , 0
-name_glGetProgramiv             DB  'glGetProgramiv'            , 0
-name_glGetProgramInfoLog        DB  'glGetProgramInfoLog'       , 0
-name_glDeleteShader             DB  'glDeleteShader'            , 0
-name_glGenVertexArrays          DB  'glGenVertexArrays'         , 0
-name_glGenBuffers               DB  'glGenBuffers'              , 0
-name_glBindVertexArray          DB  'glBindVertexArray'         , 0
-name_glBindBuffer               DB  'glBindBuffer'              , 0
-name_glBufferData               DB  'glBufferData'              , 0
-name_glVertexAttribPointer      DB  'glVertexAttribPointer'     , 0
-name_glEnableVertexAttribArray  DB  'glEnableVertexAttribArray' , 0
-name_glUseProgram               DB  'glUseProgram'              , 0
-name_glDeleteVertexArrays       DB  'glDeleteVertexArrays'      , 0
-name_glDeleteBuffers            DB  'glDeleteBuffers'           , 0
-name_glGetUniformLocation       DB  'glGetUniformLocation'      , 0
-name_glUniformMatrix4fv         DB  'glUniformMatrix4fv'        , 0
-name_glGenerateMipmap           DB  'glGenerateMipmap'          , 0
-name_glUniform1i                DB  'glUniform1i'               , 0
-name_glActiveTexture            DB  'glActiveTexture'           , 0
-name_glDrawArraysInstanced      DB  'glDrawArraysInstanced'     , 0
-name_glVertexAttribDivisor      DB  'glVertexAttribDivisor'     , 0
+oglNamesList:
+DB  'glCreateShader'            , 0
+DB  'glShaderSource'            , 0
+DB  'glCompileShader'           , 0
+DB  'glGetShaderiv'             , 0
+DB  'glGetShaderInfoLog'        , 0
+DB  'glCreateProgram'           , 0
+DB  'glAttachShader'            , 0
+DB  'glLinkProgram'             , 0
+DB  'glGetProgramiv'            , 0
+DB  'glGetProgramInfoLog'       , 0
+DB  'glDeleteShader'            , 0
+DB  'glGenVertexArrays'         , 0
+DB  'glGenBuffers'              , 0
+DB  'glBindVertexArray'         , 0
+DB  'glBindBuffer'              , 0
+DB  'glBufferData'              , 0
+DB  'glVertexAttribPointer'     , 0
+DB  'glEnableVertexAttribArray' , 0
+DB  'glUseProgram'              , 0
+DB  'glDeleteVertexArrays'      , 0
+DB  'glDeleteBuffers'           , 0
+DB  'glGetUniformLocation'      , 0
+DB  'glUniformMatrix4fv'        , 0
+DB  'glGenerateMipmap'          , 0
+DB  'glUniform1i'               , 0
+DB  'glActiveTexture'           , 0
+DB  'glDrawArraysInstanced'     , 0
+DB  'glVertexAttribDivisor'     , 0 , 0
 
-;--- Vertex shader cource, compiled at runtime by GPU driver ------------------;
-
+;--- Vertex shader source, compiled at runtime by GPU driver ------------------;
 ptr_vertexShaderSource DQ vertexShaderSource
 vertexShaderSource:
 DB  '#version 330 core'                             , 0Dh, 0Ah
@@ -1495,8 +1466,7 @@ DB  '   TexCoord = vec2(tx, ty);'                   , 0Dh, 0Ah
 DB  '   }' ,0Dh, 0Ah
 DB  '}'                                             , 0Dh, 0Ah, 0
 
-;--- Fragment shader cource, compiled at runtime by GPU driver ----------------;
-
+;--- Fragment shader source, compiled at runtime by GPU driver ----------------;
 ptr_fragmentShaderSource DQ fragmentShaderSource
 fragmentShaderSource:
 DB  '#version 330 core'                             , 0Dh, 0Ah
@@ -1509,61 +1479,58 @@ DB  '   FragColor = texture(texture1, TexCoord);'   , 0Dh, 0Ah
 DB  '}'                                             , 0Dh, 0Ah, 0
 
 ;--- Data for CPU-GPU communication with named variables ----------------------;
-modelName_1    DB    'model_1'  , 0
-modelName_2    DB    'model_2'  , 0
-modelName_3    DB    'model_3'  , 0
-modelName_R    DB    'model_R'  , 0
-textureName    DB    'texture1' , 0
-showTextName   DB    'showText' , 0
+modelName_1   DB  'model_1'  , 0
+modelName_2   DB  'model_2'  , 0
+modelName_3   DB  'model_3'  , 0
+modelName_R   DB  'model_R'  , 0
+textureName   DB  'texture1' , 0
+showTextName  DB  'showText' , 0
 
+;--- Transformation matrices, blanked as identity matrix at application start -; 
 align 16
-model_1      GLfloat  1.0 , 0.0 , 0.0 , 0.0
-             GLfloat  0.0 , 1.0 , 0.0 , 0.0
-             GLfloat  0.0 , 0.0 , 1.0 , 0.0
-             GLfloat  0.0 , 0.0 , 0.0 , 1.0
+model_1       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
 
-model_2      GLfloat  1.0 , 0.0 , 0.0 , 0.0
-             GLfloat  0.0 , 1.0 , 0.0 , 0.0
-             GLfloat  0.0 , 0.0 , 1.0 , 0.0
-             GLfloat  0.0 , 0.0 , 0.0 , 1.0
+model_2       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
 
-model_3      GLfloat  1.0 , 0.0 , 0.0 , 0.0
-             GLfloat  0.0 , 1.0 , 0.0 , 0.0
-             GLfloat  0.0 , 0.0 , 1.0 , 0.0
-             GLfloat  0.0 , 0.0 , 0.0 , 1.0
+model_3       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
 
-model_R      GLfloat  1.0 , 0.0 , 0.0 , 0.0
-             GLfloat  0.0 , 1.0 , 0.0 , 0.0
-             GLfloat  0.0 , 0.0 , 1.0 , 0.0
-             GLfloat  0.0 , 0.0 , 0.0 , 1.0
+model_R       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
 
-model_Empty  GLfloat  1.0 , 0.0 , 0.0 , 0.0
-             GLfloat  0.0 , 1.0 , 0.0 , 0.0
-             GLfloat  0.0 , 0.0 , 1.0 , 0.0
-             GLfloat  0.0 , 0.0 , 0.0 , 1.0
+model_Empty   GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
 
-listStrings     DD  GL_VENDOR
-                DD  GL_RENDERER
-                DD  GL_VERSION
-                DD  GL_SHADING_LANGUAGE_VERSION
-                DD  0
-
-szSeconds       DB  'Seconds' , 0
-szFrames        DB  'Frames'  , 0
-szFPS           DB  'FPS'     , 0
-
-szBusSeconds    DB  'Bus traffic seconds' , 0
-szBusMB         DB  'Megabytes'           , 0
-szBusMBPS       DB  'MBPS'                , 0
-
+;--- Keys list for get information about GPU by OpenGL API --------------------; 
+listStrings   DD  GL_VENDOR
+              DD  GL_RENDERER
+              DD  GL_VERSION
+              DD  GL_SHADING_LANGUAGE_VERSION
+              DD  0
 
 ;--- Messages and parameters names strings ------------------------------------;
-msgLoad    DB  'Load OpenGL API failed.'        , 0
-msgShader  DB  'Shaders initialization failed.' , 0
-
+szSeconds     DB  'Seconds' , 0
+szFrames      DB  'Frames'  , 0
+szFPS         DB  'FPS'     , 0
+szBusSeconds  DB  'Bus traffic seconds' , 0
+szBusMB       DB  'Megabytes'           , 0
+szBusMBPS     DB  'MBPS'                , 0
+msgLoad       DB  'Load OpenGL API failed.'        , 0
+msgShader     DB  'Shaders initialization failed.' , 0
 
 align 16
-
 ;--- Raster font, chars codes 00h-7Fh, format 8x16 ----------------------------;
 rasterFont:
 DB  000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h  ; 000
@@ -1695,7 +1662,40 @@ DB  000h,000h,070h,018h,018h,018h,00Eh,018h,018h,018h,018h,070h,000h,000h,000h,0
 DB  000h,000h,076h,0DCh,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h  ; 07E
 DB  000h,000h,000h,000h,010h,038h,06Ch,0C6h,0C6h,0C6h,0FEh,000h,000h,000h,000h,000h  ; 07F
 
+;--- Pointers to OpenGL API functions, dynamical import used ------------------;
+struct OGLAPI
+ptr_glCreateShader             dq ?
+ptr_glShaderSource             dq ?              
+ptr_glCompileShader            dq ?             
+ptr_glGetShaderiv              dq ?               
+ptr_glGetShaderInfoLog         dq ?          
+ptr_glCreateProgram            dq ?             
+ptr_glAttachShader             dq ?              
+ptr_glLinkProgram              dq ?               
+ptr_glGetProgramiv             dq ?              
+ptr_glGetProgramInfoLog        dq ?         
+ptr_glDeleteShader             dq ?              
+ptr_glGenVertexArrays          dq ?           
+ptr_glGenBuffers               dq ?                
+ptr_glBindVertexArray          dq ?           
+ptr_glBindBuffer               dq ?                
+ptr_glBufferData               dq ?                
+ptr_glVertexAttribPointer      dq ?       
+ptr_glEnableVertexAttribArray  dq ?   
+ptr_glUseProgram               dq ?                
+ptr_glDeleteVertexArrays       dq ?        
+ptr_glDeleteBuffers            dq ?             
+ptr_glGetUniformLocation       dq ?        
+ptr_glUniformMatrix4fv         dq ?          
+ptr_glGenerateMipmap           dq ?            
+ptr_glUniform1i                dq ?                 
+ptr_glActiveTexture            dq ?             
+ptr_glDrawArraysInstanced      dq ?       
+ptr_glVertexAttribDivisor      dq ?       
+ends
 align 8
+OGL_API OGLAPI ?
+
 ;--- Timings and benchmarks variables -----------------------------------------;
 tscFreq         DQ    ?
 tscPeriod       DQ    ?
