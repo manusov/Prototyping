@@ -20,9 +20,9 @@
 include 'win64a.inc'
 include 'OpenGL.inc'
 
-APPLICATION_NAME   EQU 'OpenGL with shaders. Engineering sample #13.4.x64.'
+APPLICATION_NAME   EQU 'OpenGL with shaders. Engineering sample #14.0.x64.'
 
-X_BASE             EQU 380    ; GUI window positions at application start.
+X_BASE             EQU 380     ; GUI window positions at application start.
 Y_BASE             EQU 140
 X_SIZE             EQU 1024    ; GUI window sizes at application start.
 Y_SIZE             EQU 768
@@ -33,7 +33,7 @@ IDR_JPEG           EQU 103     ; JPG file resource ID, used as texture.
 
 TEMP_BUFFER_SIZE   EQU 4096    ; Transit buffer(s) default size.
 
-GL_VERTEX_SHADER   EQU 00008B31h
+GL_VERTEX_SHADER   EQU 00008B31h   ; OpenGL API control codes
 GL_FRAGMENT_SHADER EQU 00008B30h
 GL_COMPILE_STATUS  EQU 00008B81h
 GL_LINK_STATUS     EQU 00008B82h
@@ -44,22 +44,23 @@ GL_TEXTURE0        EQU 000084C0h
 
 GL_SHADING_LANGUAGE_VERSION EQU 00008B8Ch
 
-TEXTURE_WIDTH      EQU 2952
-TEXTURE_HEIGHT     EQU 1967
-TEXT_FRONT_COLOR   EQU 0FF267190h 
+TEXTURE_WIDTH      EQU 2952         ; Texture JPG file X, Y sizes,
+TEXTURE_HEIGHT     EQU 1967         ; shaders update required if this changed 
+TEXT_FRONT_COLOR   EQU 0FF267190h   ; Text output front and back colors  
 TEXT_BACK_COLOR    EQU 0FFF8F8F8h
-BACKGROUND_R       EQU 0.80
+BACKGROUND_R       EQU 0.80         ; Render window background R,G,B as float
 BACKGROUND_G       EQU 0.95
 BACKGROUND_B       EQU 0.95
 
+;--- This constant IMPORTANT for GPU load ---
 ; 128 x 4 = 512 chars positions matrix for text output.
 ; 9 x 3   = 27 portraits.
 ; + 500000 instances for GPU heavy load. 
 ; Change this last addend value for change GPU load.
 INSTANCING_COUNT   EQU 128 * 4 + 27 + 500000  
 
-struct GdiplusStartupInput
-GdiplusVersion            dd ?
+struct GdiplusStartupInput          ; Structure for GDI+ support,
+GdiplusVersion            dd ?      ; GDI+ required for load JPEG packed image
 pad1                      dd ?
 DebugEventCallback        dq ?
 SuppressBackgroundThread  dd ?
@@ -72,7 +73,7 @@ format PE64 GUI 5.0
 entry start
 section '.text' code readable executable
 start:
-sub rsp,8     ; Make stack dqword (16 byte) aligned
+sub rsp,8                          ; Make stack dqword (16 byte) aligned
 ;--- Get handle of this application exe file ----------------------------------;
 xor ecx,ecx                        ; RCX = Parm#1 = 0 = means this exe file 
 call [GetModuleHandle]             ; Get handle of this exe file
@@ -86,7 +87,7 @@ test rax,rax
 jz .iconFailed                     ; Go if load error, icon handle = NULL
 mov [hIcon],rax                    ; Store handle of application icon
 .iconFailed:
-;--- OpenGL initialization ----------------------------------------------------;
+;--- GDI+ initialization ------------------------------------------------------;
 lea rdx,[startupInput]
 xor eax,eax
 mov [rdx + GdiplusStartupInput.GdiplusVersion],1
@@ -139,7 +140,7 @@ test rax,rax
 jz .skipJpgLoader
 push rsi
 mov ecx,edi             ; ECX = Size, bytes, TODO. Optimize QWORDS + Tail
-mov rsi,rbx             ; RSI = Destination for JPG file image copy 
+mov rsi,rbx             ; RSI = Source for JPG file image copy 
 mov rdi,rax             ; RDI = Destination for JPG file image copy
 cld
 rep movsb
@@ -167,35 +168,36 @@ test eax,eax
 jnz .skipJpgLoader 
 mov rcx,[rbx]
 jrcxz .skipJpgLoader
+;--- Get BITMAP structure as GDI object ---------------------------------------;
 mov edx,sizeof.BITMAP
 lea rsi,[bm]
 mov r8,rsi
 call [GetObjectA]
 test rax,rax
 jz .skipJpgLoader
-;--- Store final result = pointer to raw data ---------------------------------;
+;--- Store final result = pointer to raw image data ---------------------------;
 mov rbx,[rsi +  BITMAP.bmBits]  ; Pointer to raw data, TODO bmWidth, bmHeight.
 mov [pRawImage],rbx
 .skipJpgLoader:
-;--- Blank font unpack area ---------------------------------------------------;
-cld
+;--- Blank font unpack area, note part of image used for font build -----------;
 mov rdi,rbx
 mov ecx,TEXTURE_WIDTH * 16 
 mov eax,TEXT_BACK_COLOR
+cld
 rep stosd
-;--- Font unpack --------------------------------------------------------------;
+;--- Font unpack, build chars at graphics image -------------------------------;
 lea rsi,[rasterFont]
 mov rdi,rbx
 mov dh,128
-.unpackFont:    ; Cycle for unpack font
+.unpackFont:       ; Cycle for unpack font
 push rdi
 add rdi,TEXTURE_WIDTH * 4 * 15
 mov ch,16
-.unpackChar:    ; Cycle for unpack each char of font
+.unpackChar:       ; Cycle for unpack each char of font
 mov cl,8
 mov dl,[rsi]
 inc rsi
-.unpackByte:    ; Cycle for unpack each 8-pixel line of each char
+.unpackByte:       ; Cycle for unpack each 8-pixel line of each char
 shl dl,1
 mov eax,TEXT_BACK_COLOR
 jnc @f
@@ -203,15 +205,15 @@ mov eax,TEXT_FRONT_COLOR
 @@:
 stosd
 dec cl
-jnz .unpackByte
+jnz .unpackByte    ; Cycle for unpack each 8-pixel line of each char
 sub rdi,(TEXTURE_WIDTH * 4) + (8 * 4)
 dec ch
-jnz .unpackChar
+jnz .unpackChar    ; Cycle for unpack each char of font
 pop rdi
 add rdi,8 * 4
 dec dh
-jnz .unpackFont 
-;--- GUI objects initialization and create GUI window class -------------------; 
+jnz .unpackFont    ; Cycle for unpack font 
+;--- GUI objects initialization and register GUI window class -----------------; 
 lea rbx,[wc]
 xor ecx,ecx
 call[GetModuleHandle]
@@ -227,7 +229,7 @@ mov [rbx + WNDCLASS.hCursor],rax
 mov rcx,rbx
 call [RegisterClass]
 ;--- Create GUI window --------------------------------------------------------;
-xor eax,eax
+xor eax,eax  ; RAX = 0 for compact PUSH 0
 push rax
 push [rbx + WNDCLASS.hInstance]
 push rax
@@ -240,10 +242,10 @@ mov r9d,WS_VISIBLE + WS_OVERLAPPEDWINDOW + WS_CLIPCHILDREN + WS_CLIPSIBLINGS
 lea r8,[appName]
 lea rdx,[appClass]
 xor ecx,ecx
-sub rsp,32
+sub rsp,32              ; Re-create parameters shadow after pushes
 call [CreateWindowEx]
-add rsp,32 + 64
-test rax,rax        ; Check for RAX = 0
+add rsp,32 + 64         ; Remove parameters shadow and 8 pushes (input parms) 
+test rax,rax            ; Check for RAX = 0
 jz ApplicationExit  ; Go if initialization error by WM_CREATE returns RAX = -1
 ;--- Handling events from GUI window ------------------------------------------;
 lea rbx,[msg]
@@ -268,7 +270,7 @@ mov rax,[pStream]
 mov rcx,rax
 jrcxz @f
 mov rax,[rax]
-call qword [rax + 10h]
+call qword [rax + 10h]  ; This means pStream->Release();
 @@:
 mov rcx,[hGlobal]
 jrcxz @f
@@ -287,7 +289,7 @@ jrcxz @f
 call [GdiplusShutdown]
 @@:
 ;--- Application exit ---------------------------------------------------------;
-xor ecx,ecx
+xor ecx,ecx          ; Exit code = 0
 call [ExitProcess]
 
 ;---------- Window callback procedure -----------------------------------------;
@@ -295,28 +297,28 @@ call [ExitProcess]
 WindowProc:
 push rbx rsi rdi rbp r15  ; note about other non-volatile regs, include XMM6-15
 mov rbp,rsp
-and rsp,0FFFFFFFFFFFFFFF0h
-sub rsp,32
-mov rbx,rcx        ; RBX = HWND
-lea r15,[OGL_API]  ; R15 = Pointer for compact call OpenGL API
+and rsp,0FFFFFFFFFFFFFFF0h     ; Align stack
+sub rsp,32                     ; Create parameters shadow
+mov rbx,rcx                    ; RBX = HWND
+lea r15,[OGL_API]              ; R15 = Pointer for compact call OpenGL API
 
 ;--- Select message handler ---------------------------------------------------;
 
 cmp edx,WM_CREATE
-je .wmcreate
+je .wmcreate          ; Go window create procedure
 cmp edx,WM_SIZE
-je .wmsize
+je .wmsize            ; Go window re-size procedure
 cmp edx,WM_PAINT
-je .wmpaint
+je .wmpaint           ; Go graphics paint procedure
 cmp edx,WM_KEYDOWN
-je .wmkeydown
+je .wmkeydown         ; Go key press handler, here used for ESC
 cmp edx,WM_DESTROY
-je .wmdestroy
+je .wmdestroy         ; Go window destroy procedure
 
 ;--- Default window procedure -------------------------------------------------;
 
 .defwndproc:
-call [DefWindowProc]   ; rcx, rdx, r8, r9 must be valid input at this point
+call [DefWindowProc]  ; rcx, rdx, r8, r9 must be valid input at this point
 jmp	.finish
 
 ;--- Window message handler : create window procedure -------------------------;
@@ -324,13 +326,13 @@ jmp	.finish
 .wmcreate:
 ;--- Initialize display context -----------------------------------------------;
 call [GetDC]           ; rcx = input
-lea rdx,[hdc]
-mov [rdx],rax
+mov [r15 - sizeof.APPDATA + APPDATA.hdc],rax
 ;--- Start initialize OpenGL context ------------------------------------------;
 lea rdi,[pfd]
 mov rsi,rdi            ; rsi = pointer to pfd
 mov	ecx,sizeof.PIXELFORMATDESCRIPTOR shr 3
 xor	eax,eax
+cld
 rep stosq
 mov [rsi + PIXELFORMATDESCRIPTOR.nSize],sizeof.PIXELFORMATDESCRIPTOR
 mov [rsi + PIXELFORMATDESCRIPTOR.nVersion],1
@@ -341,7 +343,7 @@ mov [rsi + PIXELFORMATDESCRIPTOR.cColorBits],16
 mov [rsi + PIXELFORMATDESCRIPTOR.cDepthBits],16
 mov [rsi + PIXELFORMATDESCRIPTOR.cAccumBits],0
 mov [rsi + PIXELFORMATDESCRIPTOR.cStencilBits],0
-mov rdi,[rdx]            ; rdi = hdc
+mov rdi,[r15 - sizeof.APPDATA + APPDATA.hdc]            ; rdi = hdc
 mov rcx,rdi
 mov rdx,rsi
 call [ChoosePixelFormat] 
@@ -351,11 +353,11 @@ mov r8,rsi
 call [SetPixelFormat]
 mov rcx,rdi
 call [wglCreateContext]
-mov [hrc],rax
+mov [r15 - sizeof.APPDATA + APPDATA.hrc],rax
 mov rcx,rdi
 xchg rdx,rax            ; in the current context XCHG compact than MOV
 call [wglMakeCurrent]	
-lea rdi,[rc]            ; rdi = pointer to rc
+lea rdi,[r15 - sizeof.APPDATA + APPDATA.rc]    ; rdi = pointer to rc
 mov rcx,rbx
 mov rdx,rdi
 call [GetClientRect]
@@ -383,8 +385,8 @@ lodsd
 xchg ecx,eax
 jrcxz .strDone
 push rsi rdi
-sub rsp,32
-call [glGetString]
+sub rsp,32            ; Re-create parameters shadow required because pushes
+call [glGetString]    ; Get information string, selected by input RCX
 add rsp,32
 test rax,rax
 jz .skString
@@ -402,8 +404,11 @@ call StringWrite
 lea rsi,[szFrames]
 lea rdi,[tempBuffer2 + 128 * 2 + 60]
 call StringWrite
-lea rsi,[szFPS]
+lea rsi,[szFPSavg]
 lea rdi,[tempBuffer2 + 128 * 1 + 60]
+call StringWrite
+lea rsi,[szFPScur]
+lea rdi,[tempBuffer2 + 128 * 0 + 60]
 call StringWrite
 ;--- Build template for bus traffic strings group -----------------------------;
 lea rsi,[szBusSeconds]
@@ -412,22 +417,25 @@ call StringWrite
 lea rsi,[szBusMB]
 lea rdi,[tempBuffer2 + 128 * 2 + 90]
 call StringWrite
-lea rsi,[szBusMBPS]
+lea rsi,[szBusMBPSavg]
 lea rdi,[tempBuffer2 + 128 * 1 + 90]
+call StringWrite
+lea rsi,[szBusMBPScur]
+lea rdi,[tempBuffer2 + 128 * 0 + 90]
 call StringWrite
 ;--- Dynamically load required OpenGL API procedures --------------------------;
 cld
-lea rsi,[oglNamesList]
-mov rdi,r15
+lea rsi,[oglNamesList]  ; RSI = Pointer to functions names sequence
+mov rdi,r15             ; RDI = Pointer to loaded functions pointers list
 .loadCycle:
 cmp byte [rsi],0
-je .loadOk
+je .loadOk              ; Go if strings list done, second 0
 mov rcx,rsi
 call [wglGetProcAddress]
 test rax,rax
 jz .loadFailed
 stosq
-.skipName:
+.skipName:              ; Skip this function name string for access next string
 lodsb
 cmp al,0
 jne .skipName
@@ -438,18 +446,18 @@ mov ecx,GL_VERTEX_SHADER
 call [r15 + OGLAPI.ptr_glCreateShader]
 test eax,eax
 jz .shaderFailed
-mov [vertexShader],eax
+mov [r15 - sizeof.APPDATA + APPDATA.vertexShader],eax
 xchg ebx,eax
 mov ecx,ebx
 mov edx,1
 lea r8,[ptr_vertexShaderSource]
 xor r9,r9
-call [r15 + OGLAPI.ptr_glShaderSource]
+call [r15 + OGLAPI.ptr_glShaderSource]   ; Set vertex shader source C++ code
 mov ecx,ebx
-call [r15 + OGLAPI.ptr_glCompileShader]
+call [r15 + OGLAPI.ptr_glCompileShader]  ; Compile C++ shader to GPU executable
 mov ecx,ebx
 mov edx,GL_COMPILE_STATUS
-lea rsi,[params]
+lea rsi,[r15 - sizeof.APPDATA + APPDATA.params]
 mov r8,rsi
 mov dword [rsi],0
 call [r15 + OGLAPI.ptr_glGetShaderiv]
@@ -460,15 +468,15 @@ mov ecx,GL_FRAGMENT_SHADER
 call [r15 + OGLAPI.ptr_glCreateShader]
 test eax,eax
 jz .shaderFailed
-mov [fragmentShader],eax
+mov [r15 - sizeof.APPDATA + APPDATA.fragmentShader],eax
 xchg ebx,eax
 mov ecx,ebx
 mov edx,1
 lea r8,[ptr_fragmentShaderSource]
 xor r9,r9
-call [r15 + OGLAPI.ptr_glShaderSource]
+call [r15 + OGLAPI.ptr_glShaderSource]   ; Set fragment shader source C++ code
 mov ecx,ebx
-call [r15 + OGLAPI.ptr_glCompileShader]
+call [r15 + OGLAPI.ptr_glCompileShader]  ; Compile C++ shader to GPU executable
 mov ecx,ebx
 mov edx,GL_COMPILE_STATUS
 mov r8,rsi
@@ -480,16 +488,16 @@ je .compileFailed
 call [r15 + OGLAPI.ptr_glCreateProgram]
 test eax,eax
 jz .shaderFailed
-mov [shaderProgram],eax
+mov [r15 - sizeof.APPDATA + APPDATA.shaderProgram],eax
 xchg ebx,eax
 mov ecx,ebx
-mov edx,[vertexShader]
-call [r15 + OGLAPI.ptr_glAttachShader]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.vertexShader]
+call [r15 + OGLAPI.ptr_glAttachShader]   ; Attach vertex shader
 mov ecx,ebx
-mov edx,[fragmentShader]
-call [r15 + OGLAPI.ptr_glAttachShader]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.fragmentShader]
+call [r15 + OGLAPI.ptr_glAttachShader]   ; Attach fragment shader
 mov ecx,ebx
-call [r15 + OGLAPI.ptr_glLinkProgram]
+call [r15 + OGLAPI.ptr_glLinkProgram]    ; Link shader program
 mov ecx,ebx
 mov edx,GL_LINK_STATUS
 mov r8,rsi
@@ -498,12 +506,12 @@ call [r15 + OGLAPI.ptr_glGetProgramiv]
 cmp dword [rsi],0
 je .linkFailed 
 ;--- Delete shaders after used by shader program linker -----------------------;
-mov ecx,[vertexShader]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.vertexShader]
 call [r15 + OGLAPI.ptr_glDeleteShader]
-mov ecx,[fragmentShader]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.fragmentShader]
 call [r15 + OGLAPI.ptr_glDeleteShader]
-;--- Build and bind arrays ----------------------------------------------------;
-lea rbx,[VAO]
+;--- Create and bind arrays ---------------------------------------------------;
+lea rbx,[r15 - sizeof.APPDATA + APPDATA.VAO]
 mov ecx,1
 mov rdx,rbx
 mov dword [rbx],0
@@ -527,6 +535,7 @@ call [r15 + OGLAPI.ptr_glBindBuffer]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
+;--- Set vertices data --------------------------------------------------------;
 mov ecx,GL_ARRAY_BUFFER
 mov edx,6 * 6 * 5 * 4
 lea r8,[verticesCube]
@@ -539,16 +548,16 @@ xor ecx,ecx
 mov edx,3
 mov r8d,GL_FLOAT
 xor r9,r9
-push 0
-push 5 * 4
+push 0                                         ; attribute base = 0 elements
+push 5 * 4                                     ; all entry size = 5 elements
 sub rsp,32
-call [r15 + OGLAPI.ptr_glVertexAttribPointer]
+call [r15 + OGLAPI.ptr_glVertexAttribPointer]  ; Set cubes vertices coordinates
 add rsp,32 + 16
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 xor ecx,ecx
-call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
+call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]  ; enable array use by shader
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
@@ -556,28 +565,28 @@ mov ecx,1
 mov edx,2
 mov r8d,GL_FLOAT
 xor r9,r9
-push 3 * 4
-push 5 * 4
+push 3 * 4                                     ; attribute base = 3 elements
+push 5 * 4                                     ; all entry size = 5 elements
 sub rsp,32
-call [r15 + OGLAPI.ptr_glVertexAttribPointer]
+call [r15 + OGLAPI.ptr_glVertexAttribPointer]  ; Set cubes texture coordinates
 add rsp,32 + 16
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 mov ecx,1
-call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
+call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]  ; enable array use by shader
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Initializing textures ----------------------------------------------------;
 mov ecx,1
-lea rdx,[TXT1]
+lea rdx,[r15 - sizeof.APPDATA + APPDATA.TXT1]
 call [glGenTextures]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 mov ecx,GL_TEXTURE_2D
-mov edx,[TXT1]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.TXT1]
 call [glBindTexture]
 call [glGetError]
 test eax,eax
@@ -610,6 +619,7 @@ call [glTexParameteri]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
+;--- Specify texture image ----------------------------------------------------; 
 mov ecx,GL_TEXTURE_2D
 xor edx,edx
 mov r8d,GL_RGB
@@ -618,7 +628,7 @@ push rdx
 mov rax,[pRawImage]
 push rax
 push GL_UNSIGNED_BYTE
-push GL_BGRA
+push GL_BGRA           ; Adjust this parameter depend on image file type
 push rdx
 push TEXTURE_HEIGHT
 sub rsp,32 
@@ -627,19 +637,20 @@ add rsp,32 + 48
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
+;--- Generate mip map: texture copies with differrent detalization ------------;
 mov ecx,GL_TEXTURE_2D
 call [r15 + OGLAPI.ptr_glGenerateMipmap]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Connect shader program ---------------------------------------------------;
-mov ecx,[shaderProgram]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.shaderProgram]
 call [r15 + OGLAPI.ptr_glUseProgram]
 call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Set texture name for shader program --------------------------------------;
-mov ecx,[shaderProgram]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.shaderProgram]
 lea rdx,[textureName]
 call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
@@ -649,38 +660,38 @@ call [glGetError]
 test eax,eax
 jnz .shaderFailed 
 ;--- Build instancing array, used for CPU-GPU traffic only, scales values -----;
-push rdi
-cld
 lea rdi,[scales]
+push rdi
 mov ecx,INSTANCING_COUNT
 finit
 fld1
 push rax
 fstp dword [rsp]
 pop rax
-rep stosd
+cld
+rep stosd  ; Write INSTANCING_COUNT dwords of float 1.0 
 pop rdi
-;--- Generate and bind buffer for instancing array ----------------------------;
+;--- Create and bind data buffer for instancing array -------------------------;
 mov ecx,1
-lea rdx,[IVBO]
+lea rdx,[r15 - sizeof.APPDATA + APPDATA.IVBO]
 call [r15 + OGLAPI.ptr_glGenBuffers]
 mov ecx,GL_ARRAY_BUFFER
-mov edx,[IVBO]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.IVBO]
 call [r15 + OGLAPI.ptr_glBindBuffer]
-;--- Copy data from CPU to GPU ------------------------------------------------;
+;--- Copy data buffer from CPU to GPU -----------------------------------------;
 mov ecx,GL_ARRAY_BUFFER
 mov edx,4 * INSTANCING_COUNT
-lea r8,[scales]
+mov r8,rdi
 mov r9d,GL_DYNAMIC_DRAW 
 call [r15 + OGLAPI.ptr_glBufferData]
-;--- Setup CPU-GPU communication ----------------------------------------------;  
+;--- Specify format for data buffer -------------------------------------------;  
 mov ecx,GL_ARRAY_BUFFER
 xor edx,edx
 call [r15 + OGLAPI.ptr_glBindBuffer]
 mov ecx,2
 call [r15 + OGLAPI.ptr_glEnableVertexAttribArray]
 mov ecx,GL_ARRAY_BUFFER
-mov edx,[IVBO]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.IVBO]
 call [r15 + OGLAPI.ptr_glBindBuffer]
 mov ecx,2
 mov edx,1
@@ -726,13 +737,13 @@ xor r8,r8             ; R8  = Parm #3 = Caption (0 means error)
 mov r9d,MB_ICONERROR  ; R9  = Parm #4 = Message flags
 call [MessageBoxA]
 mov [contextSkip],1
-mov rax,-1
+mov rax,-1            ; Status code -1 is request for destroy window by caller
 jmp .finish
 ;--- Initialization OK, clear variables and exit window callback handler ------;
 .shadersOk:
 call HelperStartSeconds
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.framesCount]
 xor eax,eax
-lea rcx,[framesCount]
 mov [rcx + 00],rax
 mov [rcx + 08],rax
 mov [rcx + 16],rax
@@ -742,7 +753,7 @@ jmp .finish
 ;--- Window message handler : resize window procedure -------------------------;
 
 .wmsize:
-lea rdi,[rc]            ; rdi = pointer to rc
+lea rdi,[r15 - sizeof.APPDATA + APPDATA.rc]       ; rdi = pointer to rc
 mov rcx,rbx
 mov rdx,rdi
 call [GetClientRect]
@@ -771,9 +782,9 @@ call [glEnable]
 mov ecx,GL_TEXTURE0
 call [r15 + OGLAPI.ptr_glActiveTexture]
 mov ecx,GL_TEXTURE_2D 
-mov edx,[TXT1]
+mov edx,[r15 - sizeof.APPDATA + APPDATA.TXT1]
 call [glBindTexture]
-mov ecx,[shaderProgram]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.shaderProgram]
 call [r15 + OGLAPI.ptr_glUseProgram]
 ;--- Build transformation matrices, rotation = f( time ) ----------------------;
 call HelperGetSeconds
@@ -805,7 +816,7 @@ fst dword [rdx + 4*0 + 8]
 fstp dword [r8 + 4*8 + 4]
 call HelperMultiplyMatrices
 ;--- Send transformations matrix to shader program ----------------------------;
-mov ecx,[shaderProgram]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.shaderProgram]
 lea rdx,[modelName_R]
 call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
@@ -813,35 +824,48 @@ mov edx,1
 xor r8,r8
 lea r9,[model_R]
 call [r15 + OGLAPI.ptr_glUniformMatrix4fv]
+
 ;--- Data buffer copy, this operation time measured for MBPS statistics -------;
+;--- Start of timings measurement interval ------------------------------------;
+
+BUFFER_COUNT  EQU  (4 * INSTANCING_COUNT)  
+
 rdtsc
 mov esi,eax
 mov edi,edx
 xor eax,eax  ; this CPUID for serialization only, results ignored
 cpuid
+
 mov ecx,GL_ARRAY_BUFFER
-mov edx,4 * INSTANCING_COUNT
+mov edx,BUFFER_COUNT
 lea r8,[scales]
 mov r9d,GL_DYNAMIC_DRAW 
-add [bytesCount],rdx
+add [r15 - sizeof.APPDATA + APPDATA.bytesCount],rdx
 call [r15 + OGLAPI.ptr_glBufferData]
+
 xor eax,eax  ; this CPUID for serialization only, results ignored
 cpuid
+lea rcx,[mbpsStamp]
 rdtsc
 sub eax,esi
 sbb edx,edi
-lea rcx,[tscBytes]
+mov [rcx + 0],eax
+mov [rcx + 4],edx
+mov qword [rcx + 8],BUFFER_COUNT
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscBytes]
 add [rcx + 00],eax
 adc [rcx + 04],edx
+;--- End of timings measurement interval --------------------------------------;
+
 ;--- Draw and swap buffers ----------------------------------------------------;
-mov ecx,[VAO]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.VAO]
 call [r15 + OGLAPI.ptr_glBindVertexArray]
 mov ecx,GL_TRIANGLES
 xor edx,edx
 mov r8d,6 * 6
 mov r9d,INSTANCING_COUNT
 call [r15 + OGLAPI.ptr_glDrawArraysInstanced]
-mov rcx,[hdc]
+mov rcx,[r15 - sizeof.APPDATA + APPDATA.hdc]
 call [SwapBuffers]
 ;--- Build text strings for FPS statistics strings group ----------------------;
 call HelperGetSeconds
@@ -849,25 +873,48 @@ push rax
 fstp qword [rsp]
 mov bx,0200h
 mov rax,[rsp]
-lea rdi,[tempBuffer2 + 128 * 3 + 69]
-call DoublePrint
-mov rax,[framesCount]             ; TODO. Check bits RAX.[63-32] for overflow
+lea rdi,[tempBuffer2 + 128 * 3 + 73]
+call DoublePrint_Blanked         ; Print seconds
+mov rax,[r15 - sizeof.APPDATA + APPDATA.framesCount]  ; TODO. Check bits RAX.[63-32] for overflow
 push rax
 mov bl,0
-lea rdi,[tempBuffer2 + 128 * 2 + 69]
-call DecimalPrint32
-fld qword [rsp + 8]      ; st0 = seconds 
-fild qword [rsp]         ; st0 = frames, st1 = seconds. 
+lea rdi,[tempBuffer2 + 128 * 2 + 73]
+call DecimalPrint32_Blanked      ; Print frames
+fld qword [rsp + 8]              ; st0 = seconds 
+fild qword [rsp]                 ; st0 = frames, st1 = seconds. 
 pop rax rax
-fdiv st0,st1             ; st0 = FPS
+fdiv st0,st1                     ; st0 = FPS
 push rax
 fstp qword [rsp]
 pop rax
 mov bx,0200h
-lea rdi,[tempBuffer2 + 128 * 1 + 69]
-call DoublePrint
+lea rdi,[tempBuffer2 + 128 * 1 + 73]
+call DoublePrint_Blanked         ; Print FPS average
+
+;--- Build text string for FPS current actual value ---------------------------;
+lea rbx,[fpsStamp1] 
+mov rcx,[rbx + 0]
+mov [rbx + 8],rcx 
+rdtsc
+shl rdx,32
+add rax,rdx
+mov [rbx + 0],rax
+jrcxz .skipFps      ; Skip visualization if first frame, previous TSC not valid 
+sub rax,rcx         ; RAX = delta TSC between frames
+fld1
+push rax
+fild qword [rsp]
+fmul [r15 - sizeof.APPDATA + APPDATA.tscPeriod]
+fdivp st1,st0
+fstp qword [rsp]
+mov bx,0200h
+lea rdi,[tempBuffer2 + 128 * 0 + 73]
+pop rax
+call DoublePrint_Blanked         ; Print FPS current
+.skipFps:
+
 ;--- Build text strings for MBPS statistics strings group ---------------------;
-lea rcx,[tscPeriod]
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscPeriod]
 push 0
 push 1000000
 push 0
@@ -882,18 +929,37 @@ fst qword [rsp + 16]
 pop rax
 mov bx,0200h
 lea rdi,[tempBuffer2 + 128 * 3 + 112]
-call DoublePrint
+call DoublePrint_Blanked        ; Print Bus traffic seconds
 pop rax
 lea rdi,[tempBuffer2 + 128 * 2 + 112]
-call DoublePrint
+call DoublePrint_Blanked        ; Print Megabytes
 pop rax
 lea rdi,[tempBuffer2 + 128 * 1 + 112]
-call DoublePrint
+call DoublePrint_Blanked        ; Print MBPS average
+
+;--- Build text string for MBPS current actual value --------------------------;
+lea rbx,[mbpsStamp] 
+mov rcx,[rbx + 0]     ; RCX = delta TSC per buffer copy (by GPU bus master?)
+jrcxz .skipMbps       ; Skip visualization if delta TSC not valid 
+push rcx
+fild qword [rbx + 8]  ; st0 = bytes transferred
+fild qword [rsp]      ; st0 = delta TSC, clocks, st1 = bytes transferred
+fmul [r15 - sizeof.APPDATA + APPDATA.tscPeriod]   ; st0 = dTSC, seconds 
+fdivp st1,st0                                     ; st0 = bytes per second
+mov dword [rsp],1000000
+fidiv dword [rsp]     ; st0 = decimal megabytes per second
+fstp qword [rsp]
+mov bx,0200h
+lea rdi,[tempBuffer2 + 128 * 0 + 112]
+pop rax
+call DoublePrint_Blanked  ; Print MBPS current
+.skipMbps:
+
 ;--- Transfer uniform array with text data into shader program ----------------;
 xor ebx,ebx
 .uniformArray:
-lea rdi,[tempBuffer2 + 128*4] 
 lea rsi,[showTextName]
+lea rdi,[tempBuffer2 + 128*4] 
 call StringWrite
 mov al,'['
 stosb
@@ -904,7 +970,7 @@ call DecimalPrint32
 pop rbx
 mov ax,0000h + ']'
 stosw
-mov ecx,[shaderProgram]
+mov ecx,[r15 - sizeof.APPDATA + APPDATA.shaderProgram]
 lea rdx,[tempBuffer2 + 128*4]
 call [r15 + OGLAPI.ptr_glGetUniformLocation]
 xchg ecx,eax
@@ -914,7 +980,7 @@ inc ebx
 cmp ebx,128
 jb .uniformArray
 ;--- Frame counter increment and exit handler ---------------------------------;
-inc [framesCount]
+inc [r15 - sizeof.APPDATA + APPDATA.framesCount]
 xor eax,eax
 jmp .finish
 
@@ -932,21 +998,21 @@ jne .skipContext
 ;--- Close conditionally initialized context ----------------------------------;
 call HelperStopSeconds
 mov ecx,1
-lea rdx,[VAO]
+lea rdx,[r15 - sizeof.APPDATA + APPDATA.VAO]
 call [r15 + OGLAPI.ptr_glDeleteVertexArrays]
 mov ecx,1
-lea rdx,[VBO]
+lea rdx,[r15 - sizeof.APPDATA + APPDATA.VBO]
 call [r15 + OGLAPI.ptr_glDeleteBuffers]
 ;--- Close unconditionally initialized context --------------------------------;
 .skipContext:
 xor ecx,ecx
 xor edx,edx
 call [wglMakeCurrent]
-mov rcx,[hrc]
+mov rcx,[r15 - sizeof.APPDATA + APPDATA.hrc]
 call [wglDeleteContext]
 mov rcx,rbx
 ;--- Release display context --------------------------------------------------; 
-mov rdx,[hdc]
+mov rdx,[r15 - sizeof.APPDATA + APPDATA.hdc]
 call [ReleaseDC]	
 ;--- Close window -------------------------------------------------------------;
 mov rcx,rbx                ; Parm#1 = RCX = Handle
@@ -968,12 +1034,12 @@ ret
 ;---------- Helper procedures -------------------------------------------------;
 
 ;--- Initializing seconds counter from measuring session start, use TSC -------;
-; INPUT:   None                                                                ;
+; INPUT:   R15 = Pointer for addressing global variables                       ;
 ; OUTPUT:  None                                                                ;  
 ;------------------------------------------------------------------------------;
 HelperStartSeconds:
 call HelperMeasureTsc
-lea rcx,[tscFreq]
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscFreq]
 mov [rcx + 00],rax    ; save frequency, hz, integer 64
 finit
 fld1
@@ -985,11 +1051,11 @@ mov [rcx + 16],eax    ; save TSC value at application start, clocks, integer 64
 mov [rcx + 20],edx
 ret 
 ;--- Get seconds from application start, use TSC ------------------------------;
-; INPUT:   None                                                                ;
+; INPUT:   R15 = Pointer for addressing global variables                       ;
 ; OUTPUT:  x87 st0 = seconds                                                   ;
 ;------------------------------------------------------------------------------;
 HelperGetSeconds:
-lea rcx,[tscPeriod]
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscPeriod]
 rdtsc
 shl rdx,32
 add rax,rdx
@@ -1005,7 +1071,7 @@ ret
 ; OUTPUT:  None                                                                ;  
 ;------------------------------------------------------------------------------;
 HelperStopSeconds:
-lea rcx,[tscStop]
+lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscStop]
 rdtsc
 mov [rcx + 0],eax    ; save TSC value at application stop, clocks, integer 64
 mov [rcx + 4],edx
@@ -1093,6 +1159,15 @@ ret
 ;                modified because string write                                 ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
+
+DecimalPrint32_Blanked:  ; Additional entry point for pre-blank 12 chars
+push rax rcx rdi
+mov ecx,12
+mov al,' '
+cld
+rep stosb
+pop rdi rcx rax
+
 DecimalPrint32:
 cld
 push rax rbx rcx rdx
@@ -1140,6 +1215,15 @@ ret
 ; OUTPUT:  RDI = Modified by text string write                                 ;
 ;                                                                              ;
 ;------------------------------------------------------------------------------;
+
+DoublePrint_Blanked:  ; Additional entry point for pre-blank 12 chars
+push rax rcx rdi
+mov ecx,12
+mov al,' '
+cld
+rep stosb
+pop rdi rcx rax
+
 DoublePrint:
 push rax rbx rcx rdx r8 r9 r10 r11
 cld
@@ -1293,17 +1377,17 @@ movaps xmm0,[rax + rdx]
 movaps xmm1,xmm0
 movaps xmm2,xmm0
 movaps xmm3,xmm0 
-shufps xmm0, xmm0,00000000b 
-shufps xmm1, xmm1,01010101b
-shufps xmm2, xmm2,10101010b
-shufps xmm3, xmm3,11111111b
-mulps xmm0, xmm4
-mulps xmm1, xmm5
-mulps xmm2, xmm6
-mulps xmm3, xmm7
-addps xmm0, xmm1
-addps xmm2, xmm3
-addps xmm0, xmm2
+shufps xmm0,xmm0,00000000b 
+shufps xmm1,xmm1,01010101b
+shufps xmm2,xmm2,10101010b
+shufps xmm3,xmm3,11111111b
+mulps xmm0,xmm4
+mulps xmm1,xmm5
+mulps xmm2,xmm6
+mulps xmm3,xmm7
+addps xmm0,xmm1
+addps xmm2,xmm3
+addps xmm0,xmm2
 movaps [rcx + rdx],xmm0
 add edx,16
 cmp edx,16*4
@@ -1314,15 +1398,17 @@ ret
 
 section '.data' data readable writeable
 
-appName     DB  APPLICATION_NAME , 0
-appClass    DB  'FASMOPENGL32'   , 0
-wc          WNDCLASS  0, WindowProc, 0, 0, NULL, NULL, NULL, NULL, NULL,\
-                      appClass
-contextSkip DB 1
+appName       DB  APPLICATION_NAME , 0
+appClass      DB  'FASMOPENGL32'   , 0
+wc      WNDCLASS  0, WindowProc, 0, 0, NULL, NULL, NULL, NULL, NULL, appClass
+contextSkip   DB  1
+
 ;--- OpenGL background color --------------------------------------------------;
-align 8
+align 16
 clearColor    GLclampf  BACKGROUND_R, BACKGROUND_G, BACKGROUND_B, 1.0
+
 ;--- Vertex model -------------------------------------------------------------;
+align 16
 verticesCube  GLfloat   -0.5 , -0.5 , -0.5 ,  0.0 , 0.0
               GLfloat    0.5 , -0.5 , -0.5 ,  1.0 , 0.0
               GLfloat    0.5 ,  0.5 , -0.5 ,  1.0 , 1.0
@@ -1364,6 +1450,40 @@ verticesCube  GLfloat   -0.5 , -0.5 , -0.5 ,  0.0 , 0.0
               GLfloat    0.5 ,  0.5 ,  0.5 ,  1.0 , 1.0
               GLfloat   -0.5 ,  0.5 ,  0.5 ,  0.0 , 1.0
               GLfloat   -0.5 ,  0.5 , -0.5 ,  0.0 , 0.0 
+
+;--- Transformation matrices, blanked as identity matrix at application start -; 
+align 16
+model_1       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
+
+model_2       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
+
+model_3       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
+
+model_R       GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
+
+model_Empty   GLfloat  1.0 , 0.0 , 0.0 , 0.0
+              GLfloat  0.0 , 1.0 , 0.0 , 0.0
+              GLfloat  0.0 , 0.0 , 1.0 , 0.0
+              GLfloat  0.0 , 0.0 , 0.0 , 1.0
+
+;--- Keys list for get information about GPU by OpenGL API --------------------; 
+listStrings   DD  GL_VENDOR
+              DD  GL_RENDERER
+              DD  GL_VERSION
+              DD  GL_SHADING_LANGUAGE_VERSION
+              DD  0
 
 ;--- Dynamical import list for OpenGL API -------------------------------------; 
 oglNamesList:
@@ -1479,59 +1599,24 @@ DB  '   FragColor = texture(texture1, TexCoord);'   , 0Dh, 0Ah
 DB  '}'                                             , 0Dh, 0Ah, 0
 
 ;--- Data for CPU-GPU communication with named variables ----------------------;
-modelName_1   DB  'model_1'  , 0
-modelName_2   DB  'model_2'  , 0
-modelName_3   DB  'model_3'  , 0
 modelName_R   DB  'model_R'  , 0
 textureName   DB  'texture1' , 0
 showTextName  DB  'showText' , 0
 
-;--- Transformation matrices, blanked as identity matrix at application start -; 
-align 16
-model_1       GLfloat  1.0 , 0.0 , 0.0 , 0.0
-              GLfloat  0.0 , 1.0 , 0.0 , 0.0
-              GLfloat  0.0 , 0.0 , 1.0 , 0.0
-              GLfloat  0.0 , 0.0 , 0.0 , 1.0
-
-model_2       GLfloat  1.0 , 0.0 , 0.0 , 0.0
-              GLfloat  0.0 , 1.0 , 0.0 , 0.0
-              GLfloat  0.0 , 0.0 , 1.0 , 0.0
-              GLfloat  0.0 , 0.0 , 0.0 , 1.0
-
-model_3       GLfloat  1.0 , 0.0 , 0.0 , 0.0
-              GLfloat  0.0 , 1.0 , 0.0 , 0.0
-              GLfloat  0.0 , 0.0 , 1.0 , 0.0
-              GLfloat  0.0 , 0.0 , 0.0 , 1.0
-
-model_R       GLfloat  1.0 , 0.0 , 0.0 , 0.0
-              GLfloat  0.0 , 1.0 , 0.0 , 0.0
-              GLfloat  0.0 , 0.0 , 1.0 , 0.0
-              GLfloat  0.0 , 0.0 , 0.0 , 1.0
-
-model_Empty   GLfloat  1.0 , 0.0 , 0.0 , 0.0
-              GLfloat  0.0 , 1.0 , 0.0 , 0.0
-              GLfloat  0.0 , 0.0 , 1.0 , 0.0
-              GLfloat  0.0 , 0.0 , 0.0 , 1.0
-
-;--- Keys list for get information about GPU by OpenGL API --------------------; 
-listStrings   DD  GL_VENDOR
-              DD  GL_RENDERER
-              DD  GL_VERSION
-              DD  GL_SHADING_LANGUAGE_VERSION
-              DD  0
-
 ;--- Messages and parameters names strings ------------------------------------;
-szSeconds     DB  'Seconds' , 0
-szFrames      DB  'Frames'  , 0
-szFPS         DB  'FPS'     , 0
-szBusSeconds  DB  'Bus traffic seconds' , 0
-szBusMB       DB  'Megabytes'           , 0
-szBusMBPS     DB  'MBPS'                , 0
+szSeconds     DB  'Seconds'                        , 0
+szFrames      DB  'Frames'                         , 0
+szFPSavg      DB  'FPS average'                    , 0
+szFPScur      DB  'FPS current'                    , 0
+szBusSeconds  DB  'Bus traffic seconds'            , 0
+szBusMB       DB  'Megabytes'                      , 0
+szBusMBPSavg  DB  'MBPS average'                   , 0
+szBusMBPScur  DB  'MBPS current'                   , 0
 msgLoad       DB  'Load OpenGL API failed.'        , 0
 msgShader     DB  'Shaders initialization failed.' , 0
 
-align 16
 ;--- Raster font, chars codes 00h-7Fh, format 8x16 ----------------------------;
+align 16
 rasterFont:
 DB  000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h  ; 000
 DB  000h,000h,07Eh,081h,0A5h,081h,081h,0A5h,099h,081h,081h,07Eh,000h,000h,000h,000h  ; 001
@@ -1662,6 +1747,40 @@ DB  000h,000h,070h,018h,018h,018h,00Eh,018h,018h,018h,018h,070h,000h,000h,000h,0
 DB  000h,000h,076h,0DCh,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h,000h  ; 07E
 DB  000h,000h,000h,000h,010h,038h,06Ch,0C6h,0C6h,0C6h,0FEh,000h,000h,000h,000h,000h  ; 07F
 
+;--- Global variables ---------------------------------------------------------;
+
+;--- Additional timings variables for current actual FPS and MBPS values ------;
+align 8
+fpsStamp1       dq      ?
+fpsStamp2       dq      ?
+mbpsStamp       dq      ?
+mbpsOneBlock    dq      ?
+
+;--- Structures for compact addressing at range base-128 ... base + 127 -------;
+struct APPDATA
+;--- Timings and benchmarks variables ---
+tscFreq         dq      ?
+tscPeriod       dq      ?
+tscStart        dq      ?
+tscStop         dq      ?
+framesCount     dq      ?
+tscBytes        dq      ?
+bytesCount      dq      ?
+;--- Temporary variables ---
+rc              RECT    ?
+;--- OpenGL variables ---
+vertexShader    GLuint  ?
+fragmentShader  GLuint  ?
+shaderProgram   GLuint  ?
+params          GLint   ?
+VAO             GLuint  ?
+VBO             GLuint  ?
+IVBO            GLuint  ?
+TXT1            GLuint  ?
+;--- Display context variables ---
+hdc             dq      ?
+hrc             dq      ?
+ends
 ;--- Pointers to OpenGL API functions, dynamical import used ------------------;
 struct OGLAPI
 ptr_glCreateShader             dq ?
@@ -1694,35 +1813,16 @@ ptr_glDrawArraysInstanced      dq ?
 ptr_glVertexAttribDivisor      dq ?       
 ends
 align 8
-OGL_API OGLAPI ?
+APP_DATA APPDATA ?
+OGL_API  OGLAPI  ?
 
-;--- Timings and benchmarks variables -----------------------------------------;
-tscFreq         DQ    ?
-tscPeriod       DQ    ?
-tscStart        DQ    ?
-tscStop         DQ    ?
-framesCount     DQ    ?
-tscBytes        DQ    ?
-bytesCount      DQ    ?
 ;--- Application and GUI window context variables -----------------------------;
-hdc             DQ    ?
-hrc             DQ    ?
 msg             MSG   ?
-rc              RECT  ?
 pfd             PIXELFORMATDESCRIPTOR  ?
-;--- OpenGL variables ---------------------------------------------------------;
-vertexShader    GLuint  ?
-fragmentShader  GLuint  ?
-shaderProgram   GLuint  ?
-params          GLint   ?
-VAO             GLuint  ?
-VBO             GLuint  ?
-IVBO            GLuint  ?
-TXT1            GLuint  ?
 ;--- Instancing array for CPU-GPU traffic -------------------------------------;
 align 16
 scales  GLfloat  INSTANCING_COUNT DUP (?)  
-;--- GDI+ variables -----------------------------------------------------------;
+;--- GUI and GDI+ variables ---------------------------------------------------;
 startupInput  GdiplusStartupInput  ?
 gdiplusToken  DQ  ?
 pBitmapStruc  DQ  ?
@@ -2267,8 +2367,3 @@ resource raws, IDR_JPEG, LANG_ENGLISH + SUBLANG_DEFAULT, jpegFileImage
 resdata jpegFileImage
 file 'politburo.jpg'
 endres
-
-
-
-
-
