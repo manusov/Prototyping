@@ -15,11 +15,35 @@
 ; https://www.manhunter.ru/assembler/923_vivod_izobrazheniya_na_assemblere_s_pomoschyu_gdi.html
 ; https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmap  ;
 ;------------------------------------------------------------------------------;
+;                                                                              ;
+; TODO.                                                                        ;
+; 1)  Add hot key for enable/disable depth test. Add start warning.            ;
+;     Note run without enable depth test dramatically increases GPU load.      ;
+; 2)  Optimize matrices mathematics. Support differrent frequencies per axies. ;
+;     Optimize all coordinates rotation and scale range for faces positions.   ;
+;     Optimize geometry for font and text strings.                             ;
+; 3)  FPS and MBPS show 5 values: min, max, average, median, current.          ;
+; 4)  Parametrizing textures geometry. Set constants as unuform values.        ;
+; 5)  Verify platform compatibility, error messages.                           ;
+;     x87, TSC, SSE2, OpenGL, maximum uniform components count, ...            ;
+; 6)  Verify application initialization termination at incompatible platforms. ;
+;     If error, terminate WM_CREATE by return status RAX = -1.                 ;
+; 7)  Get system information: temperatures, RPMs. Show at render window.       ;
+; 8)  Error checking, detect 32-bit overflows for seconds and frames.          ;
+; 9)  Verify pStream->Release()  (get this code by tracing C++ result by ASM). ;
+; 10) Use index buffers for compact data, EBO object,                          ;
+;     see Ravesli OpenGL lessons.                                              ;
+; 11) Optimize by remove repeated calculations at paint branch.                ;
+; 12) Use same base-index scheme for FPS and MBPS data column.                 ;
+; 13) Check bits RAX.[63-32] for overflow                                      ;
+; 14) Optimize, remove model_Empty.                                            ;
+;                                                                              ;
+;------------------------------------------------------------------------------;
 
 include 'win64a.inc'
 include 'OpenGL.inc'
 
-APPLICATION_NAME    EQU 'OpenGL with shaders. Engineering sample #16.0.x64.'
+APPLICATION_NAME    EQU 'OpenGL GPUstress. Engineering sample #17.x64.'
 
 X_BASE              EQU 380     ; GUI window positions at application start.
 Y_BASE              EQU 140
@@ -46,7 +70,7 @@ GL_SHADING_LANGUAGE_VERSION EQU 00008B8Ch
 TEXTURE_WIDTH       EQU 2952         ; Texture JPG file X, Y sizes,
 TEXTURE_HEIGHT      EQU 1967         ; shaders update required if this changed 
 TEXT_FRONT_COLOR_1  EQU 0FF616161h   ; Text output front and back colors  
-TEXT_FRONT_COLOR_2  EQU 0FF21A021h
+TEXT_FRONT_COLOR_2  EQU 0FFE05757h
 TEXT_BACK_COLOR     EQU 0FFCCF2F2h   ; Old = 0FFF8F8F8h
 BACKGROUND_R        EQU 0.80         ; Render window background R,G,B as float
 BACKGROUND_G        EQU 0.95
@@ -88,6 +112,14 @@ entry start
 section '.text' code readable executable
 start:
 sub rsp,8                          ; Make stack dqword (16 byte) aligned
+;--- Warning window -----------------------------------------------------------;
+xor ecx,ecx                        ; RCX = Parm #1 = Parent window
+lea rdx,[warningText]              ; RDX = Oarm #2 = Warning message text
+lea r8,[appName]                   ; R8  = Parm #3 = Message box caption
+mov r9d,MB_YESNO + MB_ICONWARNING  ; R9  = Parm #4 = Message flags
+call [MessageBoxA]
+cmp rax,IDYES
+jne ApplicationJustExit 
 ;--- Get handle of this application exe file ----------------------------------;
 xor ecx,ecx                        ; RCX = Parm#1 = 0 = means this exe file 
 call [GetModuleHandle]             ; Get handle of this exe file
@@ -268,9 +300,9 @@ lea rdx,[appClass]
 xor ecx,ecx
 sub rsp,32              ; Re-create parameters shadow after pushes
 call [CreateWindowEx]
-add rsp,32 + 64         ; Remove parameters shadow and 8 pushes (input parms) 
-test rax,rax            ; Check for RAX = 0
-jz ApplicationExit  ; Go if initialization error by WM_CREATE returns RAX = -1
+add rsp,32 + 64      ; Remove parameters shadow and 8 pushes (input parms) 
+test rax,rax         ; Check for RAX = 0
+jz ApplicationClose  ; Go if initialization error by WM_CREATE returns RAX = -1
 ;--- Handling events from GUI window ------------------------------------------;
 lea rbx,[msg]
 msgLoop:
@@ -289,7 +321,7 @@ call [DispatchMessage]
 jmp msgLoop
 endLoop:
 ;--- Application context de-initializing --------------------------------------; 
-ApplicationExit:
+ApplicationClose:
 mov rax,[pStream]
 mov rcx,rax
 jrcxz @f
@@ -313,6 +345,7 @@ jrcxz @f
 call [GdiplusShutdown]
 @@:
 ;--- Application exit ---------------------------------------------------------;
+ApplicationJustExit:
 xor ecx,ecx          ; Exit code = 0
 call [ExitProcess]
 
@@ -450,6 +483,10 @@ call StringWrite
 ;--- Build template for GPU load strings group (screen up) --------------------;
 lea rsi,[szGpuLoad]
 lea rdi,[tempBuffer2 + 128 * 4 + 1]
+call StringWrite
+;--- Build template for Depth test at GPU load strings group (screen up) ------;
+lea rsi,[szDepthTest]
+lea rdi,[tempBuffer2 + 128 * 4 + 52]
 call StringWrite
 ;--- Dynamically load required OpenGL API procedures --------------------------;
 cld
@@ -807,7 +844,15 @@ call [glClearColor]
 mov ecx,GL_COLOR_BUFFER_BIT + GL_DEPTH_BUFFER_BIT
 call [glClear]
 mov ecx,GL_DEPTH_TEST
+;--- Note run without enable depth test dramatically increases GPU load -------;
+cmp [gpuDepthTest],0
+je .depthOff 
 call [glEnable]
+jmp .depthDone
+.depthOff:
+call [glDisable]
+.depthDone:
+;--- Bind texture and enable shader -------------------------------------------;
 mov ecx,GL_TEXTURE0
 call [r15 + OGLAPI.ptr_glActiveTexture]
 mov ecx,GL_TEXTURE_2D 
@@ -869,11 +914,12 @@ call [r15 + OGLAPI.ptr_glUniformMatrix4fv]
 ;--- Data buffer copy, this operation time measured for MBPS statistics -------;
 ;--- Start of timings measurement interval ------------------------------------;
 
-rdtsc
+rdtsc                  ; Get time for start interval
 mov esi,eax
 mov edi,edx
-xor eax,eax  ; This CPUID for serialization only, results ignored
+xor eax,eax            ; This CPUID for serialization only, results ignored
 cpuid
+
 mov ecx,GL_ARRAY_BUFFER
 mov edx,[gpuLoadNow]                                     ; mov edx,BUFFER_COUNT
 shl edx,2
@@ -882,12 +928,15 @@ mov r9d,GL_DYNAMIC_DRAW
 add [r15 - sizeof.APPDATA + APPDATA.bytesCount],rdx
 call [r15 + OGLAPI.ptr_glBufferData]
 
-xor eax,eax  ; This CPUID for serialization only, results ignored
+xor eax,eax            ; This CPUID for serialization only, results ignored
 cpuid
-lea rcx,[mbpsStamp]
-rdtsc
+rdtsc                  ; Get time for end interval
+
+;--- End of timings measurement interval --------------------------------------;
+
 sub eax,esi
 sbb edx,edi
+lea rcx,[mbpsStamp]
 mov [rcx + 0],eax
 mov [rcx + 4],edx
 
@@ -898,7 +947,7 @@ lea rcx,[r15 - sizeof.APPDATA + APPDATA.tscBytes]
 add [rcx + 00],eax
 adc [rcx + 04],edx
 
-;--- End of timings measurement interval --------------------------------------;
+;--- Timings measurement results saving done ----------------------------------;
 
 ;--- Draw and swap buffers ----------------------------------------------------;
 mov ecx,[r15 - sizeof.APPDATA + APPDATA.VAO]
@@ -1012,6 +1061,15 @@ mov bl,0
 mov eax,[gpuLoadNow]
 call DecimalPrint32_Blanked      ; Print frames
 
+;--- Build text string for Depth test (GPU load group) current actual value ---;
+lea rdi,[tempBuffer2 + 128 * 4 + 82]
+cmp [gpuDepthTest],0
+lea rsi,[szDepthOff]
+je @f
+lea rsi,[szDepthOn]
+@@:
+call StringWrite
+
 ;--- Transfer uniform array with text data into shader program ----------------;
 xor ebx,ebx
 .uniformArray:
@@ -1046,24 +1104,34 @@ jmp .finish
 ; this registers is input parameters of [DefWindowProc].   
 
 .wmkeydown:
-cmp r8d,VK_UP
 mov r10d,1
+cmp r8d,VK_UP
 je .plusMinus
-cmp r8d,VK_DOWN
 mov r10d,-1
-jne .checkEscape
+cmp r8d,VK_DOWN
+je .plusMinus
+xor eax,eax
+cmp r8d,VK_LEFT
+je .depthTest 
+inc eax
+cmp r8d,VK_RIGHT
+jne .checkEscape 
+.depthTest:
+mov [gpuDepthTest],eax
+jmp .keyDone 
+
 .plusMinus:
 lea rdx,[gpuLoadSel]
 mov eax,[rdx]
 add eax,r10d
 test eax,eax
-js .plusMinusLimit
+js .keyDone
 cmp eax,MAXIMUM_GPU_LOAD_SELECT
-ja .plusMinusLimit 
+ja .keyDone 
 mov [rdx],eax
 mov eax,[rdx + 8 + rax*4] 
 mov [rdx + 4],eax
-.plusMinusLimit:
+.keyDone:
 mov eax,1
 jmp .finish
 
@@ -1475,10 +1543,15 @@ ret
 
 section '.data' data readable writeable
 
+warningText   DB  'This application can overheat your GPU,' , 0Dh,0Ah
+              DB  'especially if Depth test OFF.'           , 0Dh,0Ah,0Dh,0Ah
+              DB  'Run application ?'                       , 0 
 appName       DB  APPLICATION_NAME , 0
 appClass      DB  'FASMOPENGL32'   , 0
+
 wc      WNDCLASS  0, WindowProc, 0, 0, NULL, NULL, NULL, NULL, NULL, appClass
 contextSkip   DB  1  ; Skip de-initializing if non-initialized objects
+
 
 ;--- OpenGL background color --------------------------------------------------;
 align 16
@@ -1575,6 +1648,7 @@ gpuLoads      DD  INSTANCING_COUNT_LOAD_0
               DD  INSTANCING_COUNT_LOAD_5
               DD  INSTANCING_COUNT_LOAD_6
               DD  INSTANCING_COUNT_LOAD_7
+gpuDepthTest  DD  1
 
 ;--- Constant pointers to shaders ---------------------------------------------;
 align 8
@@ -1718,6 +1792,9 @@ szBusMB       DB  'Megabytes'                          , 0
 szBusMBPSavg  DB  'MBPS average'                       , 0
 szBusMBPScur  DB  'MBPS current'                       , 0
 szGpuLoad     DB  'GPU load instances (up/down keys)'  , 0
+szDepthTest   DB  'Depth test (left/right keys)'       , 0
+szDepthOn     DB  'ON '                                , 0
+szDepthOff    DB  'OFF'                                , 0
 
 ;--- Error messages for application initialization errors ---------------------;
 msgLoad       DB  'Load OpenGL API failed:'          , 0Dh,0Ah
@@ -2474,9 +2551,9 @@ directory  RT_ICON       , icons  , \
 
 resource icons  , ID_EXE_ICON  , LANG_NEUTRAL , exeicon
 resource gicons , ID_EXE_ICONS , LANG_NEUTRAL , exegicon
-icon exegicon, exeicon, 'politburo.ico'
+icon exegicon, exeicon, 'gpustress.ico'
 
 resource raws, IDR_JPEG, LANG_ENGLISH + SUBLANG_DEFAULT, jpegFileImage
 resdata jpegFileImage
-file 'politburo.jpg'
+file 'gpustress.jpg'
 endres
