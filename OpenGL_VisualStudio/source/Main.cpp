@@ -1,8 +1,11 @@
 ﻿/*
 EXPERIMENTAL TEMPLATE FOR OPENGL GPUSTRESS.
+BUILD WITH VISUAL STUDIO 2022.
+Special thanks to:
+https://ravesli.com/uroki-po-opengl/
+https://ravesli.com/uroki-cpp/#toc-0
 */
 
-#include <SDKDDKVer.h>
 #include <windows.h>
 #include <iostream>
 #include <stdlib.h>
@@ -80,12 +83,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                     wcex.cbClsExtra = 0;
                     wcex.cbWndExtra = 0;
                     wcex.hInstance = hInstance;
-                    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TEST1));
+                    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_GPUSTRESS));
                     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
                     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
                     wcex.lpszMenuName = szAppMsg;
                     wcex.lpszClassName = szClassName;
-                    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+                    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_GPUSTRESS));
                     ATOM atom = RegisterClassEx(&wcex);
                     if (atom)
                     {
@@ -94,27 +97,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                             nullptr, nullptr, hInstance, nullptr);
                         if (hWnd)
                         {
-                            HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TEST1));
-                            if (hAccelTable)
+                            ShowWindow(hWnd, nCmdShow);
+                            UpdateWindow(hWnd);
+                            MSG msg;
+                            while (GetMessage(&msg, nullptr, 0, 0))
                             {
-                                ShowWindow(hWnd, nCmdShow);
-                                UpdateWindow(hWnd);
-                                MSG msg;
-                                while (GetMessage(&msg, nullptr, 0, 0))
-                                {
-                                    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-                                    {
-                                        TranslateMessage(&msg);
-                                        DispatchMessage(&msg);
-                                    }
-                                }
-                                // original template variant: exitCode = msg.wParam;
-                                if ((msg.message != WM_QUIT) || (msg.wParam != 0))
-                                {
-                                    exitCode = 8;
-                                }
+                                TranslateMessage(&msg);
+                                DispatchMessage(&msg);
                             }
-                            else
+                            if ((msg.message != WM_QUIT) || (msg.wParam != 0))
                             {
                                 exitCode = 7;
                             }
@@ -166,7 +157,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-
         case WM_CREATE:
         {
             hDC = GetDC(hWnd);
@@ -191,20 +181,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             RECT r;
             GetClientRect(hWnd, &r);
             glViewport(0, 0, r.right, r.bottom);
-        }
-        break;
-
-        case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            switch (wmId)
-            {
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
         }
         break;
 
