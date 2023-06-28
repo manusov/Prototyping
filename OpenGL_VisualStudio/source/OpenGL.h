@@ -98,7 +98,7 @@ private:
     static const char* oglNamesList[];
     static const char* vertexShaderSource;
     static const char* fragmentShaderSource;
-    static alignas(16) GLfloat verticesCube[];
+    static const alignas(16) GLfloat verticesCube[];
     static const GLclampf clearColor[];
     static const GLchar* modelName;
     static const GLchar* textureName;

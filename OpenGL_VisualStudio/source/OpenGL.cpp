@@ -296,19 +296,6 @@ void OpenGL::draw(HWND hWnd, HDC hDC, unsigned int optionLoad, BOOL optionDepth)
 	glBindTexture(GL_TEXTURE_2D, texture1);
 	f.glUseProgram(shaderProgramId);
 
-	// TODO. Vectorize and optimize this.
-	GLfloat* p = ptrTransfMatrixes;
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-		{
-			for (int k = 0; k < 4; k++)
-			{
-				GLfloat a = (j == k) ? 1.0f : 0.0f;
-				*(p++) = a;
-			}
-		}
-	}
 	float xSin = static_cast<float>(sin(-seconds * 0.25));
 	float xCos = static_cast<float>(cos(-seconds * 0.25));
 	float ySin = static_cast<float>(sin(seconds * 0.5));
@@ -330,11 +317,13 @@ void OpenGL::draw(HWND hWnd, HDC hDC, unsigned int optionLoad, BOOL optionDepth)
 	matrixMultiply(ptrTransfMatrixes + 16, ptrTransfMatrixes + 32, ptrTransfMatrixes);
 	matrixMultiply(ptrTransfMatrixes, ptrTransfMatrixes + 48, ptrTransfMatrixes);
 
-	// TODO. Vectorize and optimize this.
 	float scale = static_cast<float>(sin(seconds * 0.45) * 0.6);
-	for (int i = 0; i < gpuLoadNow; i++)
+	const size_t vCount = gpuLoadNow / 4;
+	__m128* vPtr = reinterpret_cast<__m128*>(ptrScales);
+	__m128 vData = _mm_load_ps1(&scale);
+	for (size_t i = 0; i < vCount; i++)
 	{
-		ptrScales[i] = scale;
+		*(vPtr++) = vData;
 	}
 
 	GLsizeiptr nowBytes = gpuLoadNow * 4;
@@ -554,7 +543,7 @@ const char* OpenGL::fragmentShaderSource =
 "}\r\n\0";
 
 // Cube vertices coordinates.
-alignas(16) GLfloat OpenGL::verticesCube[]
+const alignas(16) GLfloat OpenGL::verticesCube[]
 {
   - 0.5 , -0.5 , -0.5 ,  0.0 , 0.0,
     0.5 , -0.5 , -0.5 ,  1.0 , 0.0,
