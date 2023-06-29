@@ -10,7 +10,7 @@ Application constants.
 namespace APPCONST
 {
 // Application title strings and x64/ia32 differentiation constants.
-	const char* const APP_NAME = "OpenGL GPUstress (C++ edition). Engineering sample #20.";
+	const char* const APP_NAME = "OpenGL GPUstress (C++ edition). Engineering sample #21.";
 #if _WIN64
 	#define NATIVE_WIDTH_64
 	const char* const BUILD_NAME = "x64.";

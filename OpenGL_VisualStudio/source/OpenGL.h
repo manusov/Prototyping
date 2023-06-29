@@ -87,9 +87,6 @@ private:
     GLuint shaderProgramId;
     GLsizeiptr gpuLoadNow;
     BOOL gpuDepthTest;
-    DWORD64 framesCount;
-    DWORD64 bytesCount;
-    double busTrafficSeconds;
     GLfloat* ptrTransfMatrixes;
     GLfloat* ptrScales;
     GLchar* textOutput;

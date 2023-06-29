@@ -10,8 +10,7 @@ https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-wglgetproca
 #include "OpenGL.h"
 
 OpenGL::OpenGL() : pfd{ 0 }, viewRect{ 0 }, f{ 0 }, hglrc(nullptr), vao(0), vbo(0), texture1(0), shaderProgramId(0),
-                   gpuLoadNow(APPCONST::DEFAULT_GPU_LOAD), gpuDepthTest(TRUE), framesCount(0), bytesCount(0),
-	               busTrafficSeconds(0.0), ptrTimer(nullptr)
+                   gpuLoadNow(APPCONST::DEFAULT_GPU_LOAD), gpuDepthTest(TRUE), ptrTimer(nullptr)
 {
 	constexpr int TRANS_MATRIXES_XYZ = 4 * 4 * 4;
 	ptrTransfMatrixes = new GLfloat[TRANS_MATRIXES_XYZ];
@@ -46,9 +45,6 @@ OpenGL::~OpenGL()
 int OpenGL::init(HWND hWnd, HDC hDC, const void* rawData, Timer* pTimer)
 {
 	ptrTimer = pTimer;
-	framesCount = 0;
-	bytesCount = 0;
-	busTrafficSeconds = 0.0;
 	gpuLoadNow = APPCONST::DEFAULT_GPU_LOAD;
 	
 	PIXELFORMATDESCRIPTOR* pPfd = &pfd;
@@ -272,11 +268,14 @@ int OpenGL::init(HWND hWnd, HDC hDC, const void* rawData, Timer* pTimer)
 	f.glVertexAttribDivisor(2, 1);
 	if (glGetError()) return 0x12B;
 
+	ptrTimer->resetStatistics();
+	ptrTimer->startApplicationSeconds();
+	ptrTimer->startPerformanceSeconds();
 	return 0;
 }
 void OpenGL::draw(HWND hWnd, HDC hDC, unsigned int optionLoad, BOOL optionDepth)
 {
-	double seconds = ptrTimer->getSeconds1();
+	double seconds = ptrTimer->getApplicationSeconds();
 	gpuLoadNow = optionLoad;
 	gpuDepthTest = optionDepth;
 	
@@ -326,24 +325,12 @@ void OpenGL::draw(HWND hWnd, HDC hDC, unsigned int optionLoad, BOOL optionDepth)
 		*(vPtr++) = vData;
 	}
 
-	GLsizeiptr nowBytes = gpuLoadNow * 4;
+	GLsizeiptr bytesPerFrame = gpuLoadNow * 4;
 	GLint location = f.glGetUniformLocation(shaderProgramId, modelName);
 	f.glUniformMatrix4fv(location, 1, 0, ptrTransfMatrixes);
-	ptrTimer->latchSeconds3();
-	f.glBufferData(GL_ARRAY_BUFFER, nowBytes, ptrScales, GL_DYNAMIC_DRAW);
-	double nowSeconds = ptrTimer->getSeconds3();
-	busTrafficSeconds += nowSeconds;
-	bytesCount += nowBytes;
-	snprintf(textOutput + 128 * 3 + 112, 128, "%.2f    ", busTrafficSeconds);
-	double megabytesCount = bytesCount / 1048576.0;
-	snprintf(textOutput + 128 * 2 + 112, 128, "%.2f    ", megabytesCount);
-	double mbpsAverage = megabytesCount / busTrafficSeconds;
-	snprintf(textOutput + 128 * 1 + 112, 128, "%.2f    ", mbpsAverage);
-	double mbpsCurrent = nowBytes / 1048576.0 / nowSeconds;
-	if (!(framesCount % 20))
-	{
-		snprintf(textOutput + 128 * 0 + 112, 128, "%.2f    ", mbpsCurrent);
-	}
+	ptrTimer->startTransferSeconds();
+	f.glBufferData(GL_ARRAY_BUFFER, bytesPerFrame, ptrScales, GL_DYNAMIC_DRAW);
+	double mbpsCurrent = ptrTimer->stopTransferSeconds(bytesPerFrame);
 
 	f.glBindVertexArray(vao);
 	constexpr GLint ARRAY_COUNT = 6 * 6;
@@ -361,26 +348,34 @@ void OpenGL::draw(HWND hWnd, HDC hDC, unsigned int optionLoad, BOOL optionDepth)
 		szOnOff = szDepthOff;
 	}
 	snprintf(textOutput + 128 * 4 + 82, 128, "%s   ", szOnOff);
-	double elapsedSeconds = ptrTimer->getSeconds1();
-	snprintf(textOutput + 128 * 3 + 73, 128, "%.1f    ", elapsedSeconds);
-	snprintf(textOutput + 128 * 2 + 73, 128, "%I64u ", framesCount);
-	double fpsAverage = framesCount / seconds;
-	snprintf(textOutput + 128 * 1 + 73, 128, "%.1f    ", fpsAverage);
 
-	if (framesCount > 20)
+	double busTrafficSeconds = ptrTimer->getTransferSeconds();
+	double megabytesCount = ptrTimer->getMegabytesCount();
+	double mbpsAverage = ptrTimer->getAverageMBPS();
+	double elapsedSeconds = ptrTimer->getPerformanceSeconds();
+
+	snprintf(textOutput + 128 * 3 + 112, 128, "%.2f    ", busTrafficSeconds);
+	snprintf(textOutput + 128 * 2 + 112, 128, "%.2f    ", megabytesCount);
+	snprintf(textOutput + 128 * 1 + 112, 128, "%.2f    ", mbpsAverage);
+	if (ptrTimer->antiBlinkMBPS())
 	{
-		double fpsCurrent = 1.0 / ptrTimer->getSeconds2();
-		ptrTimer->latchSeconds2();
-		if (!(framesCount % 20))
+		snprintf(textOutput + 128 * 0 + 112, 128, "%.2f    ", mbpsCurrent);
+	}
+	snprintf(textOutput + 128 * 3 + 73, 128, "%.1f    ", elapsedSeconds);
+	DWORD64 framesCount = ptrTimer->getFramesCount();
+	snprintf(textOutput + 128 * 2 + 73, 128, "%I64u ", framesCount);
+
+	if (framesCount)
+	{
+		double fpsAverage = ptrTimer->getAverageFPS();
+		double fpsCurrent = ptrTimer->stopFrameSeconds();
+		snprintf(textOutput + 128 * 1 + 73, 128, "%.1f    ", fpsAverage);
+		if (ptrTimer->antiBlinkFPS())
 		{
 			snprintf(textOutput + 128 * 0 + 73, 128, "%.1f    ", fpsCurrent);
 		}
 	}
-	else
-	{
-		ptrTimer->latchSeconds2();
-	}
-	framesCount++;
+	ptrTimer->startFrameSeconds();
 
 	GLchar szTextIndex[APPCONST::MAX_TEXT_STRING];
 	GLint* ptrTextDwords = reinterpret_cast<GLint*>(textOutput);

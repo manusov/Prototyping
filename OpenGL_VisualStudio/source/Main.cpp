@@ -70,8 +70,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (pTimer->getStatus())
             {
-                tscFrequency = pTimer->getTscFrequency();
-                tscPeriod = pTimer->getTscPeriod();
                 rawPtr = pTextureLoader->getRawPointer();
                 if (rawPtr)
                 {
@@ -172,7 +170,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 MessageBox(NULL, szError, nullptr, MB_ICONERROR);
                 return -1;
             }
-            pTimer->latchSeconds1();
         }
         break;
 
@@ -199,6 +196,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 if (optionLoadIndex < APPCONST::MAXIMUM_GPU_LOAD_SELECT)
                 {
                     optionLoadIndex++;
+                    pTimer->resetStatistics();
                 }
                 break;
 
@@ -206,15 +204,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 if (optionLoadIndex)
                 {
                     optionLoadIndex--;
+                    pTimer->resetStatistics();
                 }
                 break;
 
             case VK_LEFT:
                 optionDepthTest = FALSE;
+                pTimer->resetStatistics();
                 break;
 
             case VK_RIGHT:
                 optionDepthTest = TRUE;
+                pTimer->resetStatistics();
                 break;
 
             case VK_ESCAPE:
